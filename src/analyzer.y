@@ -47,7 +47,7 @@ std::vector<Function*> funcs;
 %type <fparams> FuncParams
 %type <blockstmt> Block
 %type <exp> Exp
-%type <explist> DimentList
+%type <explist> DimenList
 %type <exp> PrimaryExp
 %type <exp> UnaryExp
 %type <token> UnaryOp
@@ -105,17 +105,17 @@ VarDecl: CONST BType VarDefList SEMI { $$ = new VarDeclStmt();
                                 }
                                 }
        ; 
-DimentList: Exp { $$ = new Expression::List(); 
-                  $$->push_back($1);
-                }
-          | DimentList COMMA Exp { $1->push_back($3);
-                                   $$ = $1;
-                                 }
+DimenList: LBRACKET Exp LBRACKET { $$ = new Expression::List(); 
+                                   $$->push_back($1);
+                                  }
+          | DimenList LBRACKET Exp RBRACKET { $1->push_back($3);
+                                              $$ = $1;
+                                             }
           ;
 VarDefList: IDENT ASSIGN Exp { $$ = new Variable::List();
                                $$->push_back(new Variable(Variable::BType::UNKNOWN, *$1, false, $3));
                              }
-          | IDENT LBRACKET Exp RBRACKET ASSIGN LCURLY DimentList RCURLY {
+          | IDENT LBRACKET Exp RBRACKET ASSIGN LCURLY DimenList RCURLY {
                                $$ = new Variable::List();
                                $$->push_back(new Variable(Variable::BType::UNKNOWN, *$1, false, $3, $7));
                               }
@@ -130,7 +130,7 @@ VarDefList: IDENT ASSIGN Exp { $$ = new Variable::List();
                               $$ = $1;
                               $$->push_back(new Variable(Variable::BType::UNKNOWN, *$3, false, $5));
                             }
-          | VarDefList COMMA IDENT LPARENT Exp RPARENT ASSIGN LCURLY DimentList RCURLY {
+          | VarDefList COMMA IDENT LPARENT Exp RPARENT ASSIGN LCURLY DimenList RCURLY {
                              $$ = $1; 
                              $$->push_back(new Variable(Variable::BType::UNKNOWN, *$3, false, $5, $9));
                             }
