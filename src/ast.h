@@ -4,6 +4,14 @@
 using std::string;
 using std::vector;
 
+/** 
+ * Represents an expression.
+ * For example, `5+3` , a function call or only a variable referrence is an expression.
+ * An expression can be composed by other expressions. `5*3` is composed by expression `5` and
+ *    expression `3`.
+ * PS:After constructing an expression with other expressions, these expressions shouldn't be used.
+ *
+ **/
 class Expression {
 public:
   using List = vector<Expression *>;
@@ -23,8 +31,8 @@ public:
     MUL, //  '*'
     DIV, //  '/'
     MOD, //  '%'
-    NUM,
-    IDENT,
+    NUM, // number
+    IDENT, // variable referrence
     CALL, //  function call
     NIL   //  NULL
   };
@@ -100,7 +108,6 @@ private:
 };
 
 /* Function */
-
 class Function {
 public:
   enum class RetType { INT, VOID };
