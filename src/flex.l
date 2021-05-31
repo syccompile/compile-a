@@ -1,17 +1,17 @@
 %option noyywrap
 %{
 #include "ast.h"
-#include "analyzer.tab.hh"
+#include "analyzer.hh"
 
 #include <string>
 
-#define RETTOKEN(T)   (yylval.token = T; return T;)
 %}
 
 %%
 
 "int"       { return INT;}
-[0-9]*      { yylval.string = new std::string(yytext); return NUMBER; } 
+[0-9]*      { yylval.string = new std::string(yytext); return NUMBER; }
+"0x"[0-9A-Fa-f]+  { yylval.string = new std::string(yytext); return NUMBER; }
 [a-zA-Z_][a-zA-Z0-9_]*      { yylval.string = (new std::string(yytext)); return IDENT;}
 "="           { yylval.token = ASSIGN; return ASSIGN; }
 "+"           { yylval.token = ADD; return ADD; }

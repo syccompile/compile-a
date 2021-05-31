@@ -7,8 +7,8 @@ TARGET = test
 AST_SOURCE = ast.cc
 
 BISON_SOURCE = analyzer.y
-BISON_OUT_CPP = analyzer.tab.cc
-BISON_OUTPUT = analyzer.tab.cc analyzer.tab.hh
+BISON_OUT_CPP = analyzer.cc
+BISON_OUTPUT = analyzer.cc analyzer.hh
 
 FLEX_SOURCE = flex.l
 FLEX_OUTPUT = flex.cc
