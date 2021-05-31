@@ -1,7 +1,7 @@
 %option noyywrap
 %{
 #include "ast.h"
-#include "analyzer.tab.hh"
+#include "analyzer.hh"
 
 #include <string>
 
