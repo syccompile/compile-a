@@ -40,22 +40,65 @@ Expression::~Expression() {
 
 Variable::Variable(BType type, string name, bool immutable)
     : type_(type), name_(name), immutable_(immutable), initialized_(false),
-      initvals_(nullptr), size_(new Expression(1)) {}
+      initval_(nullptr){}
 Variable::Variable(BType type, string name, bool immutable, Expression *initval)
     : Variable(type, name, immutable) {
   initialized_ = true;
-  initvals_ = new Expression::List;
-  initvals_->push_back(initval);
+  initval_ = initval;
 }
-Variable::Variable(BType type, string name, bool immutable, Expression *size,
-                   Expression::List *initvals)
-    : Variable(type, name, immutable) {
-  delete size_;
-  size_ = size;
-  initialized_ = true;
-  initvals_ = initvals;
+Variable::~Variable() { delete initval_; }
+
+Array::InitVals::InitVals(vector<Expression *> *initvals)
+  : type_(Type::EXP)
+{
+  content_.exps = initvals;
 }
-Variable::~Variable() {
+Array::InitVals::InitVals(vector<Array::InitVals *> *initvals) 
+ :type_(Type::CONTAINER)
+{
+  content_.container = initvals;
+}
+Array::InitVals::InitVals(Expression *exp) {
+  content_.exps = new vector<Expression*>();
+  content_.exps->push_back(exp);
+}
+Array::InitVals::InitVals(InitVals* initvals){
+  content_.container = new vector<InitVals*>();
+  content_.container->push_back(initvals);
+}
+Array::InitVals::~InitVals() {
+  switch (type_) {
+    case Type::EXP:
+      delete content_.exps;
+      break;
+    case Type::CONTAINER:
+      delete content_.container;
+      break;
+  }
+}
+bool Array::InitVals::push_back(Expression *exp) {
+  if (type_ != Type::EXP) {
+    return false;
+  }
+  content_.exps->push_back(exp);
+  return true;
+}
+
+bool Array::InitVals::push_back(Array::InitVals *initvals) {
+  if(type_ != Type::CONTAINER){
+    return false;
+  }
+  content_.container->push_back(initvals);
+  return true;
+}
+Array::Array(BType type, string name, bool immutable, Expression::List *size)
+    : Variable(type, name, immutable), size_(size), initvals_(nullptr) {}
+
+Array::Array(BType type, string name, bool immutable, Expression::List *size,
+             InitVals *initvals)
+    : Variable(type, name, immutable), size_(size), initvals_(initvals) {}
+
+Array::~Array() {
   delete size_;
   delete initvals_;
 }

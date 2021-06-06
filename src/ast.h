@@ -10,6 +10,7 @@ using std::vector;
  * An expression can be composed by other expressions. `5*3` is composed by expression `5` and
  *    expression `3`.
  * PS:After constructing an expression with other expressions, these expressions shouldn't be used.
+ *    And all the pointer parameters shouldn't be null.
  *
  **/
 class Expression {
@@ -53,19 +54,18 @@ private:
   string name_;
 };
 
+enum class BType { INT, VOID, UNKNOWN };
+
 class Variable {
 public:
   using List = vector<Variable *>;
-  enum class BType { INT, UNKNOWN };
 
-  Variable(Variable::BType type, string name, bool immutable);
-  Variable(Variable::BType type, string name, bool immutable,
+  Variable(BType type, string name, bool immutable);
+  Variable(BType type, string name, bool immutable,
            Expression *initval);
-  // Array Assignment
-  Variable(Variable::BType type, string name, bool immutable, Expression *size,
-           Expression::List *initvals);
-  ~Variable();
-  void setType(Variable::BType type) { type_ = type; }
+  virtual ~Variable();
+  virtual bool isArray() { return false; }
+  void setType(BType type) { type_ = type; }
   void setImmutable(bool flag) { immutable_ = flag; }
   void setInitialzied(bool flag) { initialized_ = flag; }
 
@@ -74,8 +74,39 @@ private:
   string name_;
   bool immutable_;
   bool initialized_;
-  Expression::List *initvals_;
-  Expression *size_;
+  Expression* initval_;
+};
+
+class Array : public Variable{
+public:
+  class InitVals {
+  public:
+      InitVals(vector<Expression*>*);
+      InitVals(vector<InitVals*>*);
+      InitVals(Expression *);
+      InitVals(InitVals *);
+      ~InitVals();
+
+      bool push_back(Expression *);
+      bool push_back(InitVals*);
+
+    private:
+      enum class Type { EXP, CONTAINER };
+      Type type_;
+      union {
+        vector<InitVals*>* container;
+        vector<Expression*>* exps;
+      }content_;
+  };
+  Array(BType type, string name, bool immutable, Expression::List *size);
+  Array(BType type, string name, bool immutable, Expression::List *size,
+        InitVals *initvals);
+  ~Array();
+  virtual bool isArray ()override { return true; }
+
+private:
+  Expression::List *size_;
+  InitVals *initvals_;
 };
 
 class Stmt {};

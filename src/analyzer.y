@@ -6,7 +6,8 @@
 #include <string>
 
 extern int yylex();
-void yyerror(const char* msg) { printf("%s\n", msg); }
+extern char* yytext;
+void yyerror(const char* msg) { printf("%s: yytext is %s\n", msg, yytext); }
 std::vector<VarDeclStmt*> vardecl;
 std::vector<Function*> funcs;
 %}
@@ -18,7 +19,9 @@ std::vector<Function*> funcs;
   Expression::List * explist;
   Variable * var;
   Variable::List * varlist;
-  Variable::BType vartype;
+  BType btype;
+  Array::InitVals* initvals;
+  Array* array;
   Stmt* stmt;
   VarDeclStmt * vardeclstmt;
   IfStmt * ifstmt;
@@ -38,15 +41,16 @@ std::vector<Function*> funcs;
 %token <string> IDENT
 
 %type <token>  CompUnit
-%type <vartype>  BType
+%type <btype>  BType
 %type <vardeclstmt> VarDecl
 %type <var> VarDef
 %type <varlist> VarDefList
-%type <varinit> InitVal
+%type <initvals> InitVals InitValsList
 %type <func> FuncDef
 %type <fparams> FuncParams
 %type <blockstmt> Block
 %type <exp> Exp
+%type <explist> ExpList
 %type <explist> DimenList
 %type <exp> PrimaryExp
 %type <exp> UnaryExp
@@ -67,7 +71,7 @@ CompUnit: VarDecl { vardecl.push_back($1); }
         //| CompUnit FuncDef { vardecl.push_back($2); }
         ;
 
-BType : INT { $$ = Variable::BType::INT; }
+BType : INT { $$ =BType::INT; }
       ;
 
 Exp  :  MulExp { $$ = $1; }
@@ -90,6 +94,14 @@ PrimaryExp : LPARENT Exp RPARENT { $$ = $2; }
            | NUMBER { $$ = new Expression(*$1); }
            ;
 
+ExpList : Exp  { $$ = new Expression::List();
+                 $$->push_back($1);
+               }
+        | ExpList COMMA Exp { $$ = $1;
+                              $$->push_back($3);
+                            }
+        ;
+
 VarDecl: CONST BType VarDefList SEMI { $$ = new VarDeclStmt();  
                                       for(Variable * var : *$3){
                                         var->setImmutable(true);
@@ -103,36 +115,44 @@ VarDecl: CONST BType VarDefList SEMI { $$ = new VarDeclStmt();
                                         var->setType($1);
                                         $$->push_back(var);
                                 }
-                                }
+                               }
        ; 
-DimenList: LBRACKET Exp LBRACKET { $$ = new Expression::List(); 
-                                   $$->push_back($1);
+DimenList: LBRACKET Exp RBRACKET { $$ = new Expression::List(); 
+                                   $$->push_back($2);
                                   }
           | DimenList LBRACKET Exp RBRACKET { $1->push_back($3);
                                               $$ = $1;
                                              }
           ;
+InitValsList : InitVals { $$ = new Array::InitVals($1); }
+             | InitValsList COMMA InitVals { $$ = $1; $$->push_back($3); }
+             ;
+// FIX
+InitVals : LCURLY ExpList RCURLY { $$ = new Array::InitVals($2); }
+         | LCURLY InitValsList RCURLY { $$ = $2; }
+         ;
+
 VarDefList: IDENT ASSIGN Exp { $$ = new Variable::List();
-                               $$->push_back(new Variable(Variable::BType::UNKNOWN, *$1, false, $3));
+                               $$->push_back(new Variable(BType::UNKNOWN, *$1, false, $3));
                              }
-          | IDENT LBRACKET Exp RBRACKET ASSIGN LCURLY DimenList RCURLY {
+          | IDENT DimenList ASSIGN InitVals {
                                $$ = new Variable::List();
-                               $$->push_back(new Variable(Variable::BType::UNKNOWN, *$1, false, $3, $7));
+                               $$->push_back(new Array(BType::UNKNOWN, *$1, false, $2, $4));
                               }
           | IDENT { $$ = new Variable::List();
-                    $$->push_back(new Variable(Variable::BType::UNKNOWN, *$1, false));
+                    $$->push_back(new Variable(BType::UNKNOWN, *$1, false));
                   }
-          | IDENT LBRACKET Exp RBRACKET {
+          | IDENT DimenList{
                         $$ = new Variable::List();
-                        $$->push_back(new Variable(Variable::BType::UNKNOWN, *$1, false, $3, nullptr));
+                        $$->push_back(new Array(BType::UNKNOWN, *$1, false, $2));
                       }
           | VarDefList COMMA IDENT ASSIGN Exp {
                               $$ = $1;
-                              $$->push_back(new Variable(Variable::BType::UNKNOWN, *$3, false, $5));
+                              $$->push_back(new Variable(BType::UNKNOWN, *$3, false, $5));
                             }
-          | VarDefList COMMA IDENT LPARENT Exp RPARENT ASSIGN LCURLY DimenList RCURLY {
+          | VarDefList COMMA IDENT DimenList ASSIGN InitVals{
                              $$ = $1; 
-                             $$->push_back(new Variable(Variable::BType::UNKNOWN, *$3, false, $5, $9));
+                             $$->push_back(new Array(BType::UNKNOWN, *$3, false, $4, $6));
                             }
           ;
 %%
