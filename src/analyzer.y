@@ -1,8 +1,9 @@
 %{
 #include "ast.h"
+
+#include <iostream>
 #include <cstdio>
 #include <vector>
-
 #include <string>
 
 extern int yylex();
@@ -93,9 +94,9 @@ UnaryExp : PrimaryExp { $$ = $1; }
          ;
 // TODO
 PrimaryExp : LPARENT Exp RPARENT { $$ = $2; }
-           | NUMBER { $$ = new Expression($1); }
-           | IDENT  { $$ = new Expression(new Variable(BType::UNKNOWN, $1, false)); }
-           | IDENT DimenList  { $$ = new Expression(new Array(BType::UNKNOWN, $1, false, $2)); }
+           | NUMBER { $$ = new Expression($1); delete $1; }
+           | IDENT  { $$ = new Expression(new Variable(BType::UNKNOWN, $1, false)); delete $1; }
+           | IDENT DimenList  { $$ = new Expression(new Array(BType::UNKNOWN, $1, false, $2)); delete $1; }
            ;
 
 // 3+4, 4*3, 2, ...
@@ -153,26 +154,38 @@ InitVals : LCURLY RCURLY              { $$ = new Array::InitValContainer(); }
 // a = 10, b[10][3]... = {...}, ...
 VarDefList: IDENT ASSIGN Exp                   { $$ = new Variable::List();
                                                  $$->push_back(new Variable(BType::UNKNOWN, $1, false, $3));
+                                                 delete $1;
                                                }
           | IDENT DimenList ASSIGN InitVals    { $$ = new Variable::List();
                                                  $$->push_back(new Array(BType::UNKNOWN, $1, false, $2, $4));
+                                                 delete $1;
                                                }
           | IDENT                              { $$ = new Variable::List();
                                                  $$->push_back(new Variable(BType::UNKNOWN, $1, false));
+                                                 delete $1;
                                                }
           | IDENT DimenList                    { $$ = new Variable::List();
                                                  $$->push_back(new Array(BType::UNKNOWN, $1, false, $2));
+                                                 delete $1;
                                                }
           | VarDefList COMMA IDENT ASSIGN Exp  { $$ = $1;
                                                  $$->push_back(new Variable(BType::UNKNOWN, $3, false, $5));
+                                                 delete $3;
                                                }
           | VarDefList COMMA IDENT DimenList ASSIGN InitVals 
                       { 
                         $$ = $1; 
                         $$->push_back(new Array(BType::UNKNOWN, $3, false, $4, $6));
+                        delete $3;
                       } 
           ;
 %%
 int main () {
   yyparse();
+  for(VarDeclStmt* stmt: vardecl){
+    for(Variable* var : stmt->vars()){
+      var->internal_print();
+    }
+    std::cout << std::endl;
+  }
 }

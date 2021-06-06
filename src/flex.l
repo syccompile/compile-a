@@ -9,7 +9,9 @@
 
 %%
 
-"int"       { return INT;}
+"int"       { return INT; }
+"void"      { return VOID; }
+"const"     { return CONST; }
 [0-9]*      { yylval.string = new std::string(yytext); return NUMBER; }
 "0x"[0-9A-Fa-f]+  { yylval.string = new std::string(yytext); return NUMBER; }
 [a-zA-Z_][a-zA-Z0-9_]*      { yylval.string = (new std::string(yytext)); return IDENT;}

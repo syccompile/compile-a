@@ -11,14 +11,12 @@ Expression::Expression(string *number)
     : op_(Op::NUM), sub_exp1_(nullptr), sub_exp2_(nullptr), evaluable_(true),
       number_(*number), var_(nullptr), func_name_(),
       func_params_(nullptr) {
-        delete number;
 }
 
 Expression::Expression(string *function, vector<Expression *> *params)
     : op_(Op::CALL), sub_exp1_(nullptr), sub_exp2_(nullptr), evaluable_(false),
       number_(), var_(nullptr), func_name_(*function),
       func_params_(params) {
-        delete function;
 }
 
 Expression::Expression(Op op, Expression *lhs, Expression *rhs)
@@ -46,7 +44,6 @@ Expression::~Expression() {
 Variable::Variable(BType type, string *name, bool immutable)
     : type_(type), name_(*name), immutable_(immutable), initialized_(false),
       initval_(nullptr) {
-        delete name;
       }
 
 Variable::Variable(BType type, string *name, bool immutable,
@@ -67,14 +64,15 @@ Array::InitValContainer::~InitValContainer() {
 }
 
 Array::Array(BType type, string *name, bool immutable, Expression::List *size)
-    : Variable(type, name, immutable), size_(size), container_(nullptr) {
-      delete name;
+    : Variable(type, name, immutable), dimens_(size), container_(nullptr) {
     }
 
 Array::Array(BType type, string* name, bool immutable, Expression::List *size, InitVal* container)
-    : Variable(type, name, immutable), size_(size), container_(dynamic_cast<InitValContainer*>(container)) {}
+    : Variable(type, name, immutable), dimens_(size), container_(dynamic_cast<InitValContainer*>(container)) {
+      initialized_ = true;
+    }
 
 Array::~Array() {
-  delete size_;
+  delete dimens_;
   delete container_;
 }
