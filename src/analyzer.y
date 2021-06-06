@@ -85,7 +85,7 @@ MulExp : UnaryExp { $$ = $1;}
        | MulExp DIV UnaryExp { $$ = new Expression(Expression::Op::DIV, $1, $3); }
        | MulExp MOD UnaryExp { $$ = new Expression(Expression::Op::MOD, $1, $3); }
 
-// TODO
+// TODO func call
 UnaryExp : PrimaryExp { $$ = $1; }
          | ADD UnaryExp { $$ = new Expression(Expression::Op::ADD, $2); }
          | SUB UnaryExp { $$ = new Expression(Expression::Op::SUB, $2); }
@@ -93,8 +93,9 @@ UnaryExp : PrimaryExp { $$ = $1; }
          ;
 // TODO
 PrimaryExp : LPARENT Exp RPARENT { $$ = $2; }
-           | NUMBER { $$ = new Expression(std::move(*$1)); }
-           | IDENT DimenList  {  }
+           | NUMBER { $$ = new Expression($1); }
+           | IDENT  { $$ = new Expression(new Variable(BType::UNKNOWN, $1, false)); }
+           | IDENT DimenList  { $$ = new Expression(new Array(BType::UNKNOWN, $1, false, $2)); }
            ;
 
 // 3+4, 4*3, 2, ...
@@ -151,24 +152,24 @@ InitVals : LCURLY RCURLY              { $$ = new Array::InitValContainer(); }
 
 // a = 10, b[10][3]... = {...}, ...
 VarDefList: IDENT ASSIGN Exp                   { $$ = new Variable::List();
-                                                 $$->push_back(new Variable(BType::UNKNOWN, std::move(*$1), false, $3));
+                                                 $$->push_back(new Variable(BType::UNKNOWN, $1, false, $3));
                                                }
           | IDENT DimenList ASSIGN InitVals    { $$ = new Variable::List();
-                                                 $$->push_back(new Array(BType::UNKNOWN, std::move(*$1), false, $2, $4));
+                                                 $$->push_back(new Array(BType::UNKNOWN, $1, false, $2, $4));
                                                }
           | IDENT                              { $$ = new Variable::List();
-                                                 $$->push_back(new Variable(BType::UNKNOWN, std::move(*$1), false));
+                                                 $$->push_back(new Variable(BType::UNKNOWN, $1, false));
                                                }
           | IDENT DimenList                    { $$ = new Variable::List();
-                                                 $$->push_back(new Array(BType::UNKNOWN, std::move(*$1), false, $2));
+                                                 $$->push_back(new Array(BType::UNKNOWN, $1, false, $2));
                                                }
           | VarDefList COMMA IDENT ASSIGN Exp  { $$ = $1;
-                                                 $$->push_back(new Variable(BType::UNKNOWN, std::move(*$3), false, $5));
+                                                 $$->push_back(new Variable(BType::UNKNOWN, $3, false, $5));
                                                }
           | VarDefList COMMA IDENT DimenList ASSIGN InitVals 
                       { 
                         $$ = $1; 
-                        $$->push_back(new Array(BType::UNKNOWN, std::move(*$3), false, $4, $6));
+                        $$->push_back(new Array(BType::UNKNOWN, $3, false, $4, $6));
                       } 
           ;
 %%

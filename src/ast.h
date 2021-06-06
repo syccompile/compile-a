@@ -42,8 +42,8 @@ public:
     NIL   //  NULL
   };
   Expression(Variable* var);
-  Expression(string&& number);
-  Expression(string&& function, vector<Expression *> *params);
+  Expression(string* number);
+  Expression(string* function, vector<Expression *> *params);
   Expression(Op, Expression *, Expression *);
   Expression(Op, Expression *);
   ~Expression();
@@ -65,8 +65,8 @@ class Variable {
 public:
   using List = vector<Variable *>;
 
-  Variable(BType type, string&& name, bool immutable);
-  Variable(BType type, string&& name, bool immutable,
+  Variable(BType type, string* name, bool immutable);
+  Variable(BType type, string* name, bool immutable,
            Expression *initval);
   virtual ~Variable();
   virtual bool is_array() { return false; }
@@ -106,8 +106,8 @@ public:
     private:
       vector<InitVal*> initval_container_;
   };
-  Array(BType type, string&& name, bool immutable, Expression::List *size);
-  Array(BType type, string&& name, bool immutable, Expression::List *size, InitVal* container);
+  Array(BType type, string* name, bool immutable, Expression::List *size);
+  Array(BType type, string* name, bool immutable, Expression::List *size, InitVal* container);
   ~Array();
   virtual bool is_array ()override { return true; }
 
@@ -158,7 +158,7 @@ public:
     vector<Variable> params_;
   };
 
-  Function(RetType ret_type, string name, FuncParams params);
+  Function(RetType ret_type, string* name, FuncParams params);
 
   void push_back(Stmt *stmt) { stmts_.push_back(stmt); }
 
