@@ -20,7 +20,7 @@ std::vector<Function*> funcs;
   Variable * var;
   Variable::List * varlist;
   BType btype;
-  Array::InitVals* initvals;
+  Array::InitVal* initval;
   Array* array;
   Stmt* stmt;
   VarDeclStmt * vardeclstmt;
@@ -35,7 +35,7 @@ std::vector<Function*> funcs;
 }
 
 %token <token> LBRACKET RBRACKET LPARENT RPARENT LCURLY RCURLY
-%token <token> INT CONST SEMI COMMA ASSIGN
+%token <token> INT VOID CONST SEMI COMMA ASSIGN
 %token <string> NUMBER
 %token <token> ADD SUB MUL DIV MOD NOT
 %token <string> IDENT
@@ -45,7 +45,7 @@ std::vector<Function*> funcs;
 %type <vardeclstmt> VarDecl
 %type <var> VarDef
 %type <varlist> VarDefList
-%type <initvals> InitVals InitValsList
+%type <initval> InitVals InitValsList
 %type <func> FuncDef
 %type <fparams> FuncParams
 %type <blockstmt> Block
@@ -71,7 +71,9 @@ CompUnit: VarDecl { vardecl.push_back($1); }
         //| CompUnit FuncDef { vardecl.push_back($2); }
         ;
 
+// int 
 BType : INT { $$ =BType::INT; }
+      | VOID { $$ = BType::VOID; }
       ;
 
 Exp  :  MulExp { $$ = $1; }
@@ -91,9 +93,11 @@ UnaryExp : PrimaryExp { $$ = $1; }
          ;
 // TODO
 PrimaryExp : LPARENT Exp RPARENT { $$ = $2; }
-           | NUMBER { $$ = new Expression(*$1); }
+           | NUMBER { $$ = new Expression(std::move(*$1)); }
+           | IDENT DimenList  {  }
            ;
 
+// 3+4, 4*3, 2, ...
 ExpList : Exp  { $$ = new Expression::List();
                  $$->push_back($1);
                }
@@ -102,6 +106,7 @@ ExpList : Exp  { $$ = new Expression::List();
                             }
         ;
 
+// [const] int a = 21, b[10]... = {...}, ... ;
 VarDecl: CONST BType VarDefList SEMI { $$ = new VarDeclStmt();  
                                       for(Variable * var : *$3){
                                         var->setImmutable(true);
@@ -117,6 +122,7 @@ VarDecl: CONST BType VarDefList SEMI { $$ = new VarDeclStmt();
                                 }
                                }
        ; 
+// [4+4][2*4][6&3]...
 DimenList: LBRACKET Exp RBRACKET { $$ = new Expression::List(); 
                                    $$->push_back($2);
                                   }
@@ -124,36 +130,46 @@ DimenList: LBRACKET Exp RBRACKET { $$ = new Expression::List();
                                               $$ = $1;
                                              }
           ;
-InitValsList : InitVals { $$ = new Array::InitVals($1); }
-             | InitValsList COMMA InitVals { $$ = $1; $$->push_back($3); }
+// 4,5,{...},4,5,{...},5...
+InitValsList : Exp    { $$ = new Array::InitValContainer();
+                        dynamic_cast<Array::InitValContainer*>($$)->push_back(new Array::InitValExp($1)); 
+                      }
+             | InitVals                     { $$ = $1;}
+             | InitValsList COMMA Exp       
+                       { 
+                         $$ = $1; 
+                         dynamic_cast<Array::InitValContainer*>($$)->push_back(new Array::InitValExp($3)); 
+                       }
+             | InitValsList COMMA InitVals  { $$ = $1; 
+                           dynamic_cast<Array::InitValContainer*>($$)->push_back($3); 
+                          }
              ;
-// FIX
-InitVals : LCURLY ExpList RCURLY { $$ = new Array::InitVals($2); }
+// {...}
+InitVals : LCURLY RCURLY              { $$ = new Array::InitValContainer(); }
          | LCURLY InitValsList RCURLY { $$ = $2; }
          ;
 
-VarDefList: IDENT ASSIGN Exp { $$ = new Variable::List();
-                               $$->push_back(new Variable(BType::UNKNOWN, *$1, false, $3));
-                             }
-          | IDENT DimenList ASSIGN InitVals {
-                               $$ = new Variable::List();
-                               $$->push_back(new Array(BType::UNKNOWN, *$1, false, $2, $4));
-                              }
-          | IDENT { $$ = new Variable::List();
-                    $$->push_back(new Variable(BType::UNKNOWN, *$1, false));
-                  }
-          | IDENT DimenList{
-                        $$ = new Variable::List();
-                        $$->push_back(new Array(BType::UNKNOWN, *$1, false, $2));
-                      }
-          | VarDefList COMMA IDENT ASSIGN Exp {
-                              $$ = $1;
-                              $$->push_back(new Variable(BType::UNKNOWN, *$3, false, $5));
-                            }
-          | VarDefList COMMA IDENT DimenList ASSIGN InitVals{
-                             $$ = $1; 
-                             $$->push_back(new Array(BType::UNKNOWN, *$3, false, $4, $6));
-                            }
+// a = 10, b[10][3]... = {...}, ...
+VarDefList: IDENT ASSIGN Exp                   { $$ = new Variable::List();
+                                                 $$->push_back(new Variable(BType::UNKNOWN, std::move(*$1), false, $3));
+                                               }
+          | IDENT DimenList ASSIGN InitVals    { $$ = new Variable::List();
+                                                 $$->push_back(new Array(BType::UNKNOWN, std::move(*$1), false, $2, $4));
+                                               }
+          | IDENT                              { $$ = new Variable::List();
+                                                 $$->push_back(new Variable(BType::UNKNOWN, std::move(*$1), false));
+                                               }
+          | IDENT DimenList                    { $$ = new Variable::List();
+                                                 $$->push_back(new Array(BType::UNKNOWN, std::move(*$1), false, $2));
+                                               }
+          | VarDefList COMMA IDENT ASSIGN Exp  { $$ = $1;
+                                                 $$->push_back(new Variable(BType::UNKNOWN, std::move(*$3), false, $5));
+                                               }
+          | VarDefList COMMA IDENT DimenList ASSIGN InitVals 
+                      { 
+                        $$ = $1; 
+                        $$->push_back(new Array(BType::UNKNOWN, std::move(*$3), false, $4, $6));
+                      } 
           ;
 %%
 int main () {
