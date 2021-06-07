@@ -94,8 +94,8 @@ UnaryExp : PrimaryExp { $$ = $1; }
          | ADD UnaryExp { $$ = new Expression(Expression::Op::ADD, $2); }
          | SUB UnaryExp { $$ = new Expression(Expression::Op::SUB, $2); }
          | NOT UnaryExp { $$ = new Expression(Expression::Op::NOT, $2); }
-         | IDENT LPARENT ExpList RPARENT { $$ = new Expression($1, $3); }
-         | IDENT LPARENT RPARENT { $$ = new Expression($1, nullptr); }
+         | IDENT LPARENT ExpList RPARENT { $$ = new Expression($1, $3); delete $1; }
+         | IDENT LPARENT RPARENT { $$ = new Expression($1, nullptr); delete $1; }
          ;
 PrimaryExp : LPARENT Exp RPARENT { $$ = $2; }
            | NUMBER { $$ = new Expression($1); delete $1; }
@@ -215,8 +215,8 @@ Stmt :  SEMI    { $$ = new Stmt(); }
      |  CONTINUE SEMI  { $$ = new ContinueStmt(); }
      |  BREAK SEMI  { $$ = new BreakStmt(); }
      |  VarDecl { $$ = $1; }
-     |  IDENT ASSIGN Exp  { $$ = new AssignmentStmt($1, nullptr, $3); }
-     |  IDENT DimenList ASSIGN Exp { $$ = new AssignmentStmt($1, $2, $4); }
+     |  IDENT ASSIGN Exp  { $$ = new AssignmentStmt($1, nullptr, $3); delete $1; }
+     |  IDENT DimenList ASSIGN Exp { $$ = new AssignmentStmt($1, $2, $4); delete $1; }
      |  IF LPARENT LOrExp RPARENT BlockStmt { $$ = new IfStmt($3, $5); }
      |  IF LPARENT LOrExp RPARENT BlockStmt ELSE BlockStmt { $$ = new IfStmt($3, $5, $7); }
      |  WHILE LPARENT LOrExp RPARENT BlockStmt { $$ = new WhileStmt($3, $5); }
@@ -246,8 +246,8 @@ FuncFParams : BType IDENT             { $$ = new FunctionDecl::FParam::List();
                                                       }
             ;
 // void func(int a, int b[][10], ...) {...}
-FuncDef : BType IDENT LPARENT FuncFParams RPARENT BlockStmt  { $$ = new FunctionDecl($1, $2, $4, $6); }
-        | BType IDENT LPARENT RPARENT BlockStmt          { $$ = new FunctionDecl($1, $2, nullptr, $5); }
+FuncDef : BType IDENT LPARENT FuncFParams RPARENT BlockStmt  { $$ = new FunctionDecl($1, $2, $4, $6); delete $2; }
+        | BType IDENT LPARENT RPARENT BlockStmt          { $$ = new FunctionDecl($1, $2, nullptr, $5); delete $2; }
         ;
 %%
 int main () {
