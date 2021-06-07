@@ -76,3 +76,59 @@ Array::~Array() {
   delete dimens_;
   delete container_;
 }
+VarDeclStmt::VarDeclStmt() {}
+VarDeclStmt::~VarDeclStmt() {
+  for (Variable *var : vars_) {
+    delete var;
+  }
+}
+
+BlockStmt::BlockStmt() {}
+BlockStmt::~BlockStmt() {
+  for (Stmt *stmt : stmts_) {
+    delete stmt;
+  }
+}
+
+IfStmt::IfStmt(Expression *condition, BlockStmt *yes, BlockStmt *no)
+  : condition_(condition), yes_(yes), no_(no){
+}
+IfStmt::IfStmt(Expression *condition, BlockStmt *yes)
+    : IfStmt(condition, yes, nullptr) {}
+
+IfStmt::~IfStmt() {
+  delete condition_;
+  delete yes_;
+  delete no_;
+}
+
+WhileStmt::WhileStmt(Expression *condition, BlockStmt *body)
+    : condition_(condition), body_(body) {}
+WhileStmt::~WhileStmt() {
+  delete condition_;
+  delete body_;
+}
+
+ExpStmt::ExpStmt(Expression *exp) : exp_(exp) {}
+ExpStmt::~ExpStmt() { delete exp_; }
+
+ReturnStmt::ReturnStmt(Expression *ret) : ret_exp_(ret) {}
+ReturnStmt::~ReturnStmt() { delete ret_exp_; }
+
+AssignmentStmt::AssignmentStmt(string *name, Expression::List *dimens,
+                               Expression *rval)
+    : name_(*name), dimens_(dimens), rval_(rval) {}
+AssignmentStmt::~AssignmentStmt() {
+  delete dimens_;
+  delete rval_;
+}
+
+FunctionDecl::FunctionDecl(BType ret_type, string *name, FParam::List *params,
+                   BlockStmt *block)
+    : ret_type_(ret_type), func_name_(*name), params_(params), body_(block) {
+}
+
+FunctionDecl::~FunctionDecl() {
+  delete params_;
+  delete body_;
+}

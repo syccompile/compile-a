@@ -126,53 +126,121 @@ private:
   InitValContainer *container_;
 };
 
-class Stmt {};
-class VarDeclStmt : public Stmt {
+class Stmt : public Debug {
 public:
-  VarDeclStmt() {}
+  using List = vector<Stmt*>;
+  virtual ~Stmt() {}
+  virtual void set_lineno(int lineno) { lineno_ = lineno; }
+protected:
+  int lineno_;
+};
+
+class VarDeclStmt : public Stmt{
+public:
+  VarDeclStmt();
+  ~VarDeclStmt();
   void push_back(Variable *var) { vars_.push_back(var); }
-  vector<Variable*> vars() { return vars_; }
+  virtual void internal_print() override;
 private:
   vector<Variable *> vars_;
 };
-class IfStmt : public Stmt {};
-class WhileStmt : public Stmt {
-public:
-  Expression *condition_;
-  vector<Stmt *> stmts_;
+
+class ExpStmt : public Stmt {
+  public:
+    ExpStmt(Expression* edp);
+    ~ExpStmt();
+  private:
+    Expression* exp_;
 };
-class BreakStmt : public Stmt {};
-class ReturnStmt : public Stmt {
-public:
-  Expression *ret_;
-};
-class AssignmentStmt : public Stmt {};
+
 class BlockStmt : public Stmt {
 public:
-  void push_back(Stmt *stmt) { stmt_.push_back(stmt); }
-
+  BlockStmt();
+  ~BlockStmt();
+  void push_back(Stmt *stmt) { stmts_.push_back(stmt); }
+  void push_back(Stmt::List * list) {
+    for (Stmt *stmt : *list) {
+      stmts_.push_back(stmt);
+    }
+  }
+  virtual void internal_print() override;
 private:
-  vector<Stmt *> stmt_;
+  vector<Stmt *> stmts_;
+};
+
+class IfStmt : public Stmt {
+public:
+  IfStmt(Expression *condition, BlockStmt *yes, BlockStmt *no);
+  IfStmt(Expression *condition, BlockStmt *yes);
+  ~IfStmt();
+  virtual void internal_print() override;
+private:
+  Expression* condition_;
+  BlockStmt* yes_;
+  BlockStmt* no_;
+};
+
+class WhileStmt : public Stmt {
+public:
+  WhileStmt(Expression *condition, BlockStmt* body);
+  ~WhileStmt();
+  virtual void internal_print() override;
+private:
+  Expression *condition_;
+  BlockStmt *body_;
+};
+class ReturnStmt : public Stmt {
+public:
+  ReturnStmt(Expression *ret);
+  ~ReturnStmt();
+  virtual void internal_print() override;
+private:
+  Expression *ret_exp_;
+};
+
+class BreakStmt : public Stmt {
+public:
+  virtual void internal_print() override;
+};
+
+class ContinueStmt : public Stmt {
+public:
+  virtual void internal_print() override;
+};
+
+class AssignmentStmt : public Stmt {
+public:
+  AssignmentStmt(string *name, Expression::List *dimens, Expression *rval);
+  ~AssignmentStmt();
+  virtual void internal_print() override;
+private:
+  string name_;
+  Expression::List *dimens_;
+  Expression* rval_;
 };
 
 /* Function */
-class Function {
+class FunctionDecl : public Debug{
 public:
-  enum class RetType { INT, VOID };
-  class FuncParams {
+  class FParam {
+    friend class FunctionDecl;
   public:
-    FuncParams();
-    void push_back(Variable param) { params_.push_back(param); }
-
+    using List = vector<FParam*> ;
+    FParam(BType type, string *name, Expression::List *dimens)
+        : type_(type), name_(*name), dimens_(dimens) {}
+    ~FParam() { delete dimens_; }
   private:
-    vector<Variable> params_;
+      BType type_;
+      string name_;
+      Expression::List* dimens_;
   };
-
-  Function(RetType ret_type, string *name, FuncParams params);
-
-  void push_back(Stmt *stmt) { stmts_.push_back(stmt); }
-
+  FunctionDecl(BType ret_type, string *name, FParam::List *params,
+           BlockStmt *block);
+  ~FunctionDecl();
+  virtual void internal_print() override;
 private:
-  vector<Stmt *> stmts_;
-  FuncParams params_;
+  BType ret_type_;
+  string func_name_;
+  FParam::List* params_;
+  BlockStmt* body_;
 };

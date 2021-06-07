@@ -1,32 +1,33 @@
 CXX = clang++
-CXXFLAGS = -std=c++14
+CXXFLAGS = -std=c++11 -g
 BISON = bison
 FLEX = flex
 
-TARGET = test
+TARGET = output
 
-AST_SOURCE = ast.cc
+CXX_SOURCE = analyzer.cc flex.cc debug.cc ast.cc
+OBJS = analyzer.o ast.o debug.o flex.o
 
 BISON_SOURCE = analyzer.y
+BISON_FLAG  = -Wcounterexamples
 BISON_OUT_CPP = analyzer.cc
 BISON_OUTPUT = analyzer.cc analyzer.hh
 FLEX_SOURCE = flex.l
 FLEX_OUTPUT = flex.cc
 
-TARGET : BISON_OUTPUT FLEX_OUTPUT 
-	$(CXX) $(CXXFLAGS) $(BISON_OUT_CPP) $(FLEX_OUTPUT) $(AST_SOURCE) debug.cc -o $(TARGET) -g
+$(TARGET) : $(OBJS)
+	$(CXX) $^ -o $@
+analyzer.cc : $(BISON_SOURCE)
+	$(BISON) -d $^ -o $@
+flex.cc : $(FLEX_SOURCE)
+	$(FLEX) -o $@ $^
+%.o : %.cc
+	$(CXX) -c $^ -o $@
 
-BISON_OUTPUT : 
-	$(BISON) -d $(BISON_SOURCE) -o $(BISON_OUT_CPP)
-
-FLEX_OUTPUT : 
-	$(FLEX)  -o $(FLEX_OUTPUT) $(FLEX_SOURCE)
-
-test : TARGET
-	./test < test.txt
+.PHONY: test
+test : $(TARGET)
+	./$(TARGET) < test.txt
 
 .PHONY: clean
 clean :
-	rm $(TARGET) $(BISON_OUTPUT) $(FLEX_OUTPUT)
-
-
+	rm $(TARGET) $(BISON_OUTPUT) $(FLEX_OUTPUT) $(OBJS)
