@@ -235,29 +235,31 @@ void FunctionDecl::internal_print() {
       break;
     }
     std::cout << func_name_ << "(";
-    for(FParam* param : *params_){
-      std::cout << blue;
-      switch (param->type_) {
-        case BType::INT:
-          std::cout << "int ";
-          break;
-        case BType::VOID:
-          std::cout << "void ";
-          break;
-        default:
-          break;
+    if(params_){
+      for(FParam* param : *params_){
+        std::cout << blue;
+        switch (param->type_) {
+          case BType::INT:
+            std::cout << "int ";
+            break;
+          case BType::VOID:
+            std::cout << "void ";
+            break;
+          default:
+            break;
+        }
+        std::cout << param->name_;
+        if(!param->dimens_) break;
+        for (Expression *e : *param->dimens_) {
+          std::cout << "[";
+          if(e) e->internal_print();
+          std::cout << "]";
+        }
+        if (*(params_->rbegin()) != param) {
+          std::cout << ", ";
+        }
+        std::cout << normal;
       }
-      std::cout << param->name_;
-      if(!param->dimens_) break;
-      for (Expression *e : *param->dimens_) {
-        std::cout << "[";
-        if(e) e->internal_print();
-        std::cout << "]";
-      }
-      if (*(params_->rbegin()) != param) {
-        std::cout << ", ";
-      }
-      std::cout << normal;
     }
     std::cout << ")" << std::endl;
     body_->internal_print();
