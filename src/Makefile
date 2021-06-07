@@ -5,6 +5,8 @@ FLEX = flex
 
 TARGET = output
 
+TEST_TXT = example.txt
+
 CXX_SOURCE = analyzer.cc flex.cc debug.cc ast.cc
 OBJS = analyzer.o ast.o debug.o flex.o
 
@@ -26,7 +28,7 @@ flex.cc : $(FLEX_SOURCE)
 
 .PHONY: test
 test : $(TARGET)
-	./$(TARGET) < test.txt
+	./$(TARGET) < $(TEST_TXT)
 
 .PHONY: clean
 clean :
