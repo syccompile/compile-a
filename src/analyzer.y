@@ -82,45 +82,45 @@ Exp : AddExp { $$ = $1; }
     ;
 
 AddExp  :  MulExp { $$ = $1; }
-        |  AddExp ADD MulExp { $$ = new Expression(Expression::Op::ADD, $1, $3); }
+        |  AddExp ADD MulExp { $$ = new BinaryExp(Expression::Op::ADD, $1, $3); }
         ;
 
 MulExp : UnaryExp { $$ = $1;}
-       | MulExp MUL UnaryExp { $$ = new Expression(Expression::Op::MUL, $1, $3); }
-       | MulExp DIV UnaryExp { $$ = new Expression(Expression::Op::DIV, $1, $3); }
-       | MulExp MOD UnaryExp { $$ = new Expression(Expression::Op::MOD, $1, $3); }
+       | MulExp MUL UnaryExp { $$ = new BinaryExp(Expression::Op::MUL, $1, $3); }
+       | MulExp DIV UnaryExp { $$ = new BinaryExp(Expression::Op::DIV, $1, $3); }
+       | MulExp MOD UnaryExp { $$ = new BinaryExp(Expression::Op::MOD, $1, $3); }
 
 UnaryExp : PrimaryExp { $$ = $1; }
-         | ADD UnaryExp { $$ = new Expression(Expression::Op::ADD, $2); }
-         | SUB UnaryExp { $$ = new Expression(Expression::Op::SUB, $2); }
-         | NOT UnaryExp { $$ = new Expression(Expression::Op::NOT, $2); }
-         | IDENT LPARENT ExpList RPARENT { $$ = new Expression($1, $3); delete $1; }
-         | IDENT LPARENT RPARENT { $$ = new Expression($1, nullptr); delete $1; }
+         | ADD UnaryExp { $$ = new UnaryExp(Expression::Op::ADD, $2); }
+         | SUB UnaryExp { $$ = new UnaryExp(Expression::Op::SUB, $2); }
+         | NOT UnaryExp { $$ = new UnaryExp(Expression::Op::NOT, $2); }
+         | IDENT LPARENT ExpList RPARENT { $$ = new FuncCallExp($1, $3); delete $1; }
+         | IDENT LPARENT RPARENT { $$ = new FuncCallExp($1, nullptr); delete $1; }
          ;
 PrimaryExp : LPARENT Exp RPARENT { $$ = $2; }
-           | NUMBER { $$ = new Expression($1); delete $1; }
-           | IDENT  { $$ = new Expression(new Variable(BType::UNKNOWN, $1, false)); delete $1; }
-           | IDENT DimenList  { $$ = new Expression(new Array(BType::UNKNOWN, $1, false, $2)); delete $1; }
+           | NUMBER { $$ = new NumberExp($1); delete $1; }
+           | IDENT  { $$ = new VarExp(new Variable(BType::UNKNOWN, $1, false)); delete $1; }
+           | IDENT DimenList  { $$ = new VarExp(new Array(BType::UNKNOWN, $1, false, $2)); delete $1; }
            ;
 // 4<=5
 RelExp : AddExp   { $$ = $1; }
-       | RelExp LE AddExp { $$ = new Expression(Expression::Op::LE, $1, $3); }
-       | RelExp GE AddExp { $$ = new Expression(Expression::Op::GE, $1, $3); }
-       | RelExp LT AddExp { $$ = new Expression(Expression::Op::LT, $1, $3); }
-       | RelExp GT AddExp { $$ = new Expression(Expression::Op::GT, $1, $3); }
+       | RelExp LE AddExp { $$ = new BinaryExp(Expression::Op::LE, $1, $3); }
+       | RelExp GE AddExp { $$ = new BinaryExp(Expression::Op::GE, $1, $3); }
+       | RelExp LT AddExp { $$ = new BinaryExp(Expression::Op::LT, $1, $3); }
+       | RelExp GT AddExp { $$ = new BinaryExp(Expression::Op::GT, $1, $3); }
        ;
 // 4==5
 EqExp : RelExp { $$ = $1; }
-      | EqExp EQ RelExp { $$ = new Expression(Expression::Op::EQ, $1, $3); }
-      | EqExp NEQ RelExp { $$ = new Expression(Expression::Op::NEQ, $1, $3); }
+      | EqExp EQ RelExp { $$ = new BinaryExp(Expression::Op::EQ, $1, $3); }
+      | EqExp NEQ RelExp { $$ = new BinaryExp(Expression::Op::NEQ, $1, $3); }
       ;
 // 3&&4
 LAndExp : EqExp { $$ = $1; }
-        | LAndExp AND EqExp { $$ = new Expression(Expression::Op::AND, $1, $3); }
+        | LAndExp AND EqExp { $$ = new BinaryExp(Expression::Op::AND, $1, $3); }
         ;
 // 3||4
 LOrExp : LAndExp { $$ = $1; }
-       | LOrExp OR LAndExp { $$ = new Expression(Expression::Op::OR, $1, $3); }
+       | LOrExp OR LAndExp { $$ = new BinaryExp(Expression::Op::OR, $1, $3); }
        ;
 // 3+4, 4*3, 2, ...
 ExpList : Exp  { $$ = new Expression::List();

@@ -39,28 +39,69 @@ public:
     DIV,   //  '/'
     MOD,   //  '%'
     NUM,   // number
-    IDENT, // variable referrence
+    VAR, // variable referrence
     CALL,  //  function call
     NIL    //  NULL
   };
-  Expression(Variable *var);
-  Expression(string *number);
-  Expression(string *function, vector<Expression *> *params);
-  Expression(Op, Expression *, Expression *);
-  Expression(Op, Expression *);
-  ~Expression();
+  Expression(Op op, bool evaluable) : op_(op), evaluable_(evaluable) {}
+  virtual ~Expression() {}
+  bool evaluable() { return evaluable_; }
+  virtual void internal_print() override {}
 
-  virtual void internal_print() override;
+protected:
+  void set_evaluable(bool evaluable) { evaluable_ = evaluable; }
 
-private:
   Op op_;
-  Expression *sub_exp1_;
-  Expression *sub_exp2_;
   bool evaluable_;
-  string number_;
-  string func_name_;
-  vector<Expression *> *func_params_;
-  Variable *var_;
+};
+
+class VarExp : public Expression {
+public:
+  VarExp(Variable* var);
+  ~VarExp();
+  virtual void internal_print() override;
+  private:
+    Variable* var_;
+};
+
+class FuncCallExp : public Expression {
+public:
+  FuncCallExp(string *func_name, vector<Expression*> *params);
+  FuncCallExp(string *func_name);
+  ~FuncCallExp();
+  virtual void internal_print() override;
+private:
+  string name_;
+  vector<Expression *> *params_;
+};
+
+class BinaryExp : public Expression {
+public:
+  BinaryExp(Op op, Expression *left, Expression *right);
+  ~BinaryExp();
+  virtual void internal_print() override;
+private: 
+  Expression *left_;
+  Expression *right_;
+};
+
+class UnaryExp : public Expression {
+public:
+  UnaryExp(Op op, Expression* exp);
+  ~UnaryExp();
+  virtual void internal_print() override;
+private:
+  Expression* exp_;
+};
+
+class NumberExp : public Expression {
+public:
+  NumberExp(string* str);
+  ~NumberExp();
+  virtual void internal_print() override;
+private:
+  string string_;
+  int value_;
 };
 
 enum class BType { INT, VOID, UNKNOWN };
@@ -240,7 +281,7 @@ public:
   virtual void internal_print() override;
 private:
   BType ret_type_;
-  string func_name_;
+  string name_;
   FParam::List* params_;
   BlockStmt* body_;
 };
