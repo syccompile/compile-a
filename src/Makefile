@@ -3,19 +3,19 @@ CXXFLAGS = -std=c++11 -g
 BISON = bison
 FLEX = flex
 
-TARGET = src/output
+TARGET = output
 
-TEST_TXT = src/example.txt
+TEST_TXT = example.txt
 
-CXX_SOURCE = src/analyzer.cc src/flex.cc src/debug.cc src/ast.cc
-OBJS = src/analyzer.o src/ast.o src/debug.o src/flex.o
+CXX_SOURCE = analyzer.cc flex.cc debug.cc ast.cc
+OBJS = analyzer.o ast.o debug.o flex.o
 
-BISON_SOURCE = src/analyzer.y
+BISON_SOURCE = analyzer.y
 BISON_FLAG  = -Wcounterexamples
 BISON_OUT_CPP = analyzer.cc
-BISON_OUTPUT = src/analyzer.cc src/analyzer.hh
-FLEX_SOURCE = src/flex.l
-FLEX_OUTPUT = src/flex.cc
+BISON_OUTPUT = analyzer.cc analyzer.hh
+FLEX_SOURCE = flex.l
+FLEX_OUTPUT = flex.cc
 
 $(TARGET) : $(OBJS)
 	$(CXX) $^ -o $@
@@ -28,11 +28,7 @@ flex.cc : $(FLEX_SOURCE)
 
 .PHONY: test
 test : $(TARGET)
-	$(TARGET) < $(TEST_TXT)
-
-.PHONY: archive
-archive : clean
-	cd .. && tar -cf compile.tar compile
+	./$(TARGET) < $(TEST_TXT)
 
 .PHONY: clean
 clean :
