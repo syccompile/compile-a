@@ -61,10 +61,10 @@ std::vector<FunctionDecl*> funcs;
 %type <initval>     InitVals InitValsList
 
 %type <stmt>        Stmt
-%type <stmtlist>    StmtList
 %type <funcdecl>    FuncDef
 %type <funcfparams> FuncFParams
 %type <blockstmt>   BlockStmt
+%type <blockstmt>   BlockItems
 
 %start CompUnit
 
@@ -216,18 +216,17 @@ Stmt :  SEMI    { $$ = new Stmt(); }
      |  CONTINUE SEMI  { $$ = new ContinueStmt(); }
      |  BREAK SEMI  { $$ = new BreakStmt(); }
      |  VarDecl { $$ = $1; }
-     |  IDENT ASSIGN Exp  { $$ = new AssignmentStmt($1, nullptr, $3); delete $1; }
-     |  IDENT DimenList ASSIGN Exp { $$ = new AssignmentStmt($1, $2, $4); delete $1; }
+     |  IDENT ASSIGN Exp SEMI{ $$ = new AssignmentStmt($1, nullptr, $3); delete $1; }
+     |  IDENT DimenList ASSIGN Exp SEMI { $$ = new AssignmentStmt($1, $2, $4); delete $1; }
      |  IF LPARENT LOrExp RPARENT BlockStmt { $$ = new IfStmt($3, $5); }
      |  IF LPARENT LOrExp RPARENT BlockStmt ELSE BlockStmt { $$ = new IfStmt($3, $5, $7); }
      |  WHILE LPARENT LOrExp RPARENT BlockStmt { $$ = new WhileStmt($3, $5); }
      ;
-// FIX 有一个Shift/Reduce 错误
-StmtList : Stmt { $$ = new Stmt::List(); $$->push_back($1); }
-         | StmtList Stmt { $$ = $1; $$->push_back($2); }
-         ;
+BlockItems : Stmt { $$ = new BlockStmt(); $$->push_back($1); }
+           | BlockItems Stmt { $$ = $1; $$->push_back($2); }
+           ;
 BlockStmt : LCURLY RCURLY { $$ = new BlockStmt(); }
-          | LCURLY StmtList RCURLY { $$ = new BlockStmt(); $$->push_back($2); }
+          | LCURLY BlockItems RCURLY { $$ = $2; }
           ;
 // int a, int b[][10], ...
 FuncFParams : BType IDENT             { $$ = new FunctionDecl::FParam::List(); 

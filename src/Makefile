@@ -20,7 +20,7 @@ FLEX_OUTPUT = flex.cc
 $(TARGET) : $(OBJS)
 	$(CXX) $^ -o $@
 analyzer.cc : $(BISON_SOURCE)
-	$(BISON) -d $^ -o $@
+	$(BISON) -d $^ -o $@ $(BISON_FLAG)
 flex.cc : $(FLEX_SOURCE)
 	$(FLEX) -o $@ $^
 %.o : %.cc
