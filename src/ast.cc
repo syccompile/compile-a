@@ -68,7 +68,7 @@ Array::InitValContainer::~InitValContainer() {
 }
 
 Array::Array(BType type, string *name, bool immutable, Expression::List *size)
-    : Variable(type, name, immutable), dimens_(size), container_(nullptr) {
+    : Variable(type, name, immutable), dimens_(size), initval_container_(nullptr) {
   assert(name);
   assert(size);
 }
@@ -77,7 +77,7 @@ Array::Array(BType type, string *name, bool immutable, Expression::List *size,
              InitVal *container)
     : Variable(type, name, immutable), dimens_(size),
 
-      container_(dynamic_cast<InitValContainer *>(container)) {
+      initval_container_(dynamic_cast<InitValContainer *>(container)) {
   assert(size);
   assert(container);
   initialized_ = true;
@@ -85,7 +85,7 @@ Array::Array(BType type, string *name, bool immutable, Expression::List *size,
 
 Array::~Array() {
   delete dimens_;
-  delete container_;
+  delete initval_container_;
 }
 VarDeclStmt::VarDeclStmt() {}
 VarDeclStmt::~VarDeclStmt() {

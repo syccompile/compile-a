@@ -199,7 +199,7 @@ void Array::internal_print() {
   }
   if (initialized_) {
     printer << white << " = ";
-    container_->internal_print();
+    initval_container_->internal_print();
   }
 }
 

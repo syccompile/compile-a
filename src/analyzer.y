@@ -13,7 +13,7 @@ void yyerror(const char* msg) { printf("line %d %s: yytext is %s\n", yylineno, m
 std::vector<VarDeclStmt*> vardecl;
 std::vector<FunctionDecl*> funcs;
 %}
-%left SEMI
+
 %union {
   int token;
   BType btype;
@@ -97,19 +97,20 @@ UnaryExp : PrimaryExp { $$ = $1; }
          | IDENT LPARENT ExpList RPARENT { $$ = new FuncCallExp($1, $3); delete $1; }
          | IDENT LPARENT RPARENT { $$ = new FuncCallExp($1, nullptr); delete $1; }
          ;
+// 343 / 0xff / 03327 / a / a[10][1] / (...)
 PrimaryExp : LPARENT Exp RPARENT { $$ = $2; }
            | NUMBER { $$ = new NumberExp($1); delete $1; }
            | IDENT  { $$ = new VarExp(new Variable(BType::UNKNOWN, $1, false)); delete $1; }
            | IDENT DimenList  { $$ = new VarExp(new Array(BType::UNKNOWN, $1, false, $2)); delete $1; }
            ;
-// 4<=5
+// 4<=5 / 4>=5 / 4<5 / 4>5
 RelExp : AddExp   { $$ = $1; }
        | RelExp LE AddExp { $$ = new BinaryExp(Expression::Op::LE, $1, $3); }
        | RelExp GE AddExp { $$ = new BinaryExp(Expression::Op::GE, $1, $3); }
        | RelExp LT AddExp { $$ = new BinaryExp(Expression::Op::LT, $1, $3); }
        | RelExp GT AddExp { $$ = new BinaryExp(Expression::Op::GT, $1, $3); }
        ;
-// 4==5
+// 4==5 / 4!=5
 EqExp : RelExp { $$ = $1; }
       | EqExp EQ RelExp { $$ = new BinaryExp(Expression::Op::EQ, $1, $3); }
       | EqExp NEQ RelExp { $$ = new BinaryExp(Expression::Op::NEQ, $1, $3); }
@@ -134,15 +135,15 @@ ExpList : Exp  { $$ = new Expression::List();
 // [const] int a = 21, b[10]... = {...}, ... ;
 VarDecl: CONST BType VarDefList SEMI { $$ = new VarDeclStmt();  
                                       for(Variable * var : *$3){
-                                        var->setImmutable(true);
-                                        var->setType($2);
+                                        var->set_immutable(true);
+                                        var->set_type($2);
                                         $$->push_back(var);
                                       }
                                    }
        | BType VarDefList SEMI { $$ = new VarDeclStmt();
                                 for(Variable * var : *$2){
-                                        var->setImmutable(false);
-                                        var->setType($1);
+                                        var->set_immutable(false);
+                                        var->set_type($1);
                                         $$->push_back(var);
                                 }
                                }
@@ -221,6 +222,7 @@ Stmt :  SEMI    { $$ = new Stmt(); }
      |  IF LPARENT LOrExp RPARENT BlockStmt ELSE BlockStmt { $$ = new IfStmt($3, $5, $7); }
      |  WHILE LPARENT LOrExp RPARENT BlockStmt { $$ = new WhileStmt($3, $5); }
      ;
+// FIX 有一个Shift/Reduce 错误
 StmtList : Stmt { $$ = new Stmt::List(); $$->push_back($1); }
          | StmtList Stmt { $$ = $1; $$->push_back($2); }
          ;
