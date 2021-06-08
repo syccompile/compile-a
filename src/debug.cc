@@ -5,32 +5,33 @@
 
 class IndentPrinter {
 public:
-    const static char endl  = '\0';
-    IndentPrinter &operator<<(string str) {
-      if(newline_){
-        for (int i = 0; i < level_; ++i) {
-          std::cout << "\t";
-        }
-        newline_ = false;
+  const static char endl = '\0';
+  IndentPrinter &operator<<(string str) {
+    if (newline_) {
+      for (int i = 0; i < level_; ++i) {
+        std::cout << "\t";
       }
-      std::cout << str;
-      return *this;
+      newline_ = false;
     }
-    IndentPrinter &operator<<(char ch) {
-      if (ch == endl) {
-        std::cout << std::endl;
-        newline_ = true;
-      } else {
-        std::cout << ch;
-      }
-      return *this;
+    std::cout << str;
+    return *this;
+  }
+  IndentPrinter &operator<<(char ch) {
+    if (ch == endl) {
+      std::cout << std::endl;
+      newline_ = true;
+    } else {
+      std::cout << ch;
     }
-    void set_level(int level) { level_ = level; }
-    void add_level() { level_++; }
-    void sub_level() { level_--; }
-  private:
-    int level_;
-    bool newline_;
+    return *this;
+  }
+  void set_level(int level) { level_ = level; }
+  void add_level() { level_++; }
+  void sub_level() { level_--; }
+
+private:
+  int level_;
+  bool newline_;
 };
 
 IndentPrinter printer;
@@ -144,7 +145,7 @@ void FuncCallExp::internal_print() {
   if (params_) {
     for (Expression *e : *params_) {
       e->internal_print();
-      if(*(params_->rbegin()) != e){
+      if (*(params_->rbegin()) != e) {
         printer << white << ", ";
       }
     }
@@ -152,28 +153,25 @@ void FuncCallExp::internal_print() {
   printer << white << ")";
 }
 
-void NumberExp::internal_print() {
-  printer << green << string_;
-}
+void NumberExp::internal_print() { printer << green << string_; }
 void Variable::internal_print() {
   if (immutable_) {
     printer << blue << "const ";
   }
   switch (type_) {
   case BType::INT:
-      printer << blue << "int ";
-      break;
+    printer << blue << "int ";
+    break;
   case BType::VOID:
-      printer << blue << "void ";
-      break;
-    default:
-      break;
+    printer << blue << "void ";
+    break;
+  default:
+    break;
   }
   printer << red << name_;
   if (initialized_ && initval_) {
     printer << white << " = ";
     initval_->internal_print();
-
   }
 }
 
@@ -183,7 +181,7 @@ void Array::InitValContainer::internal_print() {
   printer << white << "{";
   for (InitVal *initval : initval_container_) {
     initval->internal_print();
-    if(*(initval_container_.rbegin()) != initval){
+    if (*(initval_container_.rbegin()) != initval) {
       printer << white << ", ";
     }
   }
@@ -207,13 +205,15 @@ void VarDeclStmt::internal_print() {
   for (Variable *var : vars_) {
     var->internal_print();
     if (*(vars_.rbegin()) != var) {
-      printer << white << ", " ;
+      printer << white << ", ";
     }
   }
-  printer << white << ";"  << IndentPrinter::endl;
+  printer << white << ";" << IndentPrinter::endl;
 }
 
-void BreakStmt::internal_print() { printer << white << "break;" << IndentPrinter::endl; }
+void BreakStmt::internal_print() {
+  printer << white << "break;" << IndentPrinter::endl;
+}
 void ReturnStmt::internal_print() {
   printer << white << "return ";
   if (ret_exp_) {
@@ -240,7 +240,8 @@ void IfStmt::internal_print() {
   condition_->internal_print();
   printer << white << ")" << IndentPrinter::endl;
   yes_->internal_print();
-  if(!no_) return;
+  if (!no_)
+    return;
   printer << blue << "else" << IndentPrinter::endl;
   no_->internal_print();
 }
@@ -254,7 +255,7 @@ void WhileStmt::internal_print() {
 
 void AssignmentStmt::internal_print() {
   printer << green << name_;
-  if(dimens_){
+  if (dimens_) {
     for (Expression *e : *dimens_) {
       printer << white << "[";
       e->internal_print();
@@ -268,41 +269,43 @@ void AssignmentStmt::internal_print() {
 
 void FunctionDecl::internal_print() {
   switch (ret_type_) {
-    case BType::INT:
-      printer << blue << "int ";
-      break;
-    case BType::VOID:
-      printer << blue << "void ";
-      break;
-    default:
-      break;
-    }
-    printer << red << name_ << white << "(";
-    if(params_){
-      for(FParam* param : *params_){
-        switch (param->type_) {
-          case BType::INT:
-            printer << blue << "int ";
-            break;
-          case BType::VOID:
-            printer << blue << "void ";
-            break;
-          default:
-            break;
-        }
-        printer << red << param->name_;
-        if(!param->dimens_) break;
-        for (Expression *e : *param->dimens_) {
-          printer << white << "[";
-          if(e) e->internal_print();
-          printer << white << "]";
-        }
-        if (*(params_->rbegin()) != param) {
-          printer << white << ", ";
-        }
-        printer << normal;
+  case BType::INT:
+    printer << blue << "int ";
+    break;
+  case BType::VOID:
+    printer << blue << "void ";
+    break;
+  default:
+    break;
+  }
+  printer << red << name_ << white << "(";
+  if (params_) {
+    for (FParam *param : *params_) {
+      switch (param->type_) {
+      case BType::INT:
+        printer << blue << "int ";
+        break;
+      case BType::VOID:
+        printer << blue << "void ";
+        break;
+      default:
+        break;
       }
+      printer << red << param->name_;
+      if (!param->dimens_)
+        break;
+      for (Expression *e : *param->dimens_) {
+        printer << white << "[";
+        if (e)
+          e->internal_print();
+        printer << white << "]";
+      }
+      if (*(params_->rbegin()) != param) {
+        printer << white << ", ";
+      }
+      printer << normal;
     }
-    printer << white << ")" << IndentPrinter::endl;
-    body_->internal_print();
+  }
+  printer << white << ")" << IndentPrinter::endl;
+  body_->internal_print();
 }

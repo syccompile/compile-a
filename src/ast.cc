@@ -8,8 +8,7 @@ VarExp::VarExp(Variable *var) : Expression(Op::VAR, false), var_(var) {
 }
 VarExp::~VarExp() { delete var_; }
 
-NumberExp::NumberExp(string *str)
-    : Expression(Op::NUM, true), string_(*str) {
+NumberExp::NumberExp(string *str) : Expression(Op::NUM, true), string_(*str) {
   assert(str);
 }
 NumberExp::~NumberExp() {}
@@ -68,7 +67,8 @@ Array::InitValContainer::~InitValContainer() {
 }
 
 Array::Array(BType type, string *name, bool immutable, Expression::List *size)
-    : Variable(type, name, immutable), dimens_(size), initval_container_(nullptr) {
+    : Variable(type, name, immutable), dimens_(size),
+      initval_container_(nullptr) {
   assert(name);
   assert(size);
 }

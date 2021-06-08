@@ -2,5 +2,5 @@
 
 class Debug {
 public:
-  virtual void internal_print() {} ;
+  virtual void internal_print(){};
 };
