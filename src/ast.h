@@ -43,8 +43,16 @@ public:
 protected:
   void set_evaluable(bool evaluable) { evaluable_ = evaluable; }
 
-  Op op_;          // 表达式类型
-  bool evaluable_; // 是否可以在编译时求值
+  /**
+   * @member op_
+   * 表达式类型
+   */
+  Op op_;
+  /**
+   * @member evaluable_
+   * 是否可以在编译时求值
+   */
+  bool evaluable_; 
 };
 
 /**
@@ -57,7 +65,9 @@ public:
   virtual void internal_print() override;
 
 private:
-  /* @member var_ 成员指针并不指向实际引用的变量，
+  /**
+   * @member var_ 
+   * 成员指针并不指向实际引用的变量，
    * 而仅用于存储
    */
   Variable *var_;
@@ -74,11 +84,19 @@ public:
   virtual void internal_print() override;
 
 private:
+  /** 
+   * @member name_
+   * 函数名称
+   */
   string name_;
+  /**
+   * @member params_
+   * 函数实参，指针可能为空
+   */
   vector<Expression *> *params_;
 };
 
-/*×
+/**
  * 二元表达式，例如" 1 + 2 "，" 4 * 3 "
  */
 class BinaryExp : public Expression {
@@ -115,8 +133,16 @@ public:
   virtual void internal_print() override;
 
 private:
-  string string_; // 存储数字的字符串表示，例如"0xff", "2021", "08876"
-  int value_;     // 数字的实际值，假设不会超过int的表示范围
+  /**
+   * @member string_
+   * 存储数字的字符串表示，例如"0xff", "2021", "08876"
+   */
+  string string_;
+  /**
+   * @member value_
+   * 数字的实际值，假设不会超过int的表示范围
+   */
+  int value_;     
 };
 
 // 基本类型
