@@ -3,6 +3,13 @@
 void func1(int a, int b){
   int a = 10;
   if(3 < 4) {
+    if(3< 5){
+      while(i>10+4){
+        a[10][10] = 22;
+        break;
+      }
+      break;
+    }
     a = 11; 
     // djfiadjoifja
     /* jdifajijaijfa
@@ -15,6 +22,12 @@ void func1(int a, int b){
     a[10][2] = func2(2,4,0xff);
   }
   while(4+5 > 7){
+    while(i>5){
+      if(5+4){
+        a[10][2] = 10;
+        break;
+      }
+    }
     a = func2();
     break;
   }
