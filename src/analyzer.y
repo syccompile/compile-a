@@ -207,7 +207,6 @@ VarDefList: IDENT ASSIGN Exp                   { $$ = new Variable::List();
                       } 
           ;
 
-// TODO
 Stmt :  SEMI    { $$ = new Stmt(); }
      |  Exp SEMI { $$ = new ExpStmt($1); }
      |  BlockStmt { $$ = $1; }

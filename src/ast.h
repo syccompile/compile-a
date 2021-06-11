@@ -171,6 +171,11 @@ public:
    * 设置变量是否初始化
    */
   void set_initialzied(bool flag) { initialized_ = flag; }
+
+  string name() { return name_; }
+  bool immutable() { return immutable_; }
+  bool initialized() { return initialized_; }
+
   /**
    * 判断变量是否是数组
    * 数组类应该重写该方法
@@ -478,6 +483,9 @@ public:
   FunctionDecl(BType ret_type, string *name, FParam::List *params,
                BlockStmt *block);
   ~FunctionDecl();
+
+  string name() { return name_; }
+  BType ret_type() { return ret_type_; }
   virtual void internal_print() override;
 
 private:
