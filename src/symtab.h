@@ -30,18 +30,20 @@ public:
       Variable *var_ptr;
       FunctionDecl *func_ptr;
     } pointer_;
+    FrameAccess access_;
   };
   SymbolTable() {}
   ~SymbolTable() {}
   static Ptr &&newSymTab();
   void set_parent(Ptr parent);
-  void push_back_variable(Variable *var);
-  void push_back_function(FunctionDecl *func);
+  void push_variable(Variable *var);
+  void push_function(FunctionDecl *func);
 
 private:
   /** 禁止直接使用构造函数构造 **/
 
   vector<SymTabEntry> entries_;
+
   /** 上一级符号表 **/
   Ptr parent_;
   Frame::Ptr frame_;

@@ -7,7 +7,7 @@
 /** 全局符号表 **/
 auto GlobSymTab = SymbolTable::newSymTab();
 
-void SymbolTable::push_back_variable(Variable *var) {
+void SymbolTable::push_variable(Variable *var) {
   assert(var);
   SymTabEntry entry;
   entry.type_ = SymTabEntry::SymType::VARIABLE;
@@ -16,7 +16,7 @@ void SymbolTable::push_back_variable(Variable *var) {
   entries_.push_back(entry);
 }
 
-void SymbolTable::push_back_function(FunctionDecl *func) {
+void SymbolTable::push_function(FunctionDecl *func) {
   assert(func);
   SymTabEntry entry;
   entry.type_ = SymTabEntry::SymType::FUNCTION;
