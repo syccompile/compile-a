@@ -30,17 +30,21 @@ public:
       Variable *var_ptr;
       FunctionDecl *func_ptr;
     } pointer_;
+    /**
+     * 若为变量，access_应为MEM或REG类型，
+     * 若为函数，access_应为LABEL类型
+     */
     FrameAccess access_;
   };
+  //** 避免使用构造函数生成符号表 **/
   SymbolTable() {}
   ~SymbolTable() {}
   static Ptr &&newSymTab();
   void set_parent(Ptr parent);
   void push_variable(Variable *var);
   void push_function(FunctionDecl *func);
-
+  SymTabEntry find();
 private:
-  /** 禁止直接使用构造函数构造 **/
 
   vector<SymTabEntry> entries_;
 

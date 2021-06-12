@@ -29,6 +29,10 @@ SymbolTable::Ptr&& SymbolTable::newSymTab() {
   return std::move(std::make_shared<SymbolTable>());
 }
 
-void SymbolTable::set_parent(SymbolTable::Ptr parent) {
-  parent_ = parent;
+void SymbolTable::set_parent(SymbolTable::Ptr parent) { parent_ = parent; }
+
+SymbolTable::SymTabEntry SymbolTable::find() {
+  // TODO
+  SymbolTable::SymTabEntry entry;
+  return entry;
 }

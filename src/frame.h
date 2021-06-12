@@ -22,7 +22,17 @@ class Reg {};
  * 同理计算3*c时
  *  MUL 3, c -> tmp2
  * 最后计算加法有
- *  ADD tmp1, tmp2 -> a 
+ *  ADD tmp1, tmp2 -> a
+ *
+ * 例如对于函数调用
+ *    var = func(10, b);
+ *  在处理函数声明时已经把func加入了符号表，假设func有两个形参，
+ *  其FrameAccess分别为fa1, fa2, 处理上述函数调用可以如下
+ *    MOV 10 -> fa1
+ *    MOV b  -> fa2
+ *    CALL func -> tmp
+ *    MOV tmp -> var 
+ *  其中tmp对应函数调用结果
  *
  */
 struct _FrameAccess {
