@@ -514,4 +514,10 @@ private:
    * 函数体，保证该指针非空
    */
   BlockStmt *body_;
+
+  /**
+   * @member frame_
+   * 函数的栈帧
+   */
+  Frame::Ptr frame_;
 };

@@ -36,10 +36,8 @@ public:
      */
     FrameAccess access_;
   };
-  //** 避免使用构造函数生成符号表 **/
-  SymbolTable() {}
+  SymbolTable(): parent_(nullptr) {}
   ~SymbolTable() {}
-  static Ptr &&newSymTab();
   void set_parent(Ptr parent);
   void push_variable(Variable *var);
   void push_function(FunctionDecl *func);
@@ -50,7 +48,6 @@ private:
 
   /** 上一级符号表 **/
   Ptr parent_;
-  Frame::Ptr frame_;
 };
 
 /** 全局符号表 **/

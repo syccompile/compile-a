@@ -2,7 +2,6 @@
 
 #include <cassert>
 #include <string>
-
 VarExp::VarExp(Variable *var) : Expression(Op::VAR, false), var_(var) {
   assert(var);
 }
@@ -94,7 +93,7 @@ VarDeclStmt::~VarDeclStmt() {
   }
 }
 
-BlockStmt::BlockStmt(): symtab_(SymbolTable::newSymTab()) {}
+BlockStmt::BlockStmt(): symtab_(std::make_shared<SymbolTable>()) {}
 BlockStmt::~BlockStmt() {
   for (Stmt *stmt : stmts_) {
     delete stmt;
@@ -144,7 +143,7 @@ AssignmentStmt::~AssignmentStmt() {
 
 FunctionDecl::FunctionDecl(BType ret_type, string *name, FParam::List *params,
                            BlockStmt *block)
-    : ret_type_(ret_type), name_(*name), params_(params), body_(block) {
+    : ret_type_(ret_type), name_(*name), params_(params), body_(block), frame_(std::make_shared<Frame>()){
   assert(name);
   assert(block);
   body_->symtab_->set_parent(GlobSymTab);

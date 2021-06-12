@@ -5,7 +5,7 @@
 #include <cassert>
 
 /** 全局符号表 **/
-auto GlobSymTab = SymbolTable::newSymTab();
+auto GlobSymTab = std::make_shared<SymbolTable>();
 
 void SymbolTable::push_variable(Variable *var) {
   assert(var);
@@ -25,11 +25,10 @@ void SymbolTable::push_function(FunctionDecl *func) {
   entries_.push_back(entry);
 }
 
-SymbolTable::Ptr&& SymbolTable::newSymTab() {
-  return std::move(std::make_shared<SymbolTable>());
-}
 
-void SymbolTable::set_parent(SymbolTable::Ptr parent) { parent_ = parent; }
+void SymbolTable::set_parent(SymbolTable::Ptr parent) {
+  parent_ = parent; 
+}
 
 SymbolTable::SymTabEntry SymbolTable::find() {
   // TODO
