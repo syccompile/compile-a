@@ -1,6 +1,7 @@
 #pragma once
 
 #include "debug.h"
+#include "symtab.h"
 
 #include <string>
 #include <vector>
@@ -316,6 +317,7 @@ private:
  */
 class BlockStmt : public Stmt {
 public:
+  friend class FunctionDecl;
   BlockStmt();
   ~BlockStmt();
   /**
@@ -334,6 +336,9 @@ public:
 
 private:
   vector<Stmt *> stmts_;
+
+  /** 每个块语句有一个符号表 **/
+  SymbolTable::Ptr symtab_;
 };
 
 /**

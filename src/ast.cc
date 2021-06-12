@@ -94,7 +94,7 @@ VarDeclStmt::~VarDeclStmt() {
   }
 }
 
-BlockStmt::BlockStmt() {}
+BlockStmt::BlockStmt(): symtab_(SymbolTable::newSymTab()) {}
 BlockStmt::~BlockStmt() {
   for (Stmt *stmt : stmts_) {
     delete stmt;
@@ -147,6 +147,7 @@ FunctionDecl::FunctionDecl(BType ret_type, string *name, FParam::List *params,
     : ret_type_(ret_type), name_(*name), params_(params), body_(block) {
   assert(name);
   assert(block);
+  body_->symtab_->set_parent(GlobSymTab);
 }
 
 FunctionDecl::~FunctionDecl() {
