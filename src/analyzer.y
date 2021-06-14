@@ -83,6 +83,7 @@ Exp : AddExp { $$ = $1; }
 
 AddExp  :  MulExp { $$ = $1; }
         |  AddExp ADD MulExp { $$ = new BinaryExp(Expression::Op::ADD, $1, $3); }
+        |  AddExp SUB MulExp { $$ = new BinaryExp(Expression::Op::SUB, $1, $3); }
         ;
 
 MulExp : UnaryExp { $$ = $1;}
