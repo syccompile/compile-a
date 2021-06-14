@@ -41,7 +41,7 @@ public:
   Expression(Op op, bool evaluable) : op_(op), evaluable_(evaluable) {}
   virtual ~Expression() {}
   bool evaluable() { return evaluable_; }
-  int eval() { 
+  int eval() {
     // TODO
     return 0;
   }
@@ -164,6 +164,7 @@ enum class BType { INT, VOID, UNKNOWN };
  */
 class Variable : public Debug_impl , public IrTranslator_impl{
 public:
+  friend class VarDeclStmt;
   using List = vector<Variable *>;
 
   Variable(BType type, string *name, bool immutable);
@@ -189,7 +190,6 @@ public:
   bool immutable() { return immutable_; }
   bool global() { return global_; }
   bool initialized() { return initialized_; }
-  Expression* initval() { return initval_; }
 
   /**
    * 判断变量是否是数组
@@ -290,6 +290,7 @@ public:
    * 设置行号
    */
   virtual void set_lineno(int lineno) { lineno_ = lineno; }
+
   virtual std::tuple<vector<IR::Ptr>, FrameAccess>
       translate(SymbolTable::Ptr) override {
     return std::make_tuple(vector<IR::Ptr>(), nullptr);
@@ -382,7 +383,9 @@ private:
  */
 class BlockStmt : public Stmt {
 public:
-  friend class FunctionDecl;
+  friend class FunctionDecl; 
+  friend class IfStmt; 
+  friend class WhileStmt;
   BlockStmt();
   ~BlockStmt();
   /**
@@ -529,12 +532,12 @@ public:
 
   string name() { return name_; }
   BType ret_type() { return ret_type_; }
+
   FrameAccess get_params_access(size_t index) {
-    //assert(params_);
     return symtab_->find(params_->at(index)->name_).access_;
   }
   FrameAccess get_return_access() {
-    return symtab_->get_return().access_;
+    return ret_access_;
   }
   
   virtual void internal_print() override;
@@ -569,4 +572,6 @@ private:
   Frame::Ptr frame_;
 
   SymbolTable::Ptr symtab_;
+
+  FrameAccess ret_access_;
 };

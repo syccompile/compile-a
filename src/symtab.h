@@ -20,7 +20,7 @@ public:
   class SymTabEntry {
   public:
     friend class SymbolTable;
-    enum class SymType { VARIABLE, FUNCTION, RETURN, PARAM};
+    enum class SymType { VARIABLE, FUNCTION, PARAM};
     ~SymTabEntry() {}
 
     SymType type_;
@@ -43,16 +43,17 @@ public:
   SymbolTable(SymbolTable::Ptr parent, Frame::Ptr frame) : parent_(parent), frame_(frame) {}
   ~SymbolTable() {}
   void set_parent(Ptr parent);
-  void set_frame(Frame::Ptr frame);
+
   Frame::Ptr frame() { return frame_; }
-  FrameAccess push_variable(Variable *var);
-  FrameAccess push_function(FunctionDecl *func);
-  FrameAccess push_param(FParam* param);
-  FrameAccess push_return();
+  void set_frame(Frame::Ptr frame);
+
+  FrameAccess push(Variable *var);
+  FrameAccess push(FunctionDecl *func);
+  FrameAccess push(FParam* param);
+
   SymTabEntry find(string str);
   SymTabEntry find(Variable* var);
   SymTabEntry find(FunctionDecl *func);
-  SymTabEntry get_return();
 
 private:
   vector<SymTabEntry> entries_;

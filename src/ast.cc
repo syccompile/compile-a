@@ -2,8 +2,8 @@
 
 #include <cassert>
 #include <string>
-VarExp::VarExp(string* ident, Expression::List* dimens) : Expression(Op::VAR, false), ident_(*ident), dimens_(dimens) {
-}
+VarExp::VarExp(string *ident, Expression::List *dimens)
+    : Expression(Op::VAR, false), ident_(*ident), dimens_(dimens) {}
 VarExp::~VarExp() {
   if (dimens_) {
     for (Expression *exp : *dimens_) {
@@ -47,8 +47,8 @@ UnaryExp::UnaryExp(Op op, Expression *exp) : Expression(op, false), exp_(exp) {
 UnaryExp::~UnaryExp() { delete exp_; }
 
 Variable::Variable(BType type, string *name, bool immutable)
-    : global_(false), type_(type), name_(*name), immutable_(immutable), initialized_(false),
-      initval_(nullptr) {
+    : global_(false), type_(type), name_(*name), immutable_(immutable),
+      initialized_(false), initval_(nullptr) {
   assert(name);
 }
 
@@ -99,7 +99,7 @@ VarDeclStmt::~VarDeclStmt() {
   }
 }
 
-BlockStmt::BlockStmt(): symtab_(std::make_shared<SymbolTable>()) {}
+BlockStmt::BlockStmt() : symtab_(std::make_shared<SymbolTable>()) {}
 BlockStmt::~BlockStmt() {
   for (Stmt *stmt : stmts_) {
     delete stmt;
@@ -149,17 +149,18 @@ AssignmentStmt::~AssignmentStmt() {
 
 FunctionDecl::FunctionDecl(BType ret_type, string *name, FParam::List *params,
                            BlockStmt *block)
-    : ret_type_(ret_type), name_(*name), params_(params), body_(block), frame_(std::make_shared<Frame>(false)), symtab_(std::make_shared<SymbolTable>(GlobSymTab, frame_)){
+    : ret_type_(ret_type), name_(*name), params_(params), body_(block),
+      frame_(std::make_shared<Frame>(false)),
+      symtab_(std::make_shared<SymbolTable>()),
+      ret_access_(frame_->newRetAccess()) {
   assert(name);
   assert(block);
-  body_->symtab_->set_parent(symtab_);
-  body_->symtab_->set_frame(frame_);
-  if(ret_type == BType::INT){
-    symtab_->push_return();
-  }
+
+  symtab_->push(this);
+
   if (params_) {
     for (FParam *param : *params_) {
-      symtab_->push_param(param);
+      symtab_->push(param);
     }
   }
 }
@@ -176,5 +177,6 @@ void VarDeclStmt::set_global() {
 }
 
 void BlockStmt::push_back(Stmt *stmt) {
-    stmts_.push_back(stmt);
+  stmts_.push_back(stmt);
+  // TODO
 }

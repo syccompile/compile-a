@@ -67,4 +67,5 @@ public:
   FrameAccess newLabelAccess();
   FrameAccess newTempAccess();
   FrameAccess newImmAccess(int);
+  FrameAccess newRetAccess();
 };

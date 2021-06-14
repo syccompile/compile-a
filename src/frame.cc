@@ -13,3 +13,7 @@ FrameAccess Frame::newVarAccess() {
   return std::make_shared<_FrameAccess>();
 }
 
+FrameAccess Frame::newRetAccess() {
+  return std::make_shared<_FrameAccess>();
+}
+
