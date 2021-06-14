@@ -195,7 +195,6 @@ ContinueStmt::translate(SymbolTable::Ptr symtab) {
   parent_ = now_while;
   // TODO
   return std::make_tuple(vector<IR::Ptr>(), nullptr);
-  assert(entry.type_ == SymbolTable::SymTabEntry::SymType::VARIABLE);
 }
 
 std::tuple<vector<IR::Ptr>, FrameAccess>
