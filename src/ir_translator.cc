@@ -22,9 +22,7 @@ FuncCallExp::translate(SymbolTable::Ptr symtab) {
   if (params_) {
     size_t i = 0;
     for (Expression *exp : *params_) {
-      vector<IR::Ptr> vec;
-      FrameAccess access;
-      std::tie(vec, access) = exp->translate(symtab);
+      wrap_tie(vec, access, exp, symtab);
       ret.insert(ret.end(), vec.begin(), vec.end());
       ret.push_back(std::make_shared<UnaryOpIR>(IR::Op::MOV,
                                   entry.pointer_.func_ptr->get_params_access(i),
@@ -142,9 +140,7 @@ BlockStmt::translate(SymbolTable::Ptr symtab) {
   symtab_->set_parent(symtab);
   vector<IR::Ptr> ret;
   for (Stmt *stmt : stmts_) {
-    vector<IR::Ptr> vec;
-    FrameAccess access;
-    std::tie(vec, access) = stmt->translate(symtab_);
+    wrap_tie(vec, access, stmt, symtab_);
     ret.insert(ret.end(), vec.begin(), vec.end());
   }
   return std::make_tuple(ret, nullptr);
@@ -177,9 +173,7 @@ ReturnStmt::translate(SymbolTable::Ptr symtab) {
 
   vector<IR::Ptr> ret;
   if (ret_exp_) {
-    vector<IR::Ptr> vec;
-    FrameAccess access;
-    std::tie(vec, access) = ret_exp_->translate(symtab);
+    wrap_tie(vec, access, ret_exp_, symtab);
     ret.insert(ret.end(), vec.begin(), vec.end());
     ret.push_back(std::make_shared<UnaryOpIR>(IR::Op::MOV, parent_->get_return_access(), access));
   }
@@ -201,6 +195,7 @@ ContinueStmt::translate(SymbolTable::Ptr symtab) {
   parent_ = now_while;
   // TODO
   return std::make_tuple(vector<IR::Ptr>(), nullptr);
+  assert(entry.type_ == SymbolTable::SymTabEntry::SymType::VARIABLE);
 }
 
 std::tuple<vector<IR::Ptr>, FrameAccess>
@@ -213,9 +208,7 @@ AssignmentStmt::translate(SymbolTable::Ptr symtab) {
   if (var_ptr->is_array()) {
 
   } else {
-    vector<IR::Ptr> vec;
-    FrameAccess access;
-    std::tie(vec, access) = rval_->translate(symtab);
+    wrap_tie(vec, access, rval_, symtab);
     ret.insert(ret.end(), vec.begin(), vec.end());
     ret.push_back(std::make_shared<UnaryOpIR>(IR::Op::MOV, entry.access_, access));
   }
@@ -229,9 +222,7 @@ FunctionDecl::translate(SymbolTable::Ptr symtab) {
   now_func = this;
 
   vector<IR::Ptr> ret;
-  std::vector<IR::Ptr> vec;
-  FrameAccess access;
-  std::tie(vec, access) = body_->translate(symtab_);
+  wrap_tie(vec, access, body_, symtab_);
   ret.insert(ret.end(), vec.begin(), vec.end());
 
   now_func = temp;

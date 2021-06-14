@@ -7,15 +7,6 @@
 /** 全局符号表 **/
 auto GlobSymTab = std::make_shared<SymbolTable>(nullptr, nullptr);
 
-FrameAccess SymbolTable::push(FParam *param) {
-  SymTabEntry entry;
-  entry.type_ = SymTabEntry::SymType::PARAM;
-  entry.name_ = param->name_;
-  entry.access_ = frame_->newTempAccess();
-  entry.pointer_.param_ptr = param;
-  entries_.push_back(entry);
-  return entry.access_;
-}
 FrameAccess SymbolTable::push(Variable *var) {
   assert(var);
   SymTabEntry entry; entry.type_ = SymTabEntry::SymType::VARIABLE; entry.name_ = var->name();

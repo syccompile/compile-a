@@ -38,7 +38,7 @@ std::vector<FunctionDecl*> funcs;
   AssignmentStmt * assignstmt;
   BlockStmt * blockstmt;
   FunctionDecl* funcdecl;
-  FParam::List* funcfparams;
+  Variable::List* funcfparams;
 }
 
 %token <token> LBRACKET RBRACKET LPARENT RPARENT LCURLY RCURLY
@@ -228,20 +228,20 @@ BlockStmt : LCURLY RCURLY { $$ = new BlockStmt(); }
           | LCURLY BlockItems RCURLY { $$ = $2; }
           ;
 // int a, int b[][10], ...
-FuncFParams : BType IDENT             { $$ = new FParam::List(); 
-                                        $$->push_back(new FParam($1, $2, nullptr)); 
+FuncFParams : BType IDENT             { $$ = new Variable::List(); 
+                                        $$->push_back(new Variable($1, $2, false)); 
                                         delete $2;
                                       }
-            | BType IDENT DimenList   { $$ = new FParam::List();
-                                        $$->push_back(new FParam($1, $2, $3));
+            | BType IDENT DimenList   { $$ = new Variable::List();
+                                        $$->push_back(new Array($1, $2, false, $3));
                                         delete $2;
                                       }
             | FuncFParams COMMA BType IDENT { $$ = $1; 
-                                              $$->push_back(new FParam($3, $4, nullptr));
+                                              $$->push_back(new Variable($3, $4, false));
                                               delete $4;
                                             }
             | FuncFParams COMMA BType IDENT DimenList { $$ = $1;
-                                                        $$->push_back(new FParam($3,  $4, $5));
+                                                        $$->push_back(new Array($3,  $4, false, $5));
                                                         delete $4;
                                                       }
             ;

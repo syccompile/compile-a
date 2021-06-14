@@ -147,7 +147,7 @@ AssignmentStmt::~AssignmentStmt() {
   delete rval_;
 }
 
-FunctionDecl::FunctionDecl(BType ret_type, string *name, FParam::List *params,
+FunctionDecl::FunctionDecl(BType ret_type, string *name, Variable::List *params,
                            BlockStmt *block)
     : ret_type_(ret_type), name_(*name), params_(params), body_(block),
       frame_(std::make_shared<Frame>(false)),
@@ -159,7 +159,7 @@ FunctionDecl::FunctionDecl(BType ret_type, string *name, FParam::List *params,
   symtab_->push(this);
 
   if (params_) {
-    for (FParam *param : *params_) {
+    for (Variable *param : *params_) {
       symtab_->push(param);
     }
   }

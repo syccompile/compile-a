@@ -6,6 +6,11 @@
 #include <tuple>
 #include <memory>
 
+#define wrap_tie(vec, access, stmt, symtab)   \
+  vector<IR::Ptr> vec; \
+  FrameAccess access; \
+  std::tie(vec, access) = stmt->translate(symtab);\
+
 using std::vector;
 
 struct IrTranslator_impl {

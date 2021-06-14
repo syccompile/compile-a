@@ -201,7 +201,9 @@ void Array::internal_print() {
   Variable::internal_print();
   for (Expression *e : *dimens_) {
     printer << white << "[";
-    e->internal_print();
+    if(e){
+      e->internal_print();
+    }
     printer << white << "]";
   }
   if (initialized_) {
@@ -289,26 +291,8 @@ void FunctionDecl::internal_print() {
   }
   printer << red << name_ << white << "(";
   if (params_) {
-    for (FParam *param : *params_) {
-      switch (param->type_) {
-      case BType::INT:
-        printer << blue << "int ";
-        break;
-      case BType::VOID:
-        printer << blue << "void ";
-        break;
-      default:
-        break;
-      }
-      printer << red << param->name_;
-      if (!param->dimens_)
-        break;
-      for (Expression *e : *param->dimens_) {
-        printer << white << "[";
-        if (e)
-          e->internal_print();
-        printer << white << "]";
-      }
+    for (Variable *param : *params_) {
+      param->internal_print();
       if (*(params_->rbegin()) != param) {
         printer << white << ", ";
       }
@@ -317,4 +301,32 @@ void FunctionDecl::internal_print() {
   }
   printer << white << ")" << IndentPrinter::endl;
   body_->internal_print();
+}
+void IR::internal_print() {
+  switch (op_) {
+  case IR::Op::MOV :
+    printer << "MOV\t$$->$$" << IndentPrinter::endl;
+    break;
+  case IR::Op::SUB:
+    printer << "SUB\t$$, $$->$$" << IndentPrinter::endl;
+    break;
+  case IR::Op::ADD:
+    printer << "ADD\t$$, $$->$$" << IndentPrinter::endl;
+    break;
+  case IR::Op::MUL:
+    printer << "MUL\t$$, $$->$$" << IndentPrinter::endl;
+    break;
+  case IR::Op::DIV:
+    printer << "DIV\t$$, $$->$$" << IndentPrinter::endl;
+    break;
+  case IR::Op::MOD:
+    printer << "MOD\t$$, $$->$$" << IndentPrinter::endl;
+    break;
+  case IR::Op::JMP:
+    printer << "JMP\t->$$" << IndentPrinter::endl;
+    break;
+  default:
+    printer << "NOP" << IndentPrinter::endl;
+    break;
+  }
 }

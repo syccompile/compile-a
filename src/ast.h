@@ -494,39 +494,13 @@ private:
   Expression *rval_;
 };
 
-/**
- * 表示函数形参
- */
-class FParam {
-public:
-  using List = vector<FParam *>;
-  FParam(BType type, string *name, Expression::List *dimens)
-      : type_(type), name_(*name), dimens_(dimens) {}
-  ~FParam() { delete dimens_; }
-
-  /**
-   * @member type_
-   * 形参的类型
-   */
-  BType type_;
-  /**
-   * @member name_
-   * 形参的名称
-   */
-  string name_;
-  /**
-   * @member dimens_
-   * 若形参为普通变量, 该项为空；若形参为数组，该项表示数组的维度
-   */
-  Expression::List *dimens_;
-};
 
 /**
  * 函数声明
  */
 class FunctionDecl : public Debug_impl , public IrTranslator_impl{
 public:
-  FunctionDecl(BType ret_type, string *name, FParam::List *params,
+  FunctionDecl(BType ret_type, string *name, Variable::List *params,
                BlockStmt *block);
   ~FunctionDecl();
 
@@ -534,7 +508,7 @@ public:
   BType ret_type() { return ret_type_; }
 
   FrameAccess get_params_access(size_t index) {
-    return symtab_->find(params_->at(index)->name_).access_;
+    return symtab_->find(params_->at(index)).access_;
   }
   FrameAccess get_return_access() {
     return ret_access_;
@@ -558,7 +532,7 @@ private:
    * @member params_
    * 函数形参，指针可能为空
    */
-  FParam::List *params_;
+  Variable::List *params_;
   /**
    * @member body_
    * 函数体，保证该指针非空

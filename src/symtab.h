@@ -20,7 +20,7 @@ public:
   class SymTabEntry {
   public:
     friend class SymbolTable;
-    enum class SymType { VARIABLE, FUNCTION, PARAM};
+    enum class SymType { VARIABLE, FUNCTION};
     ~SymTabEntry() {}
 
     SymType type_;
@@ -28,7 +28,6 @@ public:
     union {
       Variable *var_ptr;
       FunctionDecl *func_ptr;
-      FParam *param_ptr;
     } pointer_;
     /**
      * 若为变量，access_应为MEM或REG类型，
@@ -49,7 +48,6 @@ public:
 
   FrameAccess push(Variable *var);
   FrameAccess push(FunctionDecl *func);
-  FrameAccess push(FParam* param);
 
   SymTabEntry find(string str);
   SymTabEntry find(Variable* var);
