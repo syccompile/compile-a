@@ -255,10 +255,16 @@ int main () {
   yyparse();
   for(VarDeclStmt* stmt: vardecl){
     stmt->internal_print();
-    stmt->translate(GlobSymTab);
+    wrap_tie(vec, access, stmt, GlobSymTab);
+    for(auto ir : vec){
+      ir->internal_print();
+    }
   }
   for(FunctionDecl* f : funcs){
     f->internal_print();
-    f->translate(GlobSymTab);
+    wrap_tie(vec, access, f, GlobSymTab);
+    for(auto ir : vec){
+      ir->internal_print();
+    }
   }
 }

@@ -1,9 +1,9 @@
 #pragma once
 
 #include "debug.h"
-#include "symtab.h"
 #include "ir.h"
 #include "ir_translator.h"
+#include "symtab.h"
 
 #include <string>
 #include <vector>
@@ -14,7 +14,7 @@ using std::vector;
 // Forward Declartion for @class Expression
 class Variable;
 
-class Expression : public Debug_impl, public IrTranslator_impl{
+class Expression : public Debug_impl, public IrTranslator_impl {
 public:
   using List = vector<Expression *>;
   enum class Op {
@@ -46,8 +46,10 @@ public:
     return 0;
   }
   virtual void internal_print() override {}
-  virtual std::tuple<vector<IR::Ptr>, FrameAccess> translate(SymbolTable::Ptr symtab) override {
-        return std::make_tuple(vector<IR::Ptr>(), nullptr);
+
+  virtual std::tuple<vector<IR::Ptr>, FrameAccess>
+  translate(SymbolTable::Ptr symtab) override {
+    return std::make_tuple(vector<IR::Ptr>(), nullptr);
   }
 
 protected:
@@ -62,7 +64,7 @@ protected:
    * @member evaluable_
    * 是否可以在编译时求值
    */
-  bool evaluable_; 
+  bool evaluable_;
 };
 
 /**
@@ -70,14 +72,24 @@ protected:
  */
 class VarExp : public Expression {
 public:
-  VarExp(string* ident, Expression::List* dimens);
+  VarExp(string *ident, Expression::List *dimens);
   ~VarExp();
   virtual void internal_print() override;
-  virtual std::tuple<vector<IR::Ptr>, FrameAccess> translate(SymbolTable::Ptr symtab) override;
+  virtual std::tuple<vector<IR::Ptr>, FrameAccess>
+  translate(SymbolTable::Ptr symtab) override;
 
 private:
+  /**
+   * @member ident_
+   * 变量名称
+   */
   string ident_;
-  Expression::List* dimens_;
+  /**
+   * @member dimens_
+   * 若为普通变量，该项为空
+   * 若为数组，该项表示维度信息
+   */
+  Expression::List *dimens_;
 };
 
 /*
@@ -89,10 +101,11 @@ public:
   FuncCallExp(string *func_name);
   ~FuncCallExp();
   virtual void internal_print() override;
-  virtual std::tuple<vector<IR::Ptr>, FrameAccess> translate(SymbolTable::Ptr symtab) override;
+  virtual std::tuple<vector<IR::Ptr>, FrameAccess>
+  translate(SymbolTable::Ptr symtab) override;
 
 private:
-  /** 
+  /**
    * @member name_
    * 函数名称
    */
@@ -101,7 +114,7 @@ private:
    * @member params_
    * 函数实参，指针可能为空
    */
-  vector<Expression *> *params_;
+  Expression::List *params_;
 };
 
 /**
@@ -112,7 +125,8 @@ public:
   BinaryExp(Op op, Expression *left, Expression *right);
   ~BinaryExp();
   virtual void internal_print() override;
-  virtual std::tuple<vector<IR::Ptr>, FrameAccess> translate(SymbolTable::Ptr symtab) override;
+  virtual std::tuple<vector<IR::Ptr>, FrameAccess>
+  translate(SymbolTable::Ptr symtab) override;
 
 private:
   Expression *left_;
@@ -127,7 +141,8 @@ public:
   UnaryExp(Op op, Expression *exp);
   ~UnaryExp();
   virtual void internal_print() override;
-  virtual std::tuple<vector<IR::Ptr>, FrameAccess> translate(SymbolTable::Ptr symtab) override;
+  virtual std::tuple<vector<IR::Ptr>, FrameAccess>
+  translate(SymbolTable::Ptr symtab) override;
 
 private:
   Expression *exp_;
@@ -141,7 +156,8 @@ public:
   NumberExp(string *str);
   ~NumberExp();
   virtual void internal_print() override;
-  virtual std::tuple<vector<IR::Ptr>, FrameAccess> translate(SymbolTable::Ptr symtab) override;
+  virtual std::tuple<vector<IR::Ptr>, FrameAccess>
+  translate(SymbolTable::Ptr symtab) override;
 
 private:
   /**
@@ -153,7 +169,7 @@ private:
    * @member value_
    * 数字的实际值，假设不会超过int的表示范围
    */
-  int value_;     
+  int value_;
 };
 
 // 基本类型
@@ -162,7 +178,7 @@ enum class BType { INT, VOID, UNKNOWN };
 /**
  * 普通变量
  */
-class Variable : public Debug_impl , public IrTranslator_impl{
+class Variable : public Debug_impl, public IrTranslator_impl {
 public:
   friend class VarDeclStmt;
   using List = vector<Variable *>;
@@ -184,6 +200,9 @@ public:
    */
   void set_initialzied(bool flag) { initialized_ = flag; }
 
+  /**
+   * 设置是否是全局变量
+   */
   void set_global(bool global) { global_ = global; }
 
   string name() { return name_; }
@@ -199,15 +218,37 @@ public:
 
   virtual void internal_print() override;
 
-
 protected:
-
+  /**
+   * @member global_
+   * 变量是否为全局变量
+   */
   bool global_;
+  /**
+   * @member type_
+   * 变量类型
+   */
   BType type_;
+  /**
+   * @member name_
+   * 变量名称
+   */
   string name_;
-  bool immutable_;      // 变量是否可变
-  bool initialized_;    // 变量是否初始化
-  Expression *initval_; // 变量的初始化值
+  /**
+   * @member immutable_
+   * 若使用const修饰，变量不可变，该项为真
+   */
+  bool immutable_;      
+  /**
+   * @member initialized_
+   * 若变量初始化，该项为真
+   */
+  bool initialized_;
+  /**
+   * @member initval_
+   * 若变量初始化，该项表示初始化值，否则为空
+   */
+  Expression *initval_;
 };
 
 class Array : public Variable {
@@ -215,7 +256,7 @@ public:
   /**
    * 表示数组的初始化值
    */
-  class InitVal : public Debug_impl , public IrTranslator_impl{
+  class InitVal : public Debug_impl, public IrTranslator_impl {
     /**
      * 使用InitVal来表示其中的"1"， "2"， "{3， 4}"
      */
@@ -278,11 +319,10 @@ private:
   InitValContainer *initval_container_;
 };
 
-class BlockStmt;
 /**
  * 表示一个语句
  */
-class Stmt : public Debug_impl , public IrTranslator_impl {
+class Stmt : public Debug_impl, public IrTranslator_impl {
 public:
   using List = vector<Stmt *>;
   virtual ~Stmt() {}
@@ -292,7 +332,7 @@ public:
   virtual void set_lineno(int lineno) { lineno_ = lineno; }
 
   virtual std::tuple<vector<IR::Ptr>, FrameAccess>
-      translate(SymbolTable::Ptr) override {
+  translate(SymbolTable::Ptr) override {
     return std::make_tuple(vector<IR::Ptr>(), nullptr);
   }
 
@@ -313,7 +353,8 @@ public:
   void push_back(Variable *var) { vars_.push_back(var); }
   void set_global();
   virtual void internal_print() override;
-  virtual std::tuple<vector<IR::Ptr>, FrameAccess> translate(SymbolTable::Ptr) override;
+  virtual std::tuple<vector<IR::Ptr>, FrameAccess>
+      translate(SymbolTable::Ptr) override;
 
 private:
   /**
@@ -333,7 +374,11 @@ public:
   virtual void internal_print() override;
   virtual std::tuple<vector<IR::Ptr>, FrameAccess>
       translate(SymbolTable::Ptr) override;
-  FunctionDecl* parent_;
+  /**
+   * @member parent_
+   * return语句对应的函数
+   */
+  FunctionDecl *parent_;
 
 private:
   /**
@@ -341,7 +386,6 @@ private:
    * return 语句的返回值, 指针可能为空
    */
   Expression *ret_exp_;
-
 };
 
 class WhileStmt;
@@ -351,8 +395,13 @@ class WhileStmt;
 class BreakStmt : public Stmt {
 public:
   virtual void internal_print() override;
-  virtual std::tuple<vector<IR::Ptr>, FrameAccess> translate(SymbolTable::Ptr) override;
-  WhileStmt* parent_;
+  virtual std::tuple<vector<IR::Ptr>, FrameAccess>
+      translate(SymbolTable::Ptr) override;
+  /**
+   * @member parent_
+   * break语句对应的while语句
+   */
+  WhileStmt *parent_;
 };
 
 /**
@@ -361,8 +410,13 @@ public:
 class ContinueStmt : public Stmt {
 public:
   virtual void internal_print() override;
-  virtual std::tuple<vector<IR::Ptr>, FrameAccess> translate(SymbolTable::Ptr) override;
-  WhileStmt* parent_;
+  virtual std::tuple<vector<IR::Ptr>, FrameAccess>
+      translate(SymbolTable::Ptr) override;
+  /**
+   * @member parent_
+   * continue语句对应的while语句
+   */
+  WhileStmt *parent_;
 };
 
 /**
@@ -372,7 +426,8 @@ class ExpStmt : public Stmt {
 public:
   ExpStmt(Expression *edp);
   ~ExpStmt();
-  virtual std::tuple<vector<IR::Ptr>, FrameAccess> translate(SymbolTable::Ptr) override;
+  virtual std::tuple<vector<IR::Ptr>, FrameAccess>
+      translate(SymbolTable::Ptr) override;
 
 private:
   Expression *exp_;
@@ -383,8 +438,8 @@ private:
  */
 class BlockStmt : public Stmt {
 public:
-  friend class FunctionDecl; 
-  friend class IfStmt; 
+  friend class FunctionDecl;
+  friend class IfStmt;
   friend class WhileStmt;
   BlockStmt();
   ~BlockStmt();
@@ -401,12 +456,20 @@ public:
     }
   }
   virtual void internal_print() override;
-  virtual std::tuple<vector<IR::Ptr>, FrameAccess> translate(SymbolTable::Ptr) override;
+  virtual std::tuple<vector<IR::Ptr>, FrameAccess>
+      translate(SymbolTable::Ptr) override;
 
 private:
+  /**
+   * @member stmts_
+   * 块语句中的所有语句
+   */
   vector<Stmt *> stmts_;
 
-  /** 每个块语句有一个符号表 **/
+  /** 
+   * @member symtab_
+   * 每个块语句有一个符号表 
+   **/
   SymbolTable::Ptr symtab_;
 };
 
@@ -421,7 +484,8 @@ public:
   BlockStmt *yes() { return yes_; }
   BlockStmt *no() { return no_; }
   virtual void internal_print() override;
-  virtual std::tuple<vector<IR::Ptr>, FrameAccess> translate(SymbolTable::Ptr) override;
+  virtual std::tuple<vector<IR::Ptr>, FrameAccess>
+      translate(SymbolTable::Ptr) override;
 
 private:
   /**
@@ -449,7 +513,8 @@ public:
   WhileStmt(Expression *condition, BlockStmt *body);
   ~WhileStmt();
   virtual void internal_print() override;
-  virtual std::tuple<vector<IR::Ptr>, FrameAccess> translate(SymbolTable::Ptr) override;
+  virtual std::tuple<vector<IR::Ptr>, FrameAccess>
+      translate(SymbolTable::Ptr) override;
 
 private:
   /**
@@ -464,8 +529,6 @@ private:
   BlockStmt *body_;
 };
 
-
-
 /**
  * 赋值语句
  */
@@ -474,7 +537,8 @@ public:
   AssignmentStmt(string *name, Expression::List *dimens, Expression *rval);
   ~AssignmentStmt();
   virtual void internal_print() override;
-  virtual std::tuple<vector<IR::Ptr>, FrameAccess> translate(SymbolTable::Ptr) override;
+  virtual std::tuple<vector<IR::Ptr>, FrameAccess>
+      translate(SymbolTable::Ptr) override;
 
 private:
   /**
@@ -494,11 +558,10 @@ private:
   Expression *rval_;
 };
 
-
 /**
  * 函数声明
  */
-class FunctionDecl : public Debug_impl , public IrTranslator_impl{
+class FunctionDecl : public Debug_impl, public IrTranslator_impl {
 public:
   FunctionDecl(BType ret_type, string *name, Variable::List *params,
                BlockStmt *block);
@@ -507,15 +570,20 @@ public:
   string name() { return name_; }
   BType ret_type() { return ret_type_; }
 
+  /**
+   * 返回对应形参的FrameAccess
+   */
   FrameAccess get_params_access(size_t index) {
     return symtab_->find(params_->at(index)).access_;
   }
-  FrameAccess get_return_access() {
-    return ret_access_;
-  }
-  
+  /**
+   * 返回函数返回值的FrameAccess
+   */
+  FrameAccess get_return_access() { return ret_access_; }
+
   virtual void internal_print() override;
-  virtual std::tuple<vector<IR::Ptr>, FrameAccess> translate(SymbolTable::Ptr) override;
+  virtual std::tuple<vector<IR::Ptr>, FrameAccess>
+      translate(SymbolTable::Ptr) override;
 
 private:
   /**
@@ -545,7 +613,16 @@ private:
    */
   Frame::Ptr frame_;
 
+  /**
+   * @member symtab_
+   * 函数的符号表，一般只保存函数的形参
+   * 函数内部的变量声明放在blockstmt的符号表内
+   */
   SymbolTable::Ptr symtab_;
 
+  /**
+   * @member ret_access_
+   * 返回值的FrameAccess
+   */
   FrameAccess ret_access_;
 };

@@ -1,6 +1,6 @@
 #pragma once
-#include <string>
 #include <memory>
+#include <string>
 
 class Frame;
 
@@ -8,7 +8,7 @@ class Frame;
 class Reg {};
 
 /**
- * FrameAccess是对栈帧中对变量、标号地址、寄存器的抽象，
+ * FrameAccess是对栈帧中对变量、标号地址、寄存器、立即数的抽象，
  * 例如如果要求栈帧分配一个变量空间，栈帧返回一个FrameAccess，
  * 后续可以通过FrameAccess来表示该变量进而生成中间代码
  *
@@ -31,7 +31,7 @@ class Reg {};
  *    MOV 10 -> fa1
  *    MOV b  -> fa2
  *    CALL func -> tmp
- *    MOV tmp -> var 
+ *    MOV tmp -> var
  *  其中tmp对应函数调用结果
  *
  */
@@ -42,13 +42,17 @@ struct _FrameAccess {
   ~_FrameAccess() {}
 
   Kind kind_;
-  union Locate{
+  union Locate {
     Locate() {}
     ~Locate() {}
-    int offset;
+    int offset;   // 内存相对帧指针的偏移
     Reg reg;
-    std::string name;
+    std::string name; // Label名称
   } locate_;
+  /**
+   * @member frame_
+   * FrameAccess对应的栈帧
+   */
   std::shared_ptr<Frame> frame_;
 };
 

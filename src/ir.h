@@ -14,6 +14,8 @@ public:
     DIV,
     MOD,
     JMP,
+    CALL,
+    RET,
     CMOVE,
     // ...
   };
@@ -42,5 +44,16 @@ class JmpIR : public IR {
 public:
     JmpIR(FrameAccess dst) : dst_(dst), IR(Op::JMP) {}
     FrameAccess dst_;
+};
+
+class CallIR : public IR {
+public:
+    CallIR(FrameAccess dst) : dst_(dst), IR(Op::CALL) {}
+    FrameAccess dst_;
+};
+
+class RetIR : public IR {
+public:
+    RetIR() : IR(Op::RET) {}
 };
 // ... More 

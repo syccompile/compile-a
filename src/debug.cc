@@ -65,7 +65,7 @@ void UnaryExp::internal_print() {
 }
 void VarExp::internal_print() {
   std::cout << red << ident_;
-  if(dimens_){
+  if (dimens_) {
     for (Expression *exp : *dimens_) {
       std::cout << white << "[";
       exp->internal_print();
@@ -201,7 +201,7 @@ void Array::internal_print() {
   Variable::internal_print();
   for (Expression *e : *dimens_) {
     printer << white << "[";
-    if(e){
+    if (e) {
       e->internal_print();
     }
     printer << white << "]";
@@ -304,7 +304,7 @@ void FunctionDecl::internal_print() {
 }
 void IR::internal_print() {
   switch (op_) {
-  case IR::Op::MOV :
+  case IR::Op::MOV:
     printer << "MOV\t$$->$$" << IndentPrinter::endl;
     break;
   case IR::Op::SUB:
@@ -324,6 +324,12 @@ void IR::internal_print() {
     break;
   case IR::Op::JMP:
     printer << "JMP\t->$$" << IndentPrinter::endl;
+    break;
+  case IR::Op::RET:
+    printer << "RET" << IndentPrinter::endl;
+    break;
+  case IR::Op::CALL:
+    printer << "CALL\t$$" << IndentPrinter::endl;
     break;
   default:
     printer << "NOP" << IndentPrinter::endl;

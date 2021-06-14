@@ -1,9 +1,14 @@
-#include "ir.h"
+/**
+ * 目前只对局部普通的变量声明，普通的变量赋值，return语句，函数声明等
+ * 尝试了中间代码的生成
+ */
+
 #include "ir_translator.h"
 #include "ast.h"
+#include "ir.h"
 
 #include <cassert>
-static FunctionDecl* now_func;
+static FunctionDecl *now_func;
 static WhileStmt *now_while;
 
 std::tuple<vector<IR::Ptr>, FrameAccess>
@@ -24,13 +29,12 @@ FuncCallExp::translate(SymbolTable::Ptr symtab) {
     for (Expression *exp : *params_) {
       wrap_tie(vec, access, exp, symtab);
       ret.insert(ret.end(), vec.begin(), vec.end());
-      ret.push_back(std::make_shared<UnaryOpIR>(IR::Op::MOV,
-                                  entry.pointer_.func_ptr->get_params_access(i),
-                                  access));
+      ret.push_back(std::make_shared<UnaryOpIR>(
+          IR::Op::MOV, entry.pointer_.func_ptr->get_params_access(i), access));
       i++;
     }
   }
-  ret.push_back(std::make_shared<JmpIR>(entry.access_));
+  ret.push_back(std::make_shared<CallIR>(entry.access_));
   return std::make_tuple(ret, entry.pointer_.func_ptr->get_return_access());
 }
 
@@ -38,17 +42,15 @@ std::tuple<vector<IR::Ptr>, FrameAccess>
 BinaryExp::translate(SymbolTable::Ptr symtab) {
   vector<IR::Ptr> ret;
   if (evaluable()) {
-    return std::make_tuple(vector<IR::Ptr>(), symtab->frame()->newImmAccess(eval()));
+    return std::make_tuple(vector<IR::Ptr>(),
+                           symtab->frame()->newImmAccess(eval()));
   }
   FrameAccess result = symtab->frame()->newTempAccess();
 
-  vector<IR::Ptr> lhs_vec;
-  FrameAccess lhs_access;
-  std::tie(lhs_vec, lhs_access) = left_->translate(symtab);
-  vector<IR::Ptr> rhs_vec;
-  FrameAccess rhs_access;
-  std::tie(lhs_vec, lhs_access) = right_->translate(symtab);
-
+  wrap_tie(lhs_vec, lhs_access, left_, symtab);
+  wrap_tie(rhs_vec, rhs_access, right_, symtab);
+  ret.insert(ret.end(), lhs_vec.begin(), lhs_vec.end());
+  ret.insert(ret.end(), rhs_vec.begin(), rhs_vec.end());
   IR::Ptr ir;
   switch (op_) {
   case Op::ADD:
@@ -81,20 +83,21 @@ std::tuple<vector<IR::Ptr>, FrameAccess>
 UnaryExp::translate(SymbolTable::Ptr symtab) {
   vector<IR::Ptr> ret;
   if (evaluable()) {
-    return std::make_tuple(vector<IR::Ptr>(), symtab->frame()->newImmAccess(eval()));
+    return std::make_tuple(vector<IR::Ptr>(),
+                           symtab->frame()->newImmAccess(eval()));
   }
   FrameAccess result = symtab->frame()->newTempAccess();
 
-  vector<IR::Ptr> vec;
-  FrameAccess access;
-  std::tie(vec, access) = exp_->translate(symtab);
+  wrap_tie(vec, access, exp_, symtab);
 
   IR::Ptr ir;
-  switch (op_) { case Op::ADD:
+  switch (op_) {
+  case Op::ADD:
     result = access;
     break;
   case Op::SUB:
-    ir = std::make_shared<BinOpIR>(IR::Op::SUB, result, symtab->frame()->newImmAccess(0), access);
+    ir = std::make_shared<BinOpIR>(IR::Op::SUB, result,
+                                   symtab->frame()->newImmAccess(0), access);
     ret.push_back(ir);
     break;
   default:
@@ -105,7 +108,8 @@ UnaryExp::translate(SymbolTable::Ptr symtab) {
 
 std::tuple<vector<IR::Ptr>, FrameAccess>
 NumberExp::translate(SymbolTable::Ptr symtab) {
-  return std::make_tuple(vector<IR::Ptr>(), symtab->frame()->newImmAccess(value_));
+  return std::make_tuple(vector<IR::Ptr>(),
+                         symtab->frame()->newImmAccess(value_));
 }
 
 std::tuple<vector<IR::Ptr>, FrameAccess>
@@ -113,15 +117,14 @@ VarDeclStmt::translate(SymbolTable::Ptr symtab) {
   vector<IR::Ptr> ret;
   for (Variable *var : vars_) {
     FrameAccess access = symtab->push(var);
-    if(var->initialized() && !var->global()){
+    if (var->initialized() && !var->global()) {
       if (var->is_array()) {
         // TODO
       } else {
-        vector<IR::Ptr> rhs_vec;
-        FrameAccess rhs_access;
-        std::tie(rhs_vec, rhs_access) = var->initval_->translate(symtab);
+        wrap_tie(rhs_vec, rhs_access, var->initval_, symtab);
         ret.insert(ret.end(), rhs_vec.begin(), rhs_vec.end());
-        ret.push_back(std::make_shared<UnaryOpIR>(IR::Op::MOV, access, rhs_access));
+        ret.push_back(
+            std::make_shared<UnaryOpIR>(IR::Op::MOV, access, rhs_access));
       }
     } else if (var->initialized() && var->global()) {
       // TODO
@@ -159,7 +162,7 @@ IfStmt::translate(SymbolTable::Ptr symtab) {
 std::tuple<vector<IR::Ptr>, FrameAccess>
 WhileStmt::translate(SymbolTable::Ptr symtab) {
   body_->symtab_->set_parent(symtab);
-  WhileStmt* temp = now_while;
+  WhileStmt *temp = now_while;
   now_while = this;
   // TODO
   now_while = temp;
@@ -175,9 +178,10 @@ ReturnStmt::translate(SymbolTable::Ptr symtab) {
   if (ret_exp_) {
     wrap_tie(vec, access, ret_exp_, symtab);
     ret.insert(ret.end(), vec.begin(), vec.end());
-    ret.push_back(std::make_shared<UnaryOpIR>(IR::Op::MOV, parent_->get_return_access(), access));
+    ret.push_back(std::make_shared<UnaryOpIR>(
+        IR::Op::MOV, parent_->get_return_access(), access));
   }
-  ret.push_back(std::make_shared<JmpIR>(symtab->find(parent_).access_));
+  ret.push_back(std::make_shared<RetIR>());
   return std::make_tuple(ret, nullptr);
 }
 
@@ -203,13 +207,15 @@ AssignmentStmt::translate(SymbolTable::Ptr symtab) {
   vector<IR::Ptr> ret;
   auto entry = symtab->find(name_);
   auto var_ptr = entry.pointer_.var_ptr;
+  assert(entry.type_ == SymbolTable::SymTabEntry::SymType::VARIABLE);
   assert(!var_ptr->immutable());
   if (var_ptr->is_array()) {
 
   } else {
     wrap_tie(vec, access, rval_, symtab);
     ret.insert(ret.end(), vec.begin(), vec.end());
-    ret.push_back(std::make_shared<UnaryOpIR>(IR::Op::MOV, entry.access_, access));
+    ret.push_back(
+        std::make_shared<UnaryOpIR>(IR::Op::MOV, entry.access_, access));
   }
   return std::make_tuple(ret, nullptr);
 }
@@ -217,6 +223,7 @@ AssignmentStmt::translate(SymbolTable::Ptr symtab) {
 std::tuple<vector<IR::Ptr>, FrameAccess>
 FunctionDecl::translate(SymbolTable::Ptr symtab) {
   symtab_->set_parent(symtab);
+  body_->symtab_->set_parent(symtab_);
   FunctionDecl *temp = now_func;
   now_func = this;
 

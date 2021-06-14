@@ -156,7 +156,7 @@ FunctionDecl::FunctionDecl(BType ret_type, string *name, Variable::List *params,
   assert(name);
   assert(block);
 
-  symtab_->push(this);
+  GlobSymTab->push(this);
 
   if (params_) {
     for (Variable *param : *params_) {
