@@ -38,7 +38,7 @@ std::vector<FunctionDecl*> funcs;
   AssignmentStmt * assignstmt;
   BlockStmt * blockstmt;
   FunctionDecl* funcdecl;
-  FunctionDecl::FParam::List* funcfparams;
+  FParam::List* funcfparams;
 }
 
 %token <token> LBRACKET RBRACKET LPARENT RPARENT LCURLY RCURLY
@@ -69,9 +69,9 @@ std::vector<FunctionDecl*> funcs;
 %start CompUnit
 
 %%
-CompUnit: VarDecl { vardecl.push_back($1); }
+CompUnit: VarDecl { vardecl.push_back($1); $1->set_global(); }
         | FuncDef { funcs.push_back($1); }
-        | CompUnit VarDecl { vardecl.push_back($2); }
+        | CompUnit VarDecl { vardecl.push_back($2); $2->set_global(); }
         | CompUnit FuncDef { funcs.push_back($2); }
         ;
 
@@ -100,8 +100,8 @@ UnaryExp : PrimaryExp { $$ = $1; }
 // 343 / 0xff / 03327 / a / a[10][1] / (...)
 PrimaryExp : LPARENT Exp RPARENT { $$ = $2; }
            | NUMBER { $$ = new NumberExp($1); delete $1; }
-           | IDENT  { $$ = new VarExp(new Variable(BType::UNKNOWN, $1, false)); delete $1; }
-           | IDENT DimenList  { $$ = new VarExp(new Array(BType::UNKNOWN, $1, false, $2)); delete $1; }
+           | IDENT  { $$ = new VarExp($1, nullptr); delete $1; }
+           | IDENT DimenList  { $$ = new VarExp($1, $2); delete $1; }
            ;
 // 4<=5 / 4>=5 / 4<5 / 4>5
 RelExp : AddExp   { $$ = $1; }
@@ -228,20 +228,20 @@ BlockStmt : LCURLY RCURLY { $$ = new BlockStmt(); }
           | LCURLY BlockItems RCURLY { $$ = $2; }
           ;
 // int a, int b[][10], ...
-FuncFParams : BType IDENT             { $$ = new FunctionDecl::FParam::List(); 
-                                        $$->push_back(new FunctionDecl::FParam($1, $2, nullptr)); 
+FuncFParams : BType IDENT             { $$ = new FParam::List(); 
+                                        $$->push_back(new FParam($1, $2, nullptr)); 
                                         delete $2;
                                       }
-            | BType IDENT DimenList   { $$ = new FunctionDecl::FParam::List();
-                                        $$->push_back(new FunctionDecl::FParam($1, $2, $3));
+            | BType IDENT DimenList   { $$ = new FParam::List();
+                                        $$->push_back(new FParam($1, $2, $3));
                                         delete $2;
                                       }
             | FuncFParams COMMA BType IDENT { $$ = $1; 
-                                              $$->push_back(new FunctionDecl::FParam($3, $4, nullptr));
+                                              $$->push_back(new FParam($3, $4, nullptr));
                                               delete $4;
                                             }
             | FuncFParams COMMA BType IDENT DimenList { $$ = $1;
-                                                        $$->push_back(new FunctionDecl::FParam($3,  $4, $5));
+                                                        $$->push_back(new FParam($3,  $4, $5));
                                                         delete $4;
                                                       }
             ;
@@ -255,8 +255,10 @@ int main () {
   yyparse();
   for(VarDeclStmt* stmt: vardecl){
     stmt->internal_print();
+    stmt->translate(GlobSymTab);
   }
   for(FunctionDecl* f : funcs){
     f->internal_print();
+    f->translate(GlobSymTab);
   }
 }

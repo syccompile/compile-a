@@ -2,10 +2,16 @@
 
 #include <cassert>
 #include <string>
-VarExp::VarExp(Variable *var) : Expression(Op::VAR, false), var_(var) {
-  assert(var);
+VarExp::VarExp(string* ident, Expression::List* dimens) : Expression(Op::VAR, false), ident_(*ident), dimens_(dimens) {
 }
-VarExp::~VarExp() { delete var_; }
+VarExp::~VarExp() {
+  if (dimens_) {
+    for (Expression *exp : *dimens_) {
+      delete exp;
+    }
+    delete dimens_;
+  }
+}
 
 NumberExp::NumberExp(string *str) : Expression(Op::NUM, true), string_(*str) {
   assert(str);
@@ -41,7 +47,7 @@ UnaryExp::UnaryExp(Op op, Expression *exp) : Expression(op, false), exp_(exp) {
 UnaryExp::~UnaryExp() { delete exp_; }
 
 Variable::Variable(BType type, string *name, bool immutable)
-    : type_(type), name_(*name), immutable_(immutable), initialized_(false),
+    : global_(false), type_(type), name_(*name), immutable_(immutable), initialized_(false),
       initval_(nullptr) {
   assert(name);
 }
@@ -143,13 +149,32 @@ AssignmentStmt::~AssignmentStmt() {
 
 FunctionDecl::FunctionDecl(BType ret_type, string *name, FParam::List *params,
                            BlockStmt *block)
-    : ret_type_(ret_type), name_(*name), params_(params), body_(block), frame_(std::make_shared<Frame>()){
+    : ret_type_(ret_type), name_(*name), params_(params), body_(block), frame_(std::make_shared<Frame>(false)), symtab_(std::make_shared<SymbolTable>(GlobSymTab, frame_)){
   assert(name);
   assert(block);
-  body_->symtab_->set_parent(GlobSymTab);
+  body_->symtab_->set_parent(symtab_);
+  body_->symtab_->set_frame(frame_);
+  if(ret_type == BType::INT){
+    symtab_->push_return();
+  }
+  if (params_) {
+    for (FParam *param : *params_) {
+      symtab_->push_param(param);
+    }
+  }
 }
 
 FunctionDecl::~FunctionDecl() {
   delete params_;
   delete body_;
+}
+
+void VarDeclStmt::set_global() {
+  for (Variable *var : vars_) {
+    var->set_global(true);
+  }
+}
+
+void BlockStmt::push_back(Stmt *stmt) {
+    stmts_.push_back(stmt);
 }

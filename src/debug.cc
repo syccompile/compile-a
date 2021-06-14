@@ -63,7 +63,16 @@ void UnaryExp::internal_print() {
     break;
   }
 }
-void VarExp::internal_print() { var_->internal_print(); }
+void VarExp::internal_print() {
+  std::cout << red << ident_;
+  if(dimens_){
+    for (Expression *exp : *dimens_) {
+      std::cout << white << "[";
+      exp->internal_print();
+      std::cout << white << "]";
+    }
+  }
+}
 void BinaryExp::internal_print() {
   switch (op_) {
   case Op::AND:

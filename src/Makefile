@@ -7,8 +7,8 @@ TARGET = output
 
 TEST_TXT = example.txt
 
-CXX_SOURCE = analyzer.cc flex.cc debug.cc ast.cc symtab.cc
-OBJS = analyzer.o ast.o debug.o flex.o symtab.o
+CXX_SOURCE = analyzer.cc flex.cc debug.cc ast.cc symtab.cc ir_translator.cc frame.cc
+OBJS = analyzer.o ast.o debug.o flex.o symtab.o ir_translator.o frame.o
 
 BISON_SOURCE = analyzer.y
 BISON_FLAG  = -Wcounterexamples
@@ -24,7 +24,7 @@ analyzer.cc : $(BISON_SOURCE)
 flex.cc : $(FLEX_SOURCE)
 	$(FLEX) -o $@ $^
 %.o : %.cc
-	$(CXX) -c $^ -o $@
+	$(CXX) $(CXXFLAGS) -c $^ -o $@
 
 .PHONY: test
 test : $(TARGET)

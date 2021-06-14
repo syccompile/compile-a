@@ -1,7 +1,9 @@
 // hell ojfodjfaijdfiajd
 // djifajidof
 void func1(int a, int b){
-  int a = 10;
+  int a = +10;
+  a = -10;
+  a = --+b;
   if(3 < 4) {
     if(3< 5){
       while(i>10+4){
@@ -10,7 +12,7 @@ void func1(int a, int b){
       }
       break;
     }
-    a = 11; 
+    a = -b; 
     // djfiadjoifja
     /* jdifajijaijfa
         *djaijdf

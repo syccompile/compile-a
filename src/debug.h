@@ -1,6 +1,6 @@
 #pragma once
 
-class Debug {
+class Debug_impl {
 public:
   virtual void internal_print(){};
 };

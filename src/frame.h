@@ -37,7 +37,7 @@ class Reg {};
  */
 struct _FrameAccess {
   using Ptr = std::shared_ptr<_FrameAccess>;
-  enum class Kind { MEM, REG, LABEL };
+  enum class Kind { MEM, REG, LABEL, TEMP, IMM };
 
   ~_FrameAccess() {}
 
@@ -59,6 +59,12 @@ using FrameAccess = std::shared_ptr<_FrameAccess>;
  */
 class Frame {
 public:
+  Frame(bool global) : global_(global) {}
+  ~Frame() {}
+  const bool global_;
   using Ptr = std::shared_ptr<Frame>;
-  FrameAccess newAccess();
+  FrameAccess newVarAccess();
+  FrameAccess newLabelAccess();
+  FrameAccess newTempAccess();
+  FrameAccess newImmAccess(int);
 };
