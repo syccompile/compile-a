@@ -303,7 +303,14 @@ void FunctionDecl::internal_print() {
   body_->internal_print();
 }
 void IR::internal_print() {
+  printer.add_level();
   switch (op_) {
+  case IR::Op::LABEL:
+    printer.sub_level();
+    dynamic_cast<LabelIR*>(this)->dst_->internal_print();
+    printer << ":" << IndentPrinter::endl;
+    printer.add_level();
+    break;
   case IR::Op::MOV:
     printer << "MOV\t$$->$$" << IndentPrinter::endl;
     break;
@@ -329,10 +336,23 @@ void IR::internal_print() {
     printer << "RET" << IndentPrinter::endl;
     break;
   case IR::Op::CALL:
-    printer << "CALL\t$$" << IndentPrinter::endl;
+    printer << "CALL\t";
+    dynamic_cast<CallIR *>(this)->dst_->internal_print();
+    printer << IndentPrinter::endl;
     break;
   default:
     printer << "NOP" << IndentPrinter::endl;
     break;
+  }
+  printer.sub_level();
+}
+
+void _FrameAccess::internal_print() {
+  switch (kind_) {
+    case Kind::LABEL:
+      printer << name_ ;
+      break;
+    default:
+      break;
   }
 }

@@ -152,7 +152,7 @@ FunctionDecl::FunctionDecl(BType ret_type, string *name, Variable::List *params,
     : ret_type_(ret_type), name_(*name), params_(params), body_(block),
       frame_(std::make_shared<Frame>(false)),
       symtab_(std::make_shared<SymbolTable>()),
-      ret_access_(frame_->newRetAccess()) {
+      ret_access_(frame_->newRetAccess(frame_)) {
   assert(name);
   assert(block);
 

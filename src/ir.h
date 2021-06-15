@@ -7,6 +7,7 @@ class IR : public Debug_impl{
 public:
   using Ptr = std::shared_ptr<IR>;
   enum class Op {
+    LABEL,
     MOV,
     ADD,
     SUB,
@@ -55,5 +56,10 @@ public:
 class RetIR : public IR {
 public:
     RetIR() : IR(Op::RET) {}
+};
+class LabelIR : public IR {
+public:
+  LabelIR(FrameAccess dst) : IR(Op::LABEL), dst_(dst) {}
+    FrameAccess dst_;
 };
 // ... More 

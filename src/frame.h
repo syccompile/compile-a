@@ -1,4 +1,6 @@
 #pragma once
+#include "debug.h"
+
 #include <memory>
 #include <string>
 
@@ -35,19 +37,20 @@ class Reg {};
  *  其中tmp对应函数调用结果
  *
  */
-struct _FrameAccess {
+struct _FrameAccess : public Debug_impl{
   using Ptr = std::shared_ptr<_FrameAccess>;
   enum class Kind { MEM, REG, LABEL, TEMP, IMM };
 
   ~_FrameAccess() {}
+  virtual void internal_print() override;
 
   Kind kind_;
+  std::string name_; // Label名称
   union Locate {
     Locate() {}
     ~Locate() {}
     int offset;   // 内存相对帧指针的偏移
     Reg reg;
-    std::string name; // Label名称
   } locate_;
   /**
    * @member frame_
@@ -63,13 +66,20 @@ using FrameAccess = std::shared_ptr<_FrameAccess>;
  */
 class Frame {
 public:
+  using Ptr = std::shared_ptr<Frame>;
   Frame(bool global) : global_(global) {}
   ~Frame() {}
   const bool global_;
-  using Ptr = std::shared_ptr<Frame>;
-  FrameAccess newVarAccess();
-  FrameAccess newLabelAccess();
-  FrameAccess newTempAccess();
-  FrameAccess newImmAccess(int);
-  FrameAccess newRetAccess();
+  FrameAccess newVarAccess(Frame::Ptr);
+  FrameAccess newLabelAccess(Frame::Ptr);
+  FrameAccess newLabelAccess(Frame::Ptr, std::string);
+  FrameAccess newTempAccess(Frame::Ptr);
+  FrameAccess newImmAccess(Frame::Ptr, int);
+  FrameAccess newRetAccess(Frame::Ptr);
+
+private:
+  static int klabel_num ;
+  std::string generateLabelName();
 };
+
+extern Frame::Ptr GlobFrame;

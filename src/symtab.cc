@@ -4,14 +4,12 @@
 #include <memory>
 #include <cassert>
 
-/** 全局符号表 **/
-auto GlobSymTab = std::make_shared<SymbolTable>(nullptr, nullptr);
 
 FrameAccess SymbolTable::push(Variable *var) {
   assert(var);
   SymTabEntry entry; entry.type_ = SymTabEntry::SymType::VARIABLE; entry.name_ = var->name();
   entry.pointer_.var_ptr = var;
-  entry.access_ = frame_->newVarAccess();
+  entry.access_ = frame_->newVarAccess(frame_);
   entries_.push_back(entry);
   return entry.access_;
 }
@@ -22,7 +20,7 @@ FrameAccess SymbolTable::push(FunctionDecl *func) {
   entry.type_ = SymTabEntry::SymType::FUNCTION;
   entry.name_ = func->name();
   entry.pointer_.func_ptr = func;
-  entry.access_ = frame_->newLabelAccess();
+  entry.access_ = frame_->newLabelAccess(frame_, func->name());
   entries_.push_back(entry);
   return entry.access_;
 }

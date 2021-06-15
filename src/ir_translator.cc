@@ -43,9 +43,9 @@ BinaryExp::translate(SymbolTable::Ptr symtab) {
   vector<IR::Ptr> ret;
   if (evaluable()) {
     return std::make_tuple(vector<IR::Ptr>(),
-                           symtab->frame()->newImmAccess(eval()));
+                           symtab->frame()->newImmAccess(symtab->frame(), eval()));
   }
-  FrameAccess result = symtab->frame()->newTempAccess();
+  FrameAccess result = symtab->frame()->newTempAccess(symtab->frame());
 
   wrap_tie(lhs_vec, lhs_access, left_, symtab);
   wrap_tie(rhs_vec, rhs_access, right_, symtab);
@@ -84,9 +84,9 @@ UnaryExp::translate(SymbolTable::Ptr symtab) {
   vector<IR::Ptr> ret;
   if (evaluable()) {
     return std::make_tuple(vector<IR::Ptr>(),
-                           symtab->frame()->newImmAccess(eval()));
+                           symtab->frame()->newImmAccess(symtab->frame(), eval()));
   }
-  FrameAccess result = symtab->frame()->newTempAccess();
+  FrameAccess result = symtab->frame()->newTempAccess(symtab->frame());
 
   wrap_tie(vec, access, exp_, symtab);
 
@@ -97,7 +97,7 @@ UnaryExp::translate(SymbolTable::Ptr symtab) {
     break;
   case Op::SUB:
     ir = std::make_shared<BinOpIR>(IR::Op::SUB, result,
-                                   symtab->frame()->newImmAccess(0), access);
+                                   symtab->frame()->newImmAccess(symtab->frame(), 0), access);
     ret.push_back(ir);
     break;
   default:
@@ -109,7 +109,7 @@ UnaryExp::translate(SymbolTable::Ptr symtab) {
 std::tuple<vector<IR::Ptr>, FrameAccess>
 NumberExp::translate(SymbolTable::Ptr symtab) {
   return std::make_tuple(vector<IR::Ptr>(),
-                         symtab->frame()->newImmAccess(value_));
+                         symtab->frame()->newImmAccess(symtab->frame(), value_));
 }
 
 std::tuple<vector<IR::Ptr>, FrameAccess>
@@ -228,6 +228,7 @@ FunctionDecl::translate(SymbolTable::Ptr symtab) {
   now_func = this;
 
   vector<IR::Ptr> ret;
+  ret.push_back(std::make_shared<LabelIR>(frame_->newLabelAccess(frame_, name_)));
   wrap_tie(vec, access, body_, symtab_);
   ret.insert(ret.end(), vec.begin(), vec.end());
 

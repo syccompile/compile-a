@@ -10,8 +10,8 @@ extern int yylex();
 extern int yylineno;
 extern char* yytext;
 void yyerror(const char* msg) { printf("line %d %s: yytext is %s\n", yylineno, msg, yytext); }
-std::vector<VarDeclStmt*> vardecl;
-std::vector<FunctionDecl*> funcs;
+extern std::vector<VarDeclStmt*> vardecl;
+extern std::vector<FunctionDecl*> funcs;
 %}
 
 %union {
@@ -251,21 +251,3 @@ FuncDef : BType IDENT LPARENT FuncFParams RPARENT BlockStmt  { $$ = new Function
         | BType IDENT LPARENT RPARENT BlockStmt          { $$ = new FunctionDecl($1, $2, nullptr, $5); delete $2; }
         ;
 %%
-int main () {
-  yylineno = 1;
-  yyparse();
-  for(VarDeclStmt* stmt: vardecl){
-    stmt->internal_print();
-    wrap_tie(vec, access, stmt, GlobSymTab);
-    for(auto ir : vec){
-      ir->internal_print();
-    }
-  }
-  for(FunctionDecl* f : funcs){
-    f->internal_print();
-    wrap_tie(vec, access, f, GlobSymTab);
-    for(auto ir : vec){
-      ir->internal_print();
-    }
-  }
-}
