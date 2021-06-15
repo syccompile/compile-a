@@ -9,7 +9,7 @@ FrameAccess SymbolTable::push(Variable *var) {
   assert(var);
   SymTabEntry entry; entry.type_ = SymTabEntry::SymType::VARIABLE; entry.name_ = var->name();
   entry.pointer_.var_ptr = var;
-  entry.access_ = frame_->newVarAccess(frame_);
+  entry.access_ = frame_->newVarAccess(frame_, var->name());
   entries_.push_back(entry);
   return entry.access_;
 }

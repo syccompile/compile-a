@@ -45,7 +45,7 @@ struct _FrameAccess : public Debug_impl{
   virtual void internal_print() override;
 
   Kind kind_;
-  std::string name_; // Label名称
+  std::string name_; // Label名称，也用于debug
   union Locate {
     Locate() {}
     ~Locate() {}
@@ -70,7 +70,7 @@ public:
   Frame(bool global) : global_(global) {}
   ~Frame() {}
   const bool global_;
-  FrameAccess newVarAccess(Frame::Ptr);
+  FrameAccess newVarAccess(Frame::Ptr, std::string);
   FrameAccess newLabelAccess(Frame::Ptr);
   FrameAccess newLabelAccess(Frame::Ptr, std::string);
   FrameAccess newTempAccess(Frame::Ptr);

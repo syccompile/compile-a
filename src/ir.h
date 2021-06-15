@@ -8,13 +8,24 @@ public:
   using Ptr = std::shared_ptr<IR>;
   enum class Op {
     LABEL,
+
     MOV,
     ADD,
     SUB,
     MUL,
     DIV,
     MOD,
+
     JMP,
+    JLE,
+    JLT,
+    JGE,
+    JGT,
+    JE,
+    JNE,
+
+    CMP,
+
     CALL,
     RET,
     CMOVE,
@@ -41,25 +52,13 @@ public:
   FrameAccess dst_;
 };
 
-class JmpIR : public IR {
-public:
-    JmpIR(FrameAccess dst) : dst_(dst), IR(Op::JMP) {}
-    FrameAccess dst_;
+class SingalOpIR : public IR {
+public :
+  SingalOpIR(Op op, FrameAccess dst) : dst_(dst), IR(op) {}
+  FrameAccess dst_;
 };
 
-class CallIR : public IR {
-public:
-    CallIR(FrameAccess dst) : dst_(dst), IR(Op::CALL) {}
-    FrameAccess dst_;
+class NoOpIR : public IR {
+public :
+  NoOpIR(Op op) : IR(op) {}
 };
-
-class RetIR : public IR {
-public:
-    RetIR() : IR(Op::RET) {}
-};
-class LabelIR : public IR {
-public:
-  LabelIR(FrameAccess dst) : IR(Op::LABEL), dst_(dst) {}
-    FrameAccess dst_;
-};
-// ... More 
