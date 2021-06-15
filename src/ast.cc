@@ -122,7 +122,7 @@ IfStmt::~IfStmt() {
 }
 
 WhileStmt::WhileStmt(Expression *condition, BlockStmt *body)
-    : condition_(condition), body_(body) {
+    : condition_(condition), body_(body), break_access_(GlobFrame->newLabelAccess(GlobFrame)), continue_access_(GlobFrame->newLabelAccess(GlobFrame)){
   assert(condition);
   assert(body);
 }

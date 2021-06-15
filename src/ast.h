@@ -512,6 +512,8 @@ private:
  */
 class WhileStmt : public Stmt {
 public:
+  friend class BreakStmt;
+  friend class ContinueStmt;
   WhileStmt(Expression *condition, BlockStmt *body);
   ~WhileStmt();
   virtual void internal_print() override;
@@ -529,6 +531,17 @@ private:
    * while语句的循环体, 保证不为空
    */
   BlockStmt *body_;
+
+  /**
+   * @member break_access_
+   * break语句跳转的Label
+   */
+  FrameAccess break_access_;
+  /**
+   * @member continue_access_
+   * break语句跳转的Label
+   */
+  FrameAccess continue_access_;
 };
 
 /**

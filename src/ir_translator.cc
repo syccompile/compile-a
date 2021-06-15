@@ -210,15 +210,41 @@ IfStmt::translate(SymbolTable::Ptr symtab) {
   ret.push_back(std::make_shared<SingalOpIR>(IR::Op::LABEL, next_label));
   return std::make_tuple(ret, nullptr);
 }
-
+/**
+ * while语句翻译为中间代码的模式如下
+ *          JMP  .L1
+ *      .L2:
+ *          #循环体代码
+ *          # ...
+ *          # ...
+ *      .L1:
+ *          # 判断代码
+ *          # ...
+ *          CMP   ax, bx # 比较
+ *          JLE   .L2
+ *      .L3:
+ *          # ...
+ */
 std::tuple<vector<IR::Ptr>, FrameAccess>
 WhileStmt::translate(SymbolTable::Ptr symtab) {
   body_->symtab_->set_parent(symtab);
   WhileStmt *temp = now_while;
   now_while = this;
   // TODO
+  vector<IR::Ptr> ret;
+  wrap_tie(condition_vec, body_access, condition_, symtab);
+  wrap_tie(body_vec, tmp_access, body_, body_->symtab_);
+
+  ret.push_back(
+      std::make_shared<SingalOpIR>(IR::Op::JMP, continue_access_));
+  ret.push_back(std::make_shared<SingalOpIR>(IR::Op::LABEL, body_access));
+  ret.insert(ret.end(), body_vec.begin(), body_vec.end());
+  ret.push_back(std::make_shared<SingalOpIR>(IR::Op::LABEL, continue_access_));
+  ret.insert(ret.end(), condition_vec.begin(), condition_vec.end());
+  ret.push_back(std::make_shared<SingalOpIR>(IR::Op::LABEL, break_access_));
+
   now_while = temp;
-  return std::make_tuple(vector<IR::Ptr>(), nullptr);
+  return std::make_tuple(ret, nullptr);
 }
 
 std::tuple<vector<IR::Ptr>, FrameAccess>
@@ -241,16 +267,18 @@ std::tuple<vector<IR::Ptr>, FrameAccess>
 BreakStmt::translate(SymbolTable::Ptr symtab) {
   assert(now_while);
   parent_ = now_while;
-  // TODO
-  return std::make_tuple(vector<IR::Ptr>(), nullptr);
+  vector<IR::Ptr> ret;
+  ret.push_back(std::make_shared<SingalOpIR>(IR::Op::JMP, parent_->break_access_));
+  return std::make_tuple(ret, nullptr);
 }
 
 std::tuple<vector<IR::Ptr>, FrameAccess>
 ContinueStmt::translate(SymbolTable::Ptr symtab) {
   assert(now_while);
   parent_ = now_while;
-  // TODO
-  return std::make_tuple(vector<IR::Ptr>(), nullptr);
+  vector<IR::Ptr> ret;
+  ret.push_back(std::make_shared<SingalOpIR>(IR::Op::JMP, parent_->continue_access_));
+  return std::make_tuple(ret, nullptr);
 }
 
 std::tuple<vector<IR::Ptr>, FrameAccess>

@@ -5,11 +5,14 @@ jdifajodf
 /  */
 const int var1 = 10, arr2[][10][10] = {{{1,2,3}, {1,2,3}}, {{2,3,4}, {3,4,2}}};
 int func2 (int c, int d){
-  if(c>0){
-    if(c*2 + d == 3+4*7){
-      d = d + 5;
+  while(c > d * 10 + 2){
+    if(c>0){
+      if(c*2 + d == 3+4*7){
+        d = d + 5;
+      }
+      d = 10;
+      break;
     }
-    d = 10;
   }
   return c * d + 4;
 }
