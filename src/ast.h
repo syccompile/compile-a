@@ -41,10 +41,7 @@ public:
   Expression(Op op, bool evaluable) : op_(op), evaluable_(evaluable) {}
   virtual ~Expression() {}
   bool evaluable() { return evaluable_; }
-  int eval() {
-    // TODO
-    return 0;
-  }
+  virtual int eval();
   virtual void internal_print() override {}
 
   virtual std::tuple<vector<IR::Ptr>, FrameAccess>
@@ -77,6 +74,7 @@ public:
   virtual void internal_print() override;
   virtual std::tuple<vector<IR::Ptr>, FrameAccess>
   translate(SymbolTable::Ptr symtab) override;
+  virtual int eval() override;
 
 private:
   /**
@@ -103,6 +101,7 @@ public:
   virtual void internal_print() override;
   virtual std::tuple<vector<IR::Ptr>, FrameAccess>
   translate(SymbolTable::Ptr symtab) override;
+  virtual int eval() override;
 
 private:
   /**
@@ -127,6 +126,7 @@ public:
   virtual void internal_print() override;
   virtual std::tuple<vector<IR::Ptr>, FrameAccess>
   translate(SymbolTable::Ptr symtab) override;
+  virtual int eval() override;
 
 private:
   Expression *left_;
@@ -143,6 +143,7 @@ public:
   virtual void internal_print() override;
   virtual std::tuple<vector<IR::Ptr>, FrameAccess>
   translate(SymbolTable::Ptr symtab) override;
+  virtual int eval() override;
 
 private:
   Expression *exp_;
@@ -158,6 +159,7 @@ public:
   virtual void internal_print() override;
   virtual std::tuple<vector<IR::Ptr>, FrameAccess>
   translate(SymbolTable::Ptr symtab) override;
+  virtual int eval() override;
 
 private:
   /**

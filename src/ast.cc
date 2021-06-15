@@ -13,7 +13,8 @@ VarExp::~VarExp() {
   }
 }
 
-NumberExp::NumberExp(string *str) : Expression(Op::NUM, true), string_(*str) {
+// FIX: 将string 转换为int
+NumberExp::NumberExp(string *str) : Expression(Op::NUM, true), string_(*str) , value_(stoi(string_)){
   assert(str);
 }
 NumberExp::~NumberExp() {}
@@ -179,4 +180,41 @@ void VarDeclStmt::set_global() {
 void BlockStmt::push_back(Stmt *stmt) {
   stmts_.push_back(stmt);
   // TODO
+}
+
+int Expression::eval() { return 0; }
+
+int VarExp::eval() { return 0; }
+int FuncCallExp::eval() { return 0; }
+int BinaryExp::eval() {
+  switch (op_) {
+    case Op::ADD:
+      return left_->eval() + right_->eval();
+    case Op::SUB:
+      return left_->eval() - right_->eval();
+    case Op::MUL:
+      return left_->eval() * right_->eval();
+    case Op::DIV:
+      return left_->eval() / right_->eval();
+    case Op::MOD:
+      return left_->eval() % right_->eval();
+    case Op::AND:
+      return left_->eval() & right_->eval();
+    case Op::OR:
+      return left_->eval() | right_->eval();
+    //case Op::
+    default :
+      return 0;
+  }
+}
+int UnaryExp::eval() {
+  switch (op_) {
+    case Op::NOT:
+      return !exp_->eval();
+    default :
+      return 0;
+  }
+}
+int NumberExp::eval() {
+  return value_;
 }

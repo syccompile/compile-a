@@ -337,9 +337,9 @@ void IR::internal_print() {
     printer << "CMP\t";
 A:
     dynamic_cast<BinOpIR *>(this)->src1_->internal_print();
-    printer << ", ";
+    printer << white << ", ";
     dynamic_cast<BinOpIR *>(this)->src2_->internal_print();
-    printer << "->";
+    printer << white << "->";
     dynamic_cast<BinOpIR *>(this)->dst_->internal_print();
     printer << IndentPrinter::endl;
     break;
@@ -385,10 +385,10 @@ void _FrameAccess::internal_print() {
     case Kind::TEMP:
     case Kind::REG:
     case Kind::LABEL:
-      printer << name_ ;
+      printer << yellow << name_ ;
       break;
     case Kind::IMM:
-      printer << std::to_string(locate_.offset);
+      printer << green << std::to_string(locate_.offset);
       break;
     default:
       printer << "$$";

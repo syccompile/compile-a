@@ -41,10 +41,11 @@ FuncCallExp::translate(SymbolTable::Ptr symtab) {
 std::tuple<vector<IR::Ptr>, FrameAccess>
 BinaryExp::translate(SymbolTable::Ptr symtab) {
   vector<IR::Ptr> ret;
+  // FIX: 现在的计算还有些问题
   if (evaluable()) {
     return std::make_tuple(vector<IR::Ptr>(),
-                           symtab->frame()->newImmAccess(symtab->frame(), eval()));
-  }
+                           symtab->frame()->newImmAccess(symtab->frame(),
+  eval())); }
   FrameAccess result = symtab->frame()->newTempAccess(symtab->frame());
 
   wrap_tie(lhs_vec, lhs_access, left_, symtab);
@@ -195,8 +196,8 @@ IfStmt::translate(SymbolTable::Ptr symtab) {
   FrameAccess next_label =
       symtab->frame()->newLabelAccess(symtab->frame());
 
-  wrap_tie(conditon_vec, yes_label, condition_, symtab);
-  ret.insert(ret.end(), conditon_vec.begin(), conditon_vec.end());
+  wrap_tie(condition_vec, yes_label, condition_, symtab);
+  ret.insert(ret.end(), condition_vec.begin(), condition_vec.end());
   if (no_) {
     wrap_tie(no_vec, access, no_, no_->symtab_);
     ret.insert(ret.end(), no_vec.begin(), no_vec.end());
