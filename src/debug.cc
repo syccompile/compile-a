@@ -314,7 +314,7 @@ void IR::internal_print() {
   case IR::Op::MOV:
     printer << "MOV\t";
     dynamic_cast<UnaryOpIR *>(this)->src_->internal_print();
-    printer << "->";
+    printer << white <<  "->";
     dynamic_cast<UnaryOpIR *>(this)->dst_->internal_print();
     printer << IndentPrinter::endl;
     break;
