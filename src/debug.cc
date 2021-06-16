@@ -307,14 +307,14 @@ void IR::internal_print() {
   switch (op_) {
   case IR::Op::LABEL:
     printer.sub_level();
-    dynamic_cast<SingalOpIR*>(this)->dst_->internal_print();
+    dynamic_cast<SingalOpIR *>(this)->dst_->internal_print();
     printer << ":" << IndentPrinter::endl;
     printer.add_level();
     break;
   case IR::Op::MOV:
     printer << "MOV\t";
     dynamic_cast<UnaryOpIR *>(this)->src_->internal_print();
-    printer << white <<  "->";
+    printer << white << "->";
     dynamic_cast<UnaryOpIR *>(this)->dst_->internal_print();
     printer << IndentPrinter::endl;
     break;
@@ -335,7 +335,7 @@ void IR::internal_print() {
     goto A;
   case IR::Op::CMP:
     printer << "CMP\t";
-A:
+  A:
     dynamic_cast<BinOpIR *>(this)->src1_->internal_print();
     printer << white << ", ";
     dynamic_cast<BinOpIR *>(this)->src2_->internal_print();
@@ -366,7 +366,7 @@ A:
     goto B;
   case IR::Op::JGT:
     printer << "JGE\t";
-B:
+  B:
     dynamic_cast<SingalOpIR *>(this)->dst_->internal_print();
     printer << IndentPrinter::endl;
     break;
@@ -382,16 +382,16 @@ B:
 
 void _FrameAccess::internal_print() {
   switch (kind_) {
-    case Kind::TEMP:
-    case Kind::REG:
-    case Kind::LABEL:
-      printer << yellow << name_ ;
-      break;
-    case Kind::IMM:
-      printer << green << std::to_string(locate_.offset);
-      break;
-    default:
-      printer << "$$";
-      break;
+  case Kind::TEMP:
+  case Kind::REG:
+  case Kind::LABEL:
+    printer << yellow << name_;
+    break;
+  case Kind::IMM:
+    printer << green << std::to_string(locate_.offset);
+    break;
+  default:
+    printer << "$$";
+    break;
   }
 }

@@ -1,13 +1,14 @@
-#include "ast.h"
 #include "symtab.h"
+#include "ast.h"
 
-#include <memory>
 #include <cassert>
-
+#include <memory>
 
 FrameAccess SymbolTable::push(Variable *var) {
   assert(var);
-  SymTabEntry entry; entry.type_ = SymTabEntry::SymType::VARIABLE; entry.name_ = var->name();
+  SymTabEntry entry;
+  entry.type_ = SymTabEntry::SymType::VARIABLE;
+  entry.name_ = var->name();
   entry.pointer_.var_ptr = var;
   entry.access_ = frame_->newVarAccess(frame_, var->name());
   entries_.push_back(entry);
@@ -25,13 +26,8 @@ FrameAccess SymbolTable::push(FunctionDecl *func) {
   return entry.access_;
 }
 
-
-void SymbolTable::set_parent(SymbolTable::Ptr parent) {
-  parent_ = parent; 
-}
-void SymbolTable::set_frame(Frame::Ptr frame) {
-  frame_ = frame;
-}
+void SymbolTable::set_parent(SymbolTable::Ptr parent) { parent_ = parent; }
+void SymbolTable::set_frame(Frame::Ptr frame) { frame_ = frame; }
 #include <iostream>
 SymbolTable::SymTabEntry SymbolTable::find(std::string str) {
   for (SymTabEntry entry : entries_) {
@@ -50,7 +46,8 @@ SymbolTable::SymTabEntry SymbolTable::find(std::string str) {
 
 SymbolTable::SymTabEntry SymbolTable::find(Variable *var) {
   for (auto entry : entries_) {
-    if (entry.type_ == SymTabEntry::SymType::VARIABLE && entry.pointer_.var_ptr == var) {
+    if (entry.type_ == SymTabEntry::SymType::VARIABLE &&
+        entry.pointer_.var_ptr == var) {
       return entry;
     }
   }
@@ -61,12 +58,12 @@ SymbolTable::SymTabEntry SymbolTable::find(Variable *var) {
   std::cout << "Can't found " << var->name() << std::endl;
   exit(1);
   return SymTabEntry();
-
 }
 
 SymbolTable::SymTabEntry SymbolTable::find(FunctionDecl *func) {
   for (auto entry : entries_) {
-    if (entry.type_ == SymTabEntry::SymType::FUNCTION && entry.pointer_.func_ptr == func) {
+    if (entry.type_ == SymTabEntry::SymType::FUNCTION &&
+        entry.pointer_.func_ptr == func) {
       return entry;
     }
   }
@@ -77,5 +74,4 @@ SymbolTable::SymTabEntry SymbolTable::find(FunctionDecl *func) {
   std::cout << "Can't found " << func->name() << std::endl;
   exit(1);
   return SymTabEntry();
-  
 }

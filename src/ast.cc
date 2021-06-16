@@ -14,7 +14,8 @@ VarExp::~VarExp() {
 }
 
 // FIX: 将string 转换为int
-NumberExp::NumberExp(string *str) : Expression(Op::NUM, true), string_(*str) , value_(stoi(string_)){
+NumberExp::NumberExp(string *str)
+    : Expression(Op::NUM, true), string_(*str), value_(stoi(string_)) {
   assert(str);
 }
 NumberExp::~NumberExp() {}
@@ -122,7 +123,9 @@ IfStmt::~IfStmt() {
 }
 
 WhileStmt::WhileStmt(Expression *condition, BlockStmt *body)
-    : condition_(condition), body_(body), break_access_(GlobFrame->newLabelAccess(GlobFrame)), continue_access_(GlobFrame->newLabelAccess(GlobFrame)){
+    : condition_(condition), body_(body),
+      break_access_(GlobFrame->newLabelAccess(GlobFrame)),
+      continue_access_(GlobFrame->newLabelAccess(GlobFrame)) {
   assert(condition);
   assert(body);
 }
@@ -188,33 +191,31 @@ int VarExp::eval() { return 0; }
 int FuncCallExp::eval() { return 0; }
 int BinaryExp::eval() {
   switch (op_) {
-    case Op::ADD:
-      return left_->eval() + right_->eval();
-    case Op::SUB:
-      return left_->eval() - right_->eval();
-    case Op::MUL:
-      return left_->eval() * right_->eval();
-    case Op::DIV:
-      return left_->eval() / right_->eval();
-    case Op::MOD:
-      return left_->eval() % right_->eval();
-    case Op::AND:
-      return left_->eval() & right_->eval();
-    case Op::OR:
-      return left_->eval() | right_->eval();
-    //case Op::
-    default :
-      return 0;
+  case Op::ADD:
+    return left_->eval() + right_->eval();
+  case Op::SUB:
+    return left_->eval() - right_->eval();
+  case Op::MUL:
+    return left_->eval() * right_->eval();
+  case Op::DIV:
+    return left_->eval() / right_->eval();
+  case Op::MOD:
+    return left_->eval() % right_->eval();
+  case Op::AND:
+    return left_->eval() & right_->eval();
+  case Op::OR:
+    return left_->eval() | right_->eval();
+  // case Op::
+  default:
+    return 0;
   }
 }
 int UnaryExp::eval() {
   switch (op_) {
-    case Op::NOT:
-      return !exp_->eval();
-    default :
-      return 0;
+  case Op::NOT:
+    return !exp_->eval();
+  default:
+    return 0;
   }
 }
-int NumberExp::eval() {
-  return value_;
-}
+int NumberExp::eval() { return value_; }

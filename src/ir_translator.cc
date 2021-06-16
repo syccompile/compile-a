@@ -43,9 +43,9 @@ BinaryExp::translate(SymbolTable::Ptr symtab) {
   vector<IR::Ptr> ret;
   // FIX: 现在的计算还有些问题
   if (evaluable()) {
-    return std::make_tuple(vector<IR::Ptr>(),
-                           symtab->frame()->newImmAccess(symtab->frame(),
-  eval())); }
+    return std::make_tuple(vector<IR::Ptr>(), symtab->frame()->newImmAccess(
+                                                  symtab->frame(), eval()));
+  }
   FrameAccess result = symtab->frame()->newTempAccess(symtab->frame());
 
   wrap_tie(lhs_vec, lhs_access, left_, symtab);
@@ -75,38 +75,44 @@ BinaryExp::translate(SymbolTable::Ptr symtab) {
     ret.push_back(ir);
     break;
   case Op::LE:
-    ret.push_back(
-        std::make_shared<BinOpIR>(IR::Op::CMP, symtab->frame()->newTempAccess(symtab->frame()), lhs_access, rhs_access));
+    ret.push_back(std::make_shared<BinOpIR>(
+        IR::Op::CMP, symtab->frame()->newTempAccess(symtab->frame()),
+        lhs_access, rhs_access));
     result = symtab->frame()->newLabelAccess(symtab->frame());
     ret.push_back(std::make_shared<SingalOpIR>(IR::Op::JLE, result));
     break;
   case Op::GE:
-    ret.push_back(
-        std::make_shared<BinOpIR>(IR::Op::CMP, symtab->frame()->newTempAccess(symtab->frame()), lhs_access, rhs_access));
+    ret.push_back(std::make_shared<BinOpIR>(
+        IR::Op::CMP, symtab->frame()->newTempAccess(symtab->frame()),
+        lhs_access, rhs_access));
     result = symtab->frame()->newLabelAccess(symtab->frame());
     ret.push_back(std::make_shared<SingalOpIR>(IR::Op::JGE, result));
     break;
   case Op::LT:
-    ret.push_back(
-        std::make_shared<BinOpIR>(IR::Op::CMP, symtab->frame()->newTempAccess(symtab->frame()), lhs_access, rhs_access));
+    ret.push_back(std::make_shared<BinOpIR>(
+        IR::Op::CMP, symtab->frame()->newTempAccess(symtab->frame()),
+        lhs_access, rhs_access));
     result = symtab->frame()->newLabelAccess(symtab->frame());
     ret.push_back(std::make_shared<SingalOpIR>(IR::Op::JLT, result));
     break;
   case Op::GT:
-    ret.push_back(
-        std::make_shared<BinOpIR>(IR::Op::CMP, symtab->frame()->newTempAccess(symtab->frame()), lhs_access, rhs_access));
+    ret.push_back(std::make_shared<BinOpIR>(
+        IR::Op::CMP, symtab->frame()->newTempAccess(symtab->frame()),
+        lhs_access, rhs_access));
     result = symtab->frame()->newLabelAccess(symtab->frame());
     ret.push_back(std::make_shared<SingalOpIR>(IR::Op::JGT, result));
     break;
   case Op::EQ:
-    ret.push_back(
-        std::make_shared<BinOpIR>(IR::Op::CMP, symtab->frame()->newTempAccess(symtab->frame()), lhs_access, rhs_access));
+    ret.push_back(std::make_shared<BinOpIR>(
+        IR::Op::CMP, symtab->frame()->newTempAccess(symtab->frame()),
+        lhs_access, rhs_access));
     result = symtab->frame()->newLabelAccess(symtab->frame());
     ret.push_back(std::make_shared<SingalOpIR>(IR::Op::JE, result));
     break;
   case Op::NEQ:
-    ret.push_back(
-        std::make_shared<BinOpIR>(IR::Op::CMP, symtab->frame()->newTempAccess(symtab->frame()), lhs_access, rhs_access));
+    ret.push_back(std::make_shared<BinOpIR>(
+        IR::Op::CMP, symtab->frame()->newTempAccess(symtab->frame()),
+        lhs_access, rhs_access));
     result = symtab->frame()->newLabelAccess(symtab->frame());
     ret.push_back(std::make_shared<SingalOpIR>(IR::Op::JNE, result));
     break;
@@ -120,8 +126,8 @@ std::tuple<vector<IR::Ptr>, FrameAccess>
 UnaryExp::translate(SymbolTable::Ptr symtab) {
   vector<IR::Ptr> ret;
   if (evaluable()) {
-    return std::make_tuple(vector<IR::Ptr>(),
-                           symtab->frame()->newImmAccess(symtab->frame(), eval()));
+    return std::make_tuple(vector<IR::Ptr>(), symtab->frame()->newImmAccess(
+                                                  symtab->frame(), eval()));
   }
   FrameAccess result = symtab->frame()->newTempAccess(symtab->frame());
 
@@ -133,8 +139,9 @@ UnaryExp::translate(SymbolTable::Ptr symtab) {
     result = access;
     break;
   case Op::SUB:
-    ir = std::make_shared<BinOpIR>(IR::Op::SUB, result,
-                                   symtab->frame()->newImmAccess(symtab->frame(), 0), access);
+    ir = std::make_shared<BinOpIR>(
+        IR::Op::SUB, result, symtab->frame()->newImmAccess(symtab->frame(), 0),
+        access);
     ret.push_back(ir);
     break;
   default:
@@ -145,8 +152,8 @@ UnaryExp::translate(SymbolTable::Ptr symtab) {
 
 std::tuple<vector<IR::Ptr>, FrameAccess>
 NumberExp::translate(SymbolTable::Ptr symtab) {
-  return std::make_tuple(vector<IR::Ptr>(),
-                         symtab->frame()->newImmAccess(symtab->frame(), value_));
+  return std::make_tuple(vector<IR::Ptr>(), symtab->frame()->newImmAccess(
+                                                symtab->frame(), value_));
 }
 
 std::tuple<vector<IR::Ptr>, FrameAccess>
@@ -193,8 +200,7 @@ IfStmt::translate(SymbolTable::Ptr symtab) {
   }
 
   vector<IR::Ptr> ret;
-  FrameAccess next_label =
-      symtab->frame()->newLabelAccess(symtab->frame());
+  FrameAccess next_label = symtab->frame()->newLabelAccess(symtab->frame());
 
   wrap_tie(condition_vec, yes_label, condition_, symtab);
   ret.insert(ret.end(), condition_vec.begin(), condition_vec.end());
@@ -235,8 +241,7 @@ WhileStmt::translate(SymbolTable::Ptr symtab) {
   wrap_tie(condition_vec, body_access, condition_, symtab);
   wrap_tie(body_vec, tmp_access, body_, body_->symtab_);
 
-  ret.push_back(
-      std::make_shared<SingalOpIR>(IR::Op::JMP, continue_access_));
+  ret.push_back(std::make_shared<SingalOpIR>(IR::Op::JMP, continue_access_));
   ret.push_back(std::make_shared<SingalOpIR>(IR::Op::LABEL, body_access));
   ret.insert(ret.end(), body_vec.begin(), body_vec.end());
   ret.push_back(std::make_shared<SingalOpIR>(IR::Op::LABEL, continue_access_));
@@ -268,7 +273,8 @@ BreakStmt::translate(SymbolTable::Ptr symtab) {
   assert(now_while);
   parent_ = now_while;
   vector<IR::Ptr> ret;
-  ret.push_back(std::make_shared<SingalOpIR>(IR::Op::JMP, parent_->break_access_));
+  ret.push_back(
+      std::make_shared<SingalOpIR>(IR::Op::JMP, parent_->break_access_));
   return std::make_tuple(ret, nullptr);
 }
 
@@ -277,7 +283,8 @@ ContinueStmt::translate(SymbolTable::Ptr symtab) {
   assert(now_while);
   parent_ = now_while;
   vector<IR::Ptr> ret;
-  ret.push_back(std::make_shared<SingalOpIR>(IR::Op::JMP, parent_->continue_access_));
+  ret.push_back(
+      std::make_shared<SingalOpIR>(IR::Op::JMP, parent_->continue_access_));
   return std::make_tuple(ret, nullptr);
 }
 
@@ -308,7 +315,8 @@ FunctionDecl::translate(SymbolTable::Ptr symtab) {
   now_func = this;
 
   vector<IR::Ptr> ret;
-  ret.push_back(std::make_shared<SingalOpIR>(IR::Op::LABEL, frame_->newLabelAccess(frame_, name_)));
+  ret.push_back(std::make_shared<SingalOpIR>(
+      IR::Op::LABEL, frame_->newLabelAccess(frame_, name_)));
   wrap_tie(vec, access, body_, body_->symtab_);
   ret.insert(ret.end(), vec.begin(), vec.end());
 

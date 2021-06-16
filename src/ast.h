@@ -240,7 +240,7 @@ protected:
    * @member immutable_
    * 若使用const修饰，变量不可变，该项为真
    */
-  bool immutable_;      
+  bool immutable_;
   /**
    * @member initialized_
    * 若变量初始化，该项为真
@@ -468,9 +468,9 @@ private:
    */
   vector<Stmt *> stmts_;
 
-  /** 
+  /**
    * @member symtab_
-   * 每个块语句有一个符号表 
+   * 每个块语句有一个符号表
    **/
   SymbolTable::Ptr symtab_;
 };

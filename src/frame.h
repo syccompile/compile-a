@@ -37,7 +37,7 @@ class Reg {};
  *  其中tmp对应函数调用结果
  *
  */
-struct _FrameAccess : public Debug_impl{
+struct _FrameAccess : public Debug_impl {
   using Ptr = std::shared_ptr<_FrameAccess>;
   enum class Kind { MEM, REG, LABEL, TEMP, IMM };
 
@@ -49,7 +49,7 @@ struct _FrameAccess : public Debug_impl{
   union Locate {
     Locate() {}
     ~Locate() {}
-    int offset;   // 内存相对帧指针的偏移
+    int offset; // 内存相对帧指针的偏移
     Reg reg;
   } locate_;
   /**
@@ -78,7 +78,7 @@ public:
   FrameAccess newRetAccess(Frame::Ptr);
 
 private:
-  static int klabel_num ;
+  static int klabel_num;
   std::string generateLabelName();
 };
 

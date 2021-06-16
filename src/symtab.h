@@ -2,8 +2,8 @@
 
 #include "frame.h"
 
-#include <string>
 #include <memory>
+#include <string>
 #include <vector>
 
 using std::string;
@@ -25,7 +25,7 @@ public:
   class SymTabEntry {
   public:
     friend class SymbolTable;
-    enum class SymType { VARIABLE, FUNCTION};
+    enum class SymType { VARIABLE, FUNCTION };
     ~SymTabEntry() {}
 
     /**
@@ -38,7 +38,7 @@ public:
      * 符号表项目的名称，一般为变量或函数的名称，
      */
     string name_;
-    /** 
+    /**
      * @member pointer_
      * 变量或函数对应的指针
      */
@@ -57,7 +57,8 @@ public:
     SymTabEntry() {}
   };
   SymbolTable() : parent_(nullptr), frame_(nullptr) {}
-  SymbolTable(SymbolTable::Ptr parent, Frame::Ptr frame) : parent_(parent), frame_(frame) {}
+  SymbolTable(SymbolTable::Ptr parent, Frame::Ptr frame)
+      : parent_(parent), frame_(frame) {}
   ~SymbolTable() {}
 
   void set_parent(Ptr parent);
@@ -76,7 +77,7 @@ public:
    * 则向上一级符号表查找
    */
   SymTabEntry find(string str);
-  SymTabEntry find(Variable* var);
+  SymTabEntry find(Variable *var);
   SymTabEntry find(FunctionDecl *func);
 
 private:
@@ -86,9 +87,9 @@ private:
    */
   vector<SymTabEntry> entries_;
 
-  /** 
+  /**
    * @member parent_
-   * 上一级符号表 
+   * 上一级符号表
    **/
   Ptr parent_;
   /**
