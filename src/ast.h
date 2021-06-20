@@ -91,19 +91,6 @@ private:
   Expression::List *dimens_;
 };
 
-class LogicExp : public Expression {
-public:
-  LogicExp(Op op, Expression *left, Expression *right);
-  ~LogicExp();
-  virtual void internal_print() override;
-  virtual std::tuple<vector<IR::Ptr>, FrameAccess>
-  translate(SymbolTable::Ptr symtab) override;
-  virtual int eval() override;
-
-private:
-  Expression *left_;
-  Expression *right_;
-};
 
 /*
  * 函数调用表达式，表示一个函数调用
@@ -137,17 +124,27 @@ private:
 class BinaryExp : public Expression {
 public:
   BinaryExp(Op op, Expression *left, Expression *right);
-  ~BinaryExp();
+  virtual ~BinaryExp();
   virtual void internal_print() override;
   virtual std::tuple<vector<IR::Ptr>, FrameAccess>
   translate(SymbolTable::Ptr symtab) override;
   virtual int eval() override;
 
-private:
+protected:
   Expression *left_;
   Expression *right_;
 };
 
+class LogicExp : public BinaryExp{
+public:
+  LogicExp(Op op, Expression *left, Expression *right);
+  ~LogicExp();
+  virtual void internal_print() override;
+  virtual std::tuple<vector<IR::Ptr>, FrameAccess>
+  translate(SymbolTable::Ptr symtab) override;
+  virtual int eval() override;
+
+};
 /**
  * 一元表达式，例如 " +1 "， " ! (1>2) "
  */
