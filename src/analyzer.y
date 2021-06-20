@@ -106,23 +106,23 @@ PrimaryExp : LPARENT Exp RPARENT { $$ = $2; }
            ;
 // 4<=5 / 4>=5 / 4<5 / 4>5
 RelExp : AddExp   { $$ = $1; }
-       | RelExp LE AddExp { $$ = new BinaryExp(Expression::Op::LE, $1, $3); }
-       | RelExp GE AddExp { $$ = new BinaryExp(Expression::Op::GE, $1, $3); }
-       | RelExp LT AddExp { $$ = new BinaryExp(Expression::Op::LT, $1, $3); }
-       | RelExp GT AddExp { $$ = new BinaryExp(Expression::Op::GT, $1, $3); }
+       | RelExp LE AddExp { $$ = new LogicExp(Expression::Op::LE, $1, $3); }
+       | RelExp GE AddExp { $$ = new LogicExp(Expression::Op::GE, $1, $3); }
+       | RelExp LT AddExp { $$ = new LogicExp(Expression::Op::LT, $1, $3); }
+       | RelExp GT AddExp { $$ = new LogicExp(Expression::Op::GT, $1, $3); }
        ;
 // 4==5 / 4!=5
 EqExp : RelExp { $$ = $1; }
-      | EqExp EQ RelExp { $$ = new BinaryExp(Expression::Op::EQ, $1, $3); }
-      | EqExp NEQ RelExp { $$ = new BinaryExp(Expression::Op::NEQ, $1, $3); }
+      | EqExp EQ RelExp { $$ = new LogicExp(Expression::Op::EQ, $1, $3); }
+      | EqExp NEQ RelExp { $$ = new LogicExp(Expression::Op::NEQ, $1, $3); }
       ;
 // 3&&4
 LAndExp : EqExp { $$ = $1; }
-        | LAndExp AND EqExp { $$ = new BinaryExp(Expression::Op::AND, $1, $3); }
+        | LAndExp AND EqExp { $$ = new LogicExp(Expression::Op::AND, $1, $3); }
         ;
 // 3||4
 LOrExp : LAndExp { $$ = $1; }
-       | LOrExp OR LAndExp { $$ = new BinaryExp(Expression::Op::OR, $1, $3); }
+       | LOrExp OR LAndExp { $$ = new LogicExp(Expression::Op::OR, $1, $3); }
        ;
 // 3+4, 4*3, 2, ...
 ExpList : Exp  { $$ = new Expression::List();

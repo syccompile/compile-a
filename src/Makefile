@@ -7,8 +7,8 @@ TARGET = output
 
 TEST_TXT = example.txt
 
-CXX_SOURCE = analyzer.cc flex.cc debug.cc ast.cc symtab.cc ir_translator.cc frame.cc main.cc
-OBJS = analyzer.o ast.o debug.o flex.o symtab.o ir_translator.o frame.o main.o
+CXX_SOURCE = analyzer.cc flex.cc debug.cc ast.cc symtab.cc ir_translator.cc frame.cc main.cc asm_translator.cc
+OBJS = analyzer.o ast.o debug.o flex.o symtab.o ir_translator.o frame.o main.o asm_translator.o
 
 BISON_SOURCE = analyzer.y
 BISON_FLAG  = -Wcounterexamples

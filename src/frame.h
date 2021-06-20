@@ -42,6 +42,12 @@ struct _FrameAccess : public Debug_impl {
   enum class Kind { MEM, REG, LABEL, TEMP, IMM };
 
   ~_FrameAccess() {}
+  void copy(std::shared_ptr<_FrameAccess> that) {
+    kind_ = that->kind_;
+    name_ = that->name_;
+    locate_ = that->locate_;
+    frame_ = that->frame_;
+  }
   virtual void internal_print() override;
 
   Kind kind_;

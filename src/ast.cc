@@ -42,6 +42,17 @@ BinaryExp::~BinaryExp() {
   delete left_;
   delete right_;
 }
+LogicExp::LogicExp(Op op, Expression *lhs, Expression *rhs)
+    : Expression(op, false), left_(lhs), right_(rhs) {
+  assert(lhs);
+  assert(rhs);
+  set_evaluable(left_->evaluable() && right_->evaluable());
+}
+
+LogicExp::~LogicExp() {
+  delete left_;
+  delete right_;
+}
 UnaryExp::UnaryExp(Op op, Expression *exp) : Expression(op, false), exp_(exp) {
   assert(exp);
   set_evaluable(exp->evaluable());
@@ -189,6 +200,28 @@ int Expression::eval() { return 0; }
 
 int VarExp::eval() { return 0; }
 int FuncCallExp::eval() { return 0; }
+int LogicExp::eval() {
+  switch (op_) {
+  case Op::AND:
+    return left_->eval() && right_->eval();
+  case Op::OR:
+    return left_->eval() || right_->eval();
+  case Op::LT:
+    return left_->eval() < right_->eval() ? 1 : 0;
+  case Op::LE:
+    return left_->eval() <= right_->eval() ? 1 : 0;
+  case Op::GT:
+    return left_->eval() > right_->eval() ? 1 : 0;
+  case Op::GE:
+    return left_->eval() >= right_->eval() ? 1 : 0;
+  case Op::EQ:
+    return left_->eval() == right_->eval() ? 1 : 0;
+  case Op::NEQ:
+    return left_->eval() != right_->eval() ? 1 : 0;
+  default:
+    return 0;
+  }
+}
 int BinaryExp::eval() {
   switch (op_) {
   case Op::ADD:
@@ -201,11 +234,6 @@ int BinaryExp::eval() {
     return left_->eval() / right_->eval();
   case Op::MOD:
     return left_->eval() % right_->eval();
-  case Op::AND:
-    return left_->eval() & right_->eval();
-  case Op::OR:
-    return left_->eval() | right_->eval();
-  // case Op::
   default:
     return 0;
   }
@@ -214,6 +242,10 @@ int UnaryExp::eval() {
   switch (op_) {
   case Op::NOT:
     return !exp_->eval();
+  case Op::ADD:
+    return exp_->eval();
+  case Op::SUB:
+    return -exp_->eval();
   default:
     return 0;
   }

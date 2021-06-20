@@ -73,7 +73,8 @@ void VarExp::internal_print() {
     }
   }
 }
-void BinaryExp::internal_print() {
+
+void LogicExp::internal_print() {
   switch (op_) {
   case Op::AND:
     left_->internal_print();
@@ -95,10 +96,32 @@ void BinaryExp::internal_print() {
     printer << yellow << "==";
     right_->internal_print();
     break;
-  case Op::NOT:
-    printer << yellow << "!";
+  case Op::GE:
     left_->internal_print();
+    printer << yellow << ">=";
+    right_->internal_print();
     break;
+  case Op::LE:
+    left_->internal_print();
+    printer << yellow << "<=";
+    right_->internal_print();
+    break;
+  case Op::GT:
+    left_->internal_print();
+    printer << yellow << ">";
+    right_->internal_print();
+    break;
+  case Op::LT:
+    left_->internal_print();
+    printer << yellow << "<";
+    right_->internal_print();
+    break;
+  default:
+    break;
+  }
+}
+void BinaryExp::internal_print() {
+  switch (op_) {
   case Op::ADD:
     left_->internal_print();
     printer << yellow << "+";
@@ -122,26 +145,6 @@ void BinaryExp::internal_print() {
   case Op::MOD:
     left_->internal_print();
     printer << yellow << "%";
-    right_->internal_print();
-    break;
-  case Op::GE:
-    left_->internal_print();
-    printer << yellow << ">=";
-    right_->internal_print();
-    break;
-  case Op::LE:
-    left_->internal_print();
-    printer << yellow << "<=";
-    right_->internal_print();
-    break;
-  case Op::GT:
-    left_->internal_print();
-    printer << yellow << ">";
-    right_->internal_print();
-    break;
-  case Op::LT:
-    left_->internal_print();
-    printer << yellow << "<";
     right_->internal_print();
     break;
   default:
@@ -362,10 +365,10 @@ void IR::internal_print() {
     printer << "JGE\t";
     goto B;
   case IR::Op::JLT:
-    printer << "JLE\t";
+    printer << "JLT\t";
     goto B;
   case IR::Op::JGT:
-    printer << "JGE\t";
+    printer << "JGT\t";
   B:
     dynamic_cast<SingalOpIR *>(this)->dst_->internal_print();
     printer << IndentPrinter::endl;

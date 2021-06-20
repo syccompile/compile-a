@@ -1,23 +1,15 @@
-// comment test
-/* comment test */
-/* comment test // // // /* djifajidfjaidf
-jdifajodf
-/  */
-const int var1 = 10, arr2[][10][10] = {{{1,2,3}, {1,2,3}}, {{2,3,4}, {3,4,2}}};
 int func2 (int c, int d){
-  while(c > d * 10 + 2){
-    if(c>0){
-      if(c*2 + d == 3+4*7){
-        d = d + 5;
-      }
-      d = 10;
-      break;
-    }
+  int a = 10;
+  while(a > 5 || c > 10 && d > 5){
+    a = 11;
   }
+  if(a > 4 && c <= 5 || d > 9){
+    a = 11;
+   } 
   return c * d + 4;
 }
 int func1 (int a, int b[][10][10]){
-  a = func2(a, var1);
+  a = func2(a, 10);
   int b = a;
   a = 2 + 3 * b / 4 * 5;
   a = 0xf + 1 + 01; 

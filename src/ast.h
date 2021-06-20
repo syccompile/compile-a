@@ -41,6 +41,7 @@ public:
   Expression(Op op, bool evaluable) : op_(op), evaluable_(evaluable) {}
   virtual ~Expression() {}
   bool evaluable() { return evaluable_; }
+  Op op() { return op_; }
   virtual int eval();
   virtual void internal_print() override {}
 
@@ -88,6 +89,20 @@ private:
    * 若为数组，该项表示维度信息
    */
   Expression::List *dimens_;
+};
+
+class LogicExp : public Expression {
+public:
+  LogicExp(Op op, Expression *left, Expression *right);
+  ~LogicExp();
+  virtual void internal_print() override;
+  virtual std::tuple<vector<IR::Ptr>, FrameAccess>
+  translate(SymbolTable::Ptr symtab) override;
+  virtual int eval() override;
+
+private:
+  Expression *left_;
+  Expression *right_;
 };
 
 /*
