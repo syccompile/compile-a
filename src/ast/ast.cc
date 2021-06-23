@@ -1,7 +1,9 @@
 #include "ast.h"
+#include "../context/context.h"
 
 #include <cassert>
 #include <string>
+
 VarExp::VarExp(string *ident, Expression::List *dimens)
     : Expression(Op::VAR, false), ident_(*ident), dimens_(dimens) {}
 VarExp::~VarExp() {
@@ -31,23 +33,18 @@ FuncCallExp::~FuncCallExp() {
     }
   }
 }
+
 BinaryExp::BinaryExp(Op op, Expression *lhs, Expression *rhs)
     : Expression(op, false), left_(lhs), right_(rhs) {
   assert(lhs);
   assert(rhs);
   set_evaluable(left_->evaluable() && right_->evaluable());
 }
-
 BinaryExp::~BinaryExp() {
   delete left_;
   delete right_;
 }
-LogicExp::LogicExp(Op op, Expression *lhs, Expression *rhs)
-    : BinaryExp(op, lhs, rhs){
-}
 
-LogicExp::~LogicExp() {
-}
 UnaryExp::UnaryExp(Op op, Expression *exp) : Expression(op, false), exp_(exp) {
   assert(exp);
   set_evaluable(exp->evaluable());
@@ -59,7 +56,6 @@ Variable::Variable(BType type, string *name, bool immutable)
       initialized_(false), initval_(nullptr) {
   assert(name);
 }
-
 Variable::Variable(BType type, string *name, bool immutable,
                    Expression *initval)
     : Variable(type, name, immutable) {
@@ -100,6 +96,7 @@ Array::~Array() {
   delete dimens_;
   delete initval_container_;
 }
+
 VarDeclStmt::VarDeclStmt() {}
 VarDeclStmt::~VarDeclStmt() {
   for (Variable *var : vars_) {
@@ -121,7 +118,6 @@ IfStmt::IfStmt(Expression *condition, BlockStmt *yes, BlockStmt *no)
 }
 IfStmt::IfStmt(Expression *condition, BlockStmt *yes)
     : IfStmt(condition, yes, nullptr) {}
-
 IfStmt::~IfStmt() {
   delete condition_;
   delete yes_;
@@ -174,16 +170,9 @@ FunctionDecl::FunctionDecl(BType ret_type, string *name, Variable::List *params,
     }
   }
 }
-
 FunctionDecl::~FunctionDecl() {
   delete params_;
   delete body_;
-}
-
-void VarDeclStmt::set_global() {
-  for (Variable *var : vars_) {
-    var->set_global(true);
-  }
 }
 
 void BlockStmt::push_back(Stmt *stmt) {

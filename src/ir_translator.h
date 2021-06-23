@@ -3,7 +3,7 @@
 #include "symtab.h"
 
 #include <memory>
-#include <tuple>
+#include <list>
 #include <vector>
 
 #define wrap_tie(vec, access, stmt, symtab)                                    \
@@ -14,7 +14,7 @@
 using std::vector;
 
 struct IrTranslator_impl {
-  virtual std::tuple<vector<IR::Ptr>, FrameAccess> translate(SymbolTable::Ptr) {
-    return std::make_tuple(vector<IR::Ptr>(), nullptr);
+  virtual std::list<IR> translate() {
+    return std::list<IR>();
   }
 };
