@@ -18,6 +18,7 @@
 static FunctionDecl *now_func;
 static WhileStmt *now_while;
 /**
+ *  @Variable jmp_revert
  *  对于一般的条件表达式，例如a > 3，使用jmp_revert控制跳转
  *  条件，例如if(a > 3)，可以翻译成
  *      CMP a , 3
@@ -35,13 +36,16 @@ static WhileStmt *now_while;
  */
 static bool jmp_revert = false;
 
-/** 将算术表达式视为逻辑表达式生成中间代码
- *   只影响最高层运算符，见函数BinaryExp::translate
+/** 
+ * @Variable arich2logic
+ * 将算术表达式视为逻辑表达式生成中间代码
+ * 只影响最高层运算符，见函数BinaryExp::translate
  */
 static bool arith2logic = false;
 
 std::tuple<vector<IR::Ptr>, FrameAccess>
 VarExp::translate(SymbolTable::Ptr symtab) {
+  // TODO: 考虑数组
   SymbolTable::SymTabEntry entry = symtab->find(ident_);
   Frame::Ptr frame = symtab->frame();
   if (arith2logic) {
@@ -122,8 +126,8 @@ logic_translate(BinaryExp *exp, SymbolTable::Ptr symtab) {
       return std::make_tuple(ret, lhs_access);
     }
   }
-  wrap_tie(lhs_vec, lhs_access, exp->left_, symtab);
-  wrap_tie(rhs_vec, rhs_access, exp->right_, symtab);
+  wrap_tie_arith(lhs_vec, lhs_access, exp->left_, symtab);
+  wrap_tie_arith(rhs_vec, rhs_access, exp->right_, symtab);
   switch (exp->op_) {
   case Expression::Op::LE:
     vec_push_all2(ret, lhs_vec, rhs_vec);
@@ -287,6 +291,38 @@ arithmetic_translate(BinaryExp *exp, SymbolTable::Ptr symtab) {
   case Expression::Op::MOD:
     vec_push_ir(ret, BinOpIR, MOD, result, lhs_access, rhs_access);
     break;
+  case Expression::Op::LT:
+    vec_push_ir(ret, BinOpIR, CMP, frame->newTempAccess(frame), lhs_access,
+                rhs_access);
+    vec_push_ir(ret, SingalOpIR, SETLT, result);
+    break;
+  case Expression::Op::LE:
+    vec_push_ir(ret, BinOpIR, CMP, frame->newTempAccess(frame), lhs_access,
+                rhs_access);
+    vec_push_ir(ret, SingalOpIR, SETLE, result);
+    break;
+  case Expression::Op::GT:
+    vec_push_ir(ret, BinOpIR, CMP, frame->newTempAccess(frame), lhs_access,
+                rhs_access);
+    vec_push_ir(ret, SingalOpIR, SETGT, result);
+    break;
+  case Expression::Op::GE:
+    vec_push_ir(ret, BinOpIR, CMP, frame->newTempAccess(frame), lhs_access,
+                rhs_access);
+    vec_push_ir(ret, SingalOpIR, SETGE, result);
+    break;
+  case Expression::Op::EQ:
+    vec_push_ir(ret, BinOpIR, CMP, frame->newTempAccess(frame), lhs_access,
+                rhs_access);
+    vec_push_ir(ret, SingalOpIR, SETE, result);
+    break;
+  case Expression::Op::NEQ:
+    vec_push_ir(ret, BinOpIR, CMP, frame->newTempAccess(frame), lhs_access,
+                rhs_access);
+    vec_push_ir(ret, SingalOpIR, SETNE, result);
+    break;
+
+  
   default:
     assert(false);
     break;

@@ -391,6 +391,24 @@ void IR::internal_print() {
     goto B;
   case IR::Op::JGT:
     printer << "JGT\t";
+    goto B;
+  case IR::Op::SETE:
+    printer << "SETE\t";
+    goto B;
+  case IR::Op::SETNE:
+    printer << "SETNE\t";
+    goto B;
+  case IR::Op::SETLE:
+    printer << "SETLE\t";
+    goto B;
+  case IR::Op::SETGE:
+    printer << "SETGE\t";
+    goto B;
+  case IR::Op::SETLT:
+    printer << "SETLT\t";
+    goto B;
+  case IR::Op::SETGT:
+    printer << "SETGT\t";
   B:
     dynamic_cast<SingalOpIR *>(this)->dst_->internal_print();
     printer << IndentPrinter::endl;

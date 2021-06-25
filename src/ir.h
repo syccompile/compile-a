@@ -24,6 +24,12 @@ public:
     JGT,
     JE,
     JNE,
+    SETE,
+    SETNE,
+    SETGT,
+    SETGE,
+    SETLT,
+    SETLE,
 
     CMP,
 

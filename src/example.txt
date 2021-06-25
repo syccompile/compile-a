@@ -2,7 +2,7 @@ int func2 (int c, int d){
   int a = 10;
   while(d || !(a+5) || c*(d+10) && c%10){
     a = 11;
-    if(a){
+    if(a+a>10){
       break;
     }
   }
