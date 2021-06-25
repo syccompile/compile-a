@@ -74,79 +74,98 @@ void VarExp::internal_print() {
   }
 }
 
-void LogicExp::internal_print() {
-  switch (op_) {
-  case Op::AND:
-    left_->internal_print();
-    printer << yellow << "&&";
-    right_->internal_print();
-    break;
-  case Op::OR:
-    left_->internal_print();
-    printer << yellow << "||";
-    right_->internal_print();
-    break;
-  case Op::NEQ:
-    left_->internal_print();
-    printer << yellow << "!=";
-    right_->internal_print();
-    break;
-  case Op::EQ:
-    left_->internal_print();
-    printer << yellow << "==";
-    right_->internal_print();
-    break;
-  case Op::GE:
-    left_->internal_print();
-    printer << yellow << ">=";
-    right_->internal_print();
-    break;
-  case Op::LE:
-    left_->internal_print();
-    printer << yellow << "<=";
-    right_->internal_print();
-    break;
-  case Op::GT:
-    left_->internal_print();
-    printer << yellow << ">";
-    right_->internal_print();
-    break;
-  case Op::LT:
-    left_->internal_print();
-    printer << yellow << "<";
-    right_->internal_print();
-    break;
-  default:
-    break;
-  }
-}
 void BinaryExp::internal_print() {
   switch (op_) {
   case Op::ADD:
+    printer << yellow << "(";
     left_->internal_print();
     printer << yellow << "+";
     right_->internal_print();
+    printer << yellow << ")";
     break;
   case Op::SUB:
+    printer << yellow << "(";
     left_->internal_print();
     printer << yellow << "-";
     right_->internal_print();
+    printer << yellow << ")";
     break;
   case Op::MUL:
+    printer << yellow << "(";
     left_->internal_print();
     printer << yellow << "*";
     right_->internal_print();
+    printer << yellow << ")";
     break;
   case Op::DIV:
+    printer << yellow << "(";
     left_->internal_print();
     printer << yellow << "/";
     right_->internal_print();
+    printer << yellow << ")";
     break;
   case Op::MOD:
+    printer << yellow << "(";
     left_->internal_print();
     printer << yellow << "%";
     right_->internal_print();
+    printer << yellow << ")";
     break;
+  case Op::AND:
+    printer << yellow << "(";
+    left_->internal_print();
+    printer << yellow << "&&";
+    right_->internal_print();
+    printer << yellow << ")";
+    break;
+  case Op::OR:
+    printer << yellow << "(";
+    left_->internal_print();
+    printer << yellow << "||";
+    right_->internal_print();
+    printer << yellow << ")";
+    break;
+  case Op::NEQ:
+    printer << yellow << "(";
+    left_->internal_print();
+    printer << yellow << "!=";
+    right_->internal_print();
+    printer << yellow << ")";
+    break;
+  case Op::EQ:
+    printer << yellow << "(";
+    left_->internal_print();
+    printer << yellow << "==";
+    right_->internal_print();
+    printer << yellow << ")";
+    break;
+  case Op::GE:
+    printer << yellow << "(";
+    left_->internal_print();
+    printer << yellow << ">=";
+    right_->internal_print();
+    printer << yellow << ")";
+    break;
+  case Op::LE:
+    printer << yellow << "(";
+    left_->internal_print();
+    printer << yellow << "<=";
+    right_->internal_print();
+    printer << yellow << ")";
+    break;
+  case Op::GT:
+    printer << yellow << "(";
+    left_->internal_print();
+    printer << yellow << ">";
+    right_->internal_print();
+    printer << yellow << ")";
+    break;
+  case Op::LT:
+    printer << yellow << "(";
+    left_->internal_print();
+    printer << yellow << "<";
+    right_->internal_print();
+    printer << yellow << ")";
   default:
     break;
   }
@@ -317,7 +336,7 @@ void IR::internal_print() {
   case IR::Op::MOV:
     printer << "MOV\t";
     dynamic_cast<UnaryOpIR *>(this)->src_->internal_print();
-    printer << white << "->";
+    printer << white << "\t\t->\t";
     dynamic_cast<UnaryOpIR *>(this)->dst_->internal_print();
     printer << IndentPrinter::endl;
     break;
@@ -338,11 +357,14 @@ void IR::internal_print() {
     goto A;
   case IR::Op::CMP:
     printer << "CMP\t";
+    goto A;
+  case IR::Op::TEST:
+    printer << "TEST\t";
   A:
     dynamic_cast<BinOpIR *>(this)->src1_->internal_print();
-    printer << white << ", ";
+    printer << white << ",\t";
     dynamic_cast<BinOpIR *>(this)->src2_->internal_print();
-    printer << white << "->";
+    printer << white << "\t->\t";
     dynamic_cast<BinOpIR *>(this)->dst_->internal_print();
     printer << IndentPrinter::endl;
     break;
@@ -388,7 +410,8 @@ void _FrameAccess::internal_print() {
   case Kind::TEMP:
   case Kind::REG:
   case Kind::LABEL:
-    printer << yellow << name_;
+    printer << yellow;
+    printer << name_;
     break;
   case Kind::IMM:
     printer << green << std::to_string(locate_.offset);

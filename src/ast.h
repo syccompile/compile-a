@@ -28,11 +28,12 @@ public:
     GT,  //  '>'
     GE,  //  '>='
 
-    ADD,  //  '+'
-    SUB,  //  '-'
-    MUL,  //  '*'
-    DIV,  //  '/'
-    MOD,  //  '%'
+    ADD, //  '+'
+    SUB, //  '-'
+    MUL, //  '*'
+    DIV, //  '/'
+    MOD, //  '%'
+
     NUM,  //  number
     VAR,  //  variable referrence
     CALL, //  function call
@@ -91,20 +92,6 @@ private:
   Expression::List *dimens_;
 };
 
-class LogicExp : public Expression {
-public:
-  LogicExp(Op op, Expression *left, Expression *right);
-  ~LogicExp();
-  virtual void internal_print() override;
-  virtual std::tuple<vector<IR::Ptr>, FrameAccess>
-  translate(SymbolTable::Ptr symtab) override;
-  virtual int eval() override;
-
-private:
-  Expression *left_;
-  Expression *right_;
-};
-
 /*
  * 函数调用表达式，表示一个函数调用
  */
@@ -136,6 +123,10 @@ private:
  */
 class BinaryExp : public Expression {
 public:
+  friend std::tuple<vector<IR::Ptr>, FrameAccess>
+    logic_translate(BinaryExp* exp, SymbolTable::Ptr symtab);
+  friend std::tuple<vector<IR::Ptr>, FrameAccess>
+    arithmetic_translate(BinaryExp* exp, SymbolTable::Ptr symtab);
   BinaryExp(Op op, Expression *left, Expression *right);
   ~BinaryExp();
   virtual void internal_print() override;

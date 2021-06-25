@@ -11,6 +11,14 @@
   FrameAccess access;                                                          \
   std::tie(vec, access) = stmt->translate(symtab);
 
+#define wrap_tie_arith(vec, access, stmt, symtab)                              \
+  arith2logic = false;                                                         \
+  wrap_tie(vec, access, stmt, symtab);
+
+#define wrap_tie_logic(vec, access, stmt, symtab)                              \
+  arith2logic = true;                                                          \
+  wrap_tie(vec, access, stmt, symtab);
+
 using std::vector;
 
 struct IrTranslator_impl {

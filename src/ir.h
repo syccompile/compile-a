@@ -28,6 +28,7 @@ public:
     CMP,
 
     CALL,
+    TEST,
     RET,
     CMOVE,
     // ...

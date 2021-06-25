@@ -39,7 +39,7 @@ SymbolTable::SymTabEntry SymbolTable::find(std::string str) {
     return parent_->find(str);
   }
   // FIX
-  std::cout << "Can't found " << str << std::endl;
+  std::cerr << "Can't found " << str << std::endl;
   exit(1);
   return SymTabEntry();
 }

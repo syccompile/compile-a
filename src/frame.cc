@@ -49,7 +49,7 @@ FrameAccess Frame::newRetAccess(Frame::Ptr parent) {
   FrameAccess access = std::make_shared<_FrameAccess>();
   // FIX：假设是REG类型
   access->kind_ = _FrameAccess::Kind::REG;
-  access->name_ = "%ret_reg";
+  access->name_ = "%ret";
   access->frame_ = parent;
   return access;
 }

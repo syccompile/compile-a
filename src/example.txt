@@ -1,7 +1,10 @@
 int func2 (int c, int d){
   int a = 10;
-  while(a > 5 || c > 10 && d > 5){
+  while(d || !(a+5) || c*(d+10) && c%10){
     a = 11;
+    if(a){
+      break;
+    }
   }
   if(a > 4 && c <= 5 || d > 9){
     a = 11;
