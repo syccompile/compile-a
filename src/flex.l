@@ -39,6 +39,7 @@
 "||"              { return OR; }
 [a-zA-Z_][a-zA-Z0-9_]*      { yylval.string = (new std::string(yytext)); return IDENT;}
 "="           { yylval.token = ASSIGN; return ASSIGN; }
+"!"           { yylval.token = NOT; return NOT; }
 "+"           { yylval.token = ADD; return ADD; }
 "-"           { yylval.token = SUB; return SUB; }
 "*"           { yylval.token = MUL; return MUL; }
