@@ -42,6 +42,7 @@ FuncCallExp::translate(SymbolTable::Ptr symtab) {
 std::tuple<vector<IR::Ptr>, FrameAccess>
 LogicExp::translate(SymbolTable::Ptr symtab) {
   vector<IR::Ptr> ret;
+  FrameAccess result;
   if (op_ == Op::AND) {
     if (jmp_revert) {
       jmp_revert = true;
@@ -81,7 +82,6 @@ LogicExp::translate(SymbolTable::Ptr symtab) {
       return std::make_tuple(ret, lhs_access);
     }
   }
-  FrameAccess label = symtab->frame()->newLabelAccess(symtab->frame());
   wrap_tie(lhs_vec, lhs_access, left_, symtab);
   wrap_tie(rhs_vec, rhs_access, right_, symtab);
   switch (op_) {
@@ -89,66 +89,72 @@ LogicExp::translate(SymbolTable::Ptr symtab) {
     ret.push_back(std::make_shared<BinOpIR>(
         IR::Op::CMP, symtab->frame()->newTempAccess(symtab->frame()),
         lhs_access, rhs_access));
+    result = symtab->frame()->newLabelAccess(symtab->frame());
     if (jmp_revert) {
-      ret.push_back(std::make_shared<SingalOpIR>(IR::Op::JGT, label));
+      ret.push_back(std::make_shared<SingalOpIR>(IR::Op::JGT, result));
     } else {
-      ret.push_back(std::make_shared<SingalOpIR>(IR::Op::JLE, label));
+      ret.push_back(std::make_shared<SingalOpIR>(IR::Op::JLE, result));
     }
     break;
   case Op::GE:
     ret.push_back(std::make_shared<BinOpIR>(
         IR::Op::CMP, symtab->frame()->newTempAccess(symtab->frame()),
         lhs_access, rhs_access));
+    result = symtab->frame()->newLabelAccess(symtab->frame());
     if (jmp_revert) {
-      ret.push_back(std::make_shared<SingalOpIR>(IR::Op::JLT, label));
+      ret.push_back(std::make_shared<SingalOpIR>(IR::Op::JLT, result));
     } else {
-      ret.push_back(std::make_shared<SingalOpIR>(IR::Op::JGE, label));
+      ret.push_back(std::make_shared<SingalOpIR>(IR::Op::JGE, result));
     }
     break;
   case Op::LT:
     ret.push_back(std::make_shared<BinOpIR>(
         IR::Op::CMP, symtab->frame()->newTempAccess(symtab->frame()),
         lhs_access, rhs_access));
+    result = symtab->frame()->newLabelAccess(symtab->frame());
     if (jmp_revert) {
-      ret.push_back(std::make_shared<SingalOpIR>(IR::Op::JGE, label));
+      ret.push_back(std::make_shared<SingalOpIR>(IR::Op::JGE, result));
     } else {
-      ret.push_back(std::make_shared<SingalOpIR>(IR::Op::JLT, label));
+      ret.push_back(std::make_shared<SingalOpIR>(IR::Op::JLT, result));
     }
     break;
   case Op::GT:
     ret.push_back(std::make_shared<BinOpIR>(
         IR::Op::CMP, symtab->frame()->newTempAccess(symtab->frame()),
         lhs_access, rhs_access));
+    result = symtab->frame()->newLabelAccess(symtab->frame());
     if (jmp_revert) {
-      ret.push_back(std::make_shared<SingalOpIR>(IR::Op::JLE, label));
+      ret.push_back(std::make_shared<SingalOpIR>(IR::Op::JLE, result));
     } else {
-      ret.push_back(std::make_shared<SingalOpIR>(IR::Op::JGT, label));
+      ret.push_back(std::make_shared<SingalOpIR>(IR::Op::JGT, result));
     }
     break;
   case Op::EQ:
     ret.push_back(std::make_shared<BinOpIR>(
         IR::Op::CMP, symtab->frame()->newTempAccess(symtab->frame()),
         lhs_access, rhs_access));
+    result = symtab->frame()->newLabelAccess(symtab->frame());
     if (jmp_revert) {
-      ret.push_back(std::make_shared<SingalOpIR>(IR::Op::JNE, label));
+      ret.push_back(std::make_shared<SingalOpIR>(IR::Op::JNE, result));
     } else {
-      ret.push_back(std::make_shared<SingalOpIR>(IR::Op::JE, label));
+      ret.push_back(std::make_shared<SingalOpIR>(IR::Op::JE, result));
     }
     break;
   case Op::NEQ:
     ret.push_back(std::make_shared<BinOpIR>(
         IR::Op::CMP, symtab->frame()->newTempAccess(symtab->frame()),
         lhs_access, rhs_access));
+    result = symtab->frame()->newLabelAccess(symtab->frame());
     if (jmp_revert) {
-      ret.push_back(std::make_shared<SingalOpIR>(IR::Op::JE, label));
+      ret.push_back(std::make_shared<SingalOpIR>(IR::Op::JE, result));
     } else {
-      ret.push_back(std::make_shared<SingalOpIR>(IR::Op::JNE, label));
+      ret.push_back(std::make_shared<SingalOpIR>(IR::Op::JNE, result));
     }
     break;
   default:
     break;
   }
-  return std::make_tuple(ret, label);
+  return std::make_tuple(ret, result);
 }
 
 std::tuple<vector<IR::Ptr>, FrameAccess>
@@ -274,15 +280,12 @@ IfStmt::translate(SymbolTable::Ptr symtab) {
   if (no_) {
     no_->symtab_->set_parent(symtab);
   }
-  LogicExp *condition = dynamic_cast<LogicExp *>(condition_);
-  if (!condition) {
-    return std::make_tuple(vector<IR::Ptr>(), nullptr);
-  }
+
   vector<IR::Ptr> ret;
   FrameAccess next_label = symtab->frame()->newLabelAccess(symtab->frame());
 
   jmp_revert = false;
-  wrap_tie(condition_vec, yes_label, condition, symtab);
+  wrap_tie(condition_vec, yes_label, condition_, symtab);
   ret.insert(ret.end(), condition_vec.begin(), condition_vec.end());
   if (no_) {
     wrap_tie(no_vec, access, no_, no_->symtab_);
