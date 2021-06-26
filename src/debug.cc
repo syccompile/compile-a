@@ -333,6 +333,19 @@ void IR::internal_print() {
     printer << ":" << IndentPrinter::endl;
     printer.add_level();
     break;
+  case IR::Op::DWORD:
+    printer << "DWORD\t";
+    goto S;
+  case IR::Op::WORD:
+    printer << "WORD\t";
+    goto S;
+  case IR::Op::ZERO:
+    printer << "ZERO\t";
+    goto S;
+  S:
+    dynamic_cast<SingalOpIR *>(this)->dst_->internal_print();
+    printer << IndentPrinter::endl;
+    break;
   case IR::Op::MOV:
     printer << "MOV\t";
     dynamic_cast<UnaryOpIR *>(this)->src_->internal_print();

@@ -60,9 +60,14 @@ VarExp::translate(SymbolTable::Ptr symtab) {
       vec_push_ir(ret, SingalOpIR, JNE, jmp);
       return std::make_tuple(ret, jmp);
     }
-  }
-  if (entry.pointer_.var_ptr->immutable()) {
-    return std::make_tuple(vector<IR::Ptr>(), entry.access_);
+  } else {
+    if (dimens_) {
+      assert(entry.pointer_.var_ptr->is_array());
+      // TODO
+    }
+    if (entry.pointer_.var_ptr->immutable()) {
+      return std::make_tuple(vector<IR::Ptr>(), entry.access_);
+    }
   }
   return std::make_tuple(vector<IR::Ptr>(), entry.access_);
 }
@@ -384,22 +389,79 @@ NumberExp::translate(SymbolTable::Ptr symtab) {
   return std::make_tuple(vector<IR::Ptr>(), symtab->frame()->newImmAccess(
                                                 symtab->frame(), value_));
 }
-
+/**
+ * initval必须是规范的，例如{{1,2,3},{1,2,4},{3,4,5}},
+ * 而不能是{1,2,{2,3,4}};
+ * initval可以为空;
+ */
+vector<IR::Ptr> global_array_translate(Frame::Ptr frame, int index, Expression::List dimens, Array::InitVal* initval) {
+  Array::InitValContainer *container =
+      dynamic_cast<Array::InitValContainer *>(initval);
+  int initval_size = 0;
+  if (!container) {
+    initval_size = 0;
+  }else{
+    initval_size = container->container().size();
+  }
+  assert(dimens[index]->evaluable());
+  assert(dimens[index]->eval() >= initval_size);
+  vector<IR::Ptr> ret;
+  for (int i = 0; i < initval_size; ++i) {
+    Array::InitVal *initval = container->container()[i];
+    if(initval->is_exp()){
+      int initval_val = dynamic_cast<Array::InitValExp*>(initval)->exp()->eval();
+      vec_push_ir(ret, SingalOpIR, WORD, frame->newImmAccess(frame, initval_val));
+    }else {
+      auto r = global_array_translate(frame, index + 1, dimens, container->container()[i]);
+      vec_push_all1(ret, r);
+    }
+  }
+  // 计算0的个数
+  if (initval_size < dimens[index]->eval()) {
+    int zero_num = 1;
+    for (int i = dimens.size() - 1; i > index; --i) {
+      zero_num *= dimens[i]->eval();
+    }
+    zero_num *= dimens[index]->eval() - initval_size;
+    vec_push_ir(ret, SingalOpIR, ZERO, frame->newImmAccess(frame, zero_num));
+  }
+  return ret;
+}
 std::tuple<vector<IR::Ptr>, FrameAccess>
 VarDeclStmt::translate(SymbolTable::Ptr symtab) {
   vector<IR::Ptr> ret;
+  Frame::Ptr frame = symtab->frame();
   for (Variable *var : vars_) {
     FrameAccess access = symtab->push(var);
-    if (var->initialized() && !var->global()) {
-      if (var->is_array()) {
-        // TODO 数组声明
+    if (var->is_array()) {
+      if (var->global()) {
+        Array *array = dynamic_cast<Array *>(var);
+        assert(array->dimens());
+
+        vec_push_ir(ret, SingalOpIR, LABEL,
+                    frame->newLabelAccess(frame, var->name()));
+        // TODO 
+        auto vec = global_array_translate(frame, 0, *array->dimens(), array->container());
+        vec_push_all1(ret, vec);
+      }else {
+        // TODO
+      }
+    } else {
+      if (var->global()) {
+        vec_push_ir(ret, SingalOpIR, LABEL,
+                    frame->newLabelAccess(frame, var->name()));
+        if (var->initialized()) {
+          assert(var->initval_->evaluable());
+          vec_push_ir(ret, SingalOpIR, WORD,
+                      frame->newImmAccess(frame, var->initval_->eval()));
+        } else {
+          vec_push_ir(ret, SingalOpIR, WORD, frame->newImmAccess(frame, 0));
+        }
       } else {
         wrap_tie(rhs_vec, rhs_access, var->initval_, symtab);
         vec_push_all1(ret, rhs_vec);
         vec_push_ir(ret, UnaryOpIR, MOV, access, rhs_access);
       }
-    } else if (var->initialized() && var->global()) {
-      // TODO 全局变量 
     }
   }
   return std::make_tuple(ret, nullptr);

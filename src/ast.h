@@ -281,6 +281,7 @@ public:
   public:
     InitValExp(Expression *exp);
     ~InitValExp();
+    Expression* exp() { return exp_; }
     virtual bool is_exp() override final { return true; }
     virtual void internal_print() override;
 
@@ -296,7 +297,9 @@ public:
   public:
     InitValContainer();
     ~InitValContainer();
-    void push_back(InitVal *initval) { initval_container_.push_back(initval); }
+    void push_back(InitVal *initval) { initval_container_.push_back(initval);
+    }
+    vector<InitVal*> container() { return initval_container_; }
     virtual bool is_exp() override final { return false; }
     virtual void internal_print() override;
 
@@ -308,6 +311,8 @@ public:
   Array(BType type, string *name, bool immutable, Expression::List *size,
         InitVal *container);
   ~Array();
+  Expression::List *dimens() { return dimens_; }
+  InitValContainer* container() { return initval_container_; }
   virtual bool is_array() override { return true; }
   virtual void internal_print() override;
 
@@ -353,6 +358,7 @@ public:
  */
 class VarDeclStmt : public Stmt {
 public:
+  friend int main();
   VarDeclStmt();
   ~VarDeclStmt();
   /**

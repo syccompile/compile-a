@@ -37,6 +37,10 @@ public:
     TEST,
     RET,
     CMOVE,
+
+    WORD,
+    DWORD,
+    ZERO,
     // ...
   };
   IR(Op op): op_(op) {}
