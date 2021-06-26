@@ -195,6 +195,14 @@ VarDefList: IDENT ASSIGN Exp                   { $$ = new Variable::List();
                                                  $$->push_back(new Array(BType::UNKNOWN, $1, false, $2));
                                                  delete $1;
                                                }
+          | VarDefList COMMA IDENT             { $$ = $1;
+                                           $$->push_back(new Variable(BType::UNKNOWN, $3, false)); 
+                                                  delete $3;
+                                               }
+          | VarDefList COMMA IDENT DimenList   { $$ = $1;
+                                           $$->push_back(new Array(BType::UNKNOWN, $3, false, $4)); 
+                                                  delete $3;
+                                               }
           | VarDefList COMMA IDENT ASSIGN Exp  { $$ = $1;
                                                  $$->push_back(new Variable(BType::UNKNOWN, $3, false, $5));
                                                  delete $3;
