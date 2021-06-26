@@ -85,6 +85,7 @@ public:
 
 private:
   static int klabel_num;
+  int tmp_num = 0;
   std::string generateLabelName();
 };
 

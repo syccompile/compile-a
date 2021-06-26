@@ -1,7 +1,6 @@
 #include "frame.h"
 
 int Frame::klabel_num;
-static int tmp_num = 0;
 
 std::string Frame::generateLabelName() {
   return std::string(".L") + std::to_string(klabel_num++);

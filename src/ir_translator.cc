@@ -423,8 +423,11 @@ BlockStmt::translate(SymbolTable::Ptr symtab) {
 std::tuple<vector<IR::Ptr>, FrameAccess>
 IfStmt::translate(SymbolTable::Ptr symtab) {
   yes_->symtab_->set_parent(symtab);
+  yes_->symtab_->set_frame(symtab->frame());
   if (no_) {
     no_->symtab_->set_parent(symtab);
+    no_->symtab_->set_frame(symtab->frame());
+
   }
 
   vector<IR::Ptr> ret;
@@ -469,6 +472,7 @@ IfStmt::translate(SymbolTable::Ptr symtab) {
 std::tuple<vector<IR::Ptr>, FrameAccess>
 WhileStmt::translate(SymbolTable::Ptr symtab) {
   body_->symtab_->set_parent(symtab);
+  body_->symtab_->set_frame(symtab->frame());
   WhileStmt *temp = now_while;
   now_while = this;
   // FIX: 使用其他的栈帧结构
@@ -543,6 +547,7 @@ std::tuple<vector<IR::Ptr>, FrameAccess>
 FunctionDecl::translate(SymbolTable::Ptr symtab) {
   symtab_->set_parent(symtab);
   body_->symtab_->set_parent(symtab_);
+  body_->symtab_->set_frame(frame_);
   FunctionDecl *temp = now_func;
   now_func = this;
 
