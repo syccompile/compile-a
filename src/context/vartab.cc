@@ -9,7 +9,8 @@ void VarTab::put(std::string name, std::vector<int> shape, int addr, bool is_con
   )));
 }
 
-VarTab::EntPtr_const VarTab::get (std::string name) const {
+VarTab::EntPtr_const VarTab::get(std::string name) const {
+  // 先在本作用域内找
   auto ent = this->symtab.at(name);
 
   // 在本作用域里找到了变量
@@ -21,6 +22,6 @@ VarTab::EntPtr_const VarTab::get (std::string name) const {
 
   // 如果找到，则返回变量信息
   // 如果没有，则返回空指针
-  // 两种情况统一
+  // 两种情况编码上统一
   return ent;
 }

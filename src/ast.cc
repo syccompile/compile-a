@@ -1,5 +1,5 @@
 #include "ast.h"
-#include "../context/context.h"
+#include "context/context.h"
 
 #include <cassert>
 #include <string>
@@ -38,7 +38,6 @@ BinaryExp::BinaryExp(Op op, Expression *lhs, Expression *rhs)
     : Expression(op, false), left_(lhs), right_(rhs) {
   assert(lhs);
   assert(rhs);
-  set_evaluable(left_->evaluable() && right_->evaluable());
 }
 BinaryExp::~BinaryExp() {
   delete left_;
@@ -52,7 +51,7 @@ UnaryExp::UnaryExp(Op op, Expression *exp) : Expression(op, false), exp_(exp) {
 UnaryExp::~UnaryExp() { delete exp_; }
 
 Variable::Variable(BType type, string *name, bool immutable)
-    : global_(false), type_(type), name_(*name), immutable_(immutable),
+    : type_(type), name_(*name), immutable_(immutable),
       initialized_(false), initval_(nullptr) {
   assert(name);
 }
@@ -157,18 +156,9 @@ FunctionDecl::FunctionDecl(BType ret_type, string *name, Variable::List *params,
                            BlockStmt *block)
     : ret_type_(ret_type), name_(*name), params_(params), body_(block),
       frame_(std::make_shared<Frame>(false)),
-      symtab_(std::make_shared<SymbolTable>()),
       ret_access_(frame_->newRetAccess(frame_)) {
   assert(name);
   assert(block);
-
-  GlobSymTab->push(this);
-
-  if (params_) {
-    for (Variable *param : *params_) {
-      symtab_->push(param);
-    }
-  }
 }
 FunctionDecl::~FunctionDecl() {
   delete params_;
@@ -184,7 +174,7 @@ int Expression::eval() { return 0; }
 
 int VarExp::eval() { return 0; }
 int FuncCallExp::eval() { return 0; }
-int LogicExp::eval() {
+/* int LogicExp::eval() {
   switch (op_) {
   case Op::AND:
     return left_->eval() && right_->eval();
@@ -205,7 +195,7 @@ int LogicExp::eval() {
   default:
     return 0;
   }
-}
+}*/
 int BinaryExp::eval() {
   switch (op_) {
   case Op::ADD:

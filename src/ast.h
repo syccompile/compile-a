@@ -1,32 +1,41 @@
 #pragma once
 
-#include "../debug.h"
-#include "../ir.h"
-#include "../ir_translator.h"
 #include "../context/context.h"
 
 #include <string>
 #include <vector>
+#include <cassert>
 
 using std::string;
 using std::vector;
 
+class AST_base {
+public:
+  // 翻译为中间代码
+  virtual std::list<IR::Ptr> translate() = 0;
+
+  // 调试输出
+  virtual void internal_print(){};
+};
+
 // Forward Declartion for @class Expression
 class Variable;
 
-class Expression : public Debug_impl, public IrTranslator_impl {
+class Expression: public AST_base {
 public:
-  using List = vector<Expression *>;
-  enum class Op {
-    AND, //  '&&'
-    OR,  //  '||'
-    NOT, //  '!'
-    EQ,  //  '=='
-    NEQ, //  '!='
-    LT,  //  '<'
-    LE,  //  '<='
-    GT,  //  '>'
-    GE,  //  '>='
+  using List = std::list<Expression>;
+  enum Op: int {
+    // logical operators
+    AND=0, //  '&&'
+    OR,    //  '||'
+    NOT,   //  '!'
+
+    EQ,    //  '=='
+    NEQ,   //  '!='
+    LT,    //  '<'
+    LE,    //  '<='
+    GT,    //  '>'
+    GE,    //  '>='
 
     ADD,  //  '+'
     SUB,  //  '-'
@@ -39,25 +48,41 @@ public:
     NIL   //  NULL
   };
 
-  Expression(Op op, bool evaluable) : op_(op), evaluable_(evaluable) {}
+  Expression(Op op, bool evaluable) : op_(op), addr(-1), label_fail(-1) { }
   virtual ~Expression() {}
 
-  bool evaluable() { return evaluable_; }
-  Op op()          { return op_; }
+  Op op() { return op_; }
+
+  // 可否编译期求值
+  virtual bool is_evaluable() const;
+  // 为常量时求值
+  virtual int eval();
+
+  // logical-regular expression cast related
+  // 是否为逻辑函数？
+  bool op_logical() const           { return this->op_<=NOT; }
+  // 是否为关系型函数？
+  bool op_rel() const               { return EQ<=this->op_ && this->op_<=GE; }
+  // 是否要求翻译为逻辑型表达式？
+  bool translate_to_logical() const { (this->op_logical()||this->op_rel()) ? !cast_to_regular : cast_to_logical; }
+  bool cast_to_logical;
+  bool cast_to_regular;
 
   // debug
-  virtual void internal_print() override {}
-
+  virtual void internal_print() override;
   // IR generate
-  virtual std::list<IR> translate() {}
+  virtual std::list<IR::Ptr> translate() override;
+
+  // 为（变量型的）表达式单位分配的临时变量虚地址
+  int addr;
+  // 为（条件）表达式分配的标号编号
+  // 只分配表达式为假时的标号
+  // 表达式为真时，直接继续执行
+  int label_fail;
 
 protected:
-  void set_evaluable(bool evaluable) { evaluable_ = evaluable; }
-
   // 表达式类型
   Op op_;
-  // 可否编译期求值
-  bool evaluable_;
 };
 
 /**
@@ -68,12 +93,24 @@ public:
   VarExp(string *ident, Expression::List *dimens);
   ~VarExp();
 
+  // 可否编译期求值
+  // TODO error handling
+  virtual bool is_evaluable() const override {
+    // 取得符号表里的对应表项，查看标识符是否为常量
+    auto entry = context.vartab_cur->get(this->ident_);
+    assert(entry!=nullptr);
+    return entry->is_constant;
+  }
+  // 为常量时求值
+  virtual int eval() override;
+
   // debug
   virtual void internal_print() override;
   // IR generate
-  virtual std::list<IR> translate() override;
+  virtual std::list<IR::Ptr> translate() override;
 
 private:
+
   // 变量名称
   string ident_;
 
@@ -92,10 +129,16 @@ public:
   FuncCallExp(string *func_name);
   ~FuncCallExp();
 
+  
+  // 可否编译期求值
+  virtual bool is_evaluable() const { return false; }
+  // evaluate when it's const
+  virtual int eval() override { return 0; }
+
   // debug
   virtual void internal_print() override;
   // IR generate
-  virtual std::list<IR> translate() override;
+  virtual std::list<IR::Ptr> translate() override;
 
 private:
   // 函数名
@@ -113,12 +156,23 @@ public:
   BinaryExp(Op op, Expression *left, Expression *right);
   virtual ~BinaryExp();
 
+  // 可否编译期求值
+  virtual bool is_evaluable() { return this->left_->is_evaluable() && this->right_->is_evaluable(); }
+  // evaluate when it's const
+  // 请注意：无论是算术还是逻辑表达式，求值结果均是整数类型
+  virtual int eval() override;
+
   // debug
   virtual void internal_print() override;
   // IR generate
-  virtual std::list<IR> translate() override;
+  virtual std::list<IR::Ptr> translate() override;
 
 protected:
+  // 分两种不同的翻译形式
+  std::list<IR::Ptr> _translate_logical();
+  std::list<IR::Ptr> _translate_rel();
+  std::list<IR::Ptr> _translate_regular();
+
   Expression *left_;
   Expression *right_;
 };
@@ -131,10 +185,15 @@ public:
   UnaryExp(Op op, Expression *exp);
   ~UnaryExp();
 
+  // 可否编译期求值
+  virtual bool is_evaluable() const { return this->exp_->is_evaluable(); }
+  // evaluate when it's const
+  virtual int eval() override;
+
   // debug
   virtual void internal_print() override;
   // IR generate
-  virtual std::list<IR> translate() override;
+  virtual std::list<IR::Ptr> translate() override;
 
 private:
   Expression *exp_;
@@ -146,12 +205,18 @@ private:
 class NumberExp : public Expression {
 public:
   NumberExp(string *str);
+  NumberExp(int);
   ~NumberExp();
+
+  // 可否编译期求值
+  virtual bool is_evaluable() const { return true; }
+  // evaluate when it's const
+  virtual int eval() override;
 
   // debug
   virtual void internal_print() override;
   // IR generate
-  virtual std::list<IR> translate() override;
+  virtual std::list<IR::Ptr> translate() override;
 
 private:
   // 存储数字的字符串表示，例如"0xff", "2021", "08876"
@@ -167,7 +232,7 @@ enum class BType { INT, VOID, UNKNOWN };
 /**
  * 普通变量
  */
-class Variable : public Debug_impl, public IrTranslator_impl {
+class Variable: public AST_base {
 public:
   friend class VarDeclStmt;
   using List = vector<Variable *>;
@@ -197,7 +262,7 @@ public:
   // debug
   virtual void internal_print() override;
   // IR generate
-  virtual std::list<IR> translate() override;
+  virtual std::list<IR::Ptr> translate() override;
 
 protected:
   // 变量类型
@@ -221,7 +286,7 @@ public:
   /**
    * 表示数组的初始化值
    */
-  class InitVal : public Debug_impl, public IrTranslator_impl {
+  class InitVal: public AST_base {
     /**
      * 使用InitVal来表示其中的"1"， "2"， "{3， 4}"
      */
@@ -287,7 +352,7 @@ private:
 /**
  * 表示一个语句
  */
-class Stmt : public Debug_impl, public IrTranslator_impl {
+class Stmt: public AST_base {
 public:
   using List = vector<Stmt *>;
   virtual ~Stmt() {}
@@ -298,7 +363,7 @@ public:
   // debug
   virtual void internal_print() override;
   // IR generate
-  virtual std::list<IR> translate() override { return std::list<IR>(); }
+  virtual std::list<IR::Ptr> translate() override { return std::list<IR::Ptr>(); }
 
   int lineno_;
 };
@@ -315,7 +380,7 @@ public:
   // debug
   virtual void internal_print() override;
   // IR generate
-  virtual std::list<IR> translate() override { return std::list<IR>(); }
+  virtual std::list<IR::Ptr> translate() override { return std::list<IR::Ptr>(); }
 
   // 加入变量声明
   void push_back(Variable *var) { vars_.push_back(var); }
@@ -336,7 +401,7 @@ public:
   // debug
   virtual void internal_print() override;
   // IR generate
-  virtual std::list<IR> translate() override { return std::list<IR>(); }
+  virtual std::list<IR::Ptr> translate() override { return std::list<IR::Ptr>(); }
 
   // return语句对应的函数
   FunctionDecl *parent_;
@@ -355,7 +420,7 @@ public:
   // debug
   virtual void internal_print() override;
   // IR generate
-  virtual std::list<IR> translate() override { return std::list<IR>(); }
+  virtual std::list<IR::Ptr> translate() override { return std::list<IR::Ptr>(); }
 
   // break语句对应的while语句
   WhileStmt *parent_;
@@ -369,7 +434,7 @@ public:
   // debug
   virtual void internal_print() override;
   // IR generate
-  virtual std::list<IR> translate() override { return std::list<IR>(); }
+  virtual std::list<IR::Ptr> translate() override { return std::list<IR::Ptr>(); }
 
   // continue语句对应的while语句
   WhileStmt *parent_;
@@ -383,7 +448,7 @@ public:
   ExpStmt(Expression *edp);
   ~ExpStmt();
   // IR generate
-  virtual std::list<IR> translate() override { return std::list<IR>(); }
+  virtual std::list<IR::Ptr> translate() override { return std::list<IR::Ptr>(); }
 
 private:
   Expression *exp_;
@@ -412,7 +477,7 @@ public:
   // debug
   virtual void internal_print() override;
   // IR generate
-  virtual std::list<IR> translate() override { return std::list<IR>(); }
+  virtual std::list<IR::Ptr> translate() override { return std::list<IR::Ptr>(); }
 
 private:
   // 块语句中的所有语句
@@ -437,7 +502,7 @@ public:
   // debug
   virtual void internal_print() override;
   // IR generate
-  virtual std::list<IR> translate() override { return std::list<IR>(); }
+  virtual std::list<IR::Ptr> translate() override { return std::list<IR::Ptr>(); }
 
 private:
   // if语句的条件表达式, 保证该指针非空
@@ -464,7 +529,7 @@ public:
   // debug
   virtual void internal_print() override;
   // IR generate
-  virtual std::list<IR> translate() override { return std::list<IR>(); }
+  virtual std::list<IR::Ptr> translate() override { return std::list<IR::Ptr>(); }
 
 private:
   // while语句的条件表达式, 保证不为空
@@ -491,7 +556,7 @@ public:
   // debug
   virtual void internal_print() override;
   // IR generate
-  virtual std::list<IR> translate() override { return std::list<IR>(); }
+  virtual std::list<IR::Ptr> translate() override { return std::list<IR::Ptr>(); }
 
 private:
   // 左值变量的名字
@@ -507,7 +572,7 @@ private:
 /**
  * 函数声明
  */
-class FunctionDecl : public Debug_impl, public IrTranslator_impl {
+class FunctionDecl: public AST_base {
 public:
   FunctionDecl(BType ret_type, string *name, Variable::List *params,
                BlockStmt *block);
@@ -526,7 +591,7 @@ public:
   // debug
   virtual void internal_print() override;
   // IR generate
-  virtual std::list<IR> translate() override { return std::list<IR>(); }
+  virtual std::list<IR::Ptr> translate() override { return std::list<IR::Ptr>(); }
 
 private:
   
