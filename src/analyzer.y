@@ -163,7 +163,8 @@ DimenList: LBRACKET Exp RBRACKET { $$ = new Expression::List();
 InitValsList : Exp    { $$ = new Array::InitValContainer();
                         dynamic_cast<Array::InitValContainer*>($$)->push_back(new Array::InitValExp($1)); 
                       }
-             | InitVals                     { $$ = $1;}
+             | InitVals                     { $$ = new Array::InitValContainer();
+                      dynamic_cast<Array::InitValContainer*>($$)->push_back($1);}
              | InitValsList COMMA Exp       
                        { 
                          $$ = $1; 
