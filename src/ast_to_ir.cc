@@ -370,60 +370,134 @@ BinaryExp::translate() {
   std::list<IR::Ptr> ret;
 
   if (this->op_logical()) {
+    // &&, ||
     ret.splice(ret.end(), this->_translate_logical());
   } else if (this->op_rel()) {
+    // ==, !=, <, <=, >, >=
     ret.splice(ret.end(), this->_translate_rel());
   } else {
+    // +, -, *, /, %
     ret.splice(ret.end(), this->_translate_regular());
   }
 
   return ret;
 }
 
-std::tuple<vector<IR::Ptr>, FrameAccess>
+std::list<IR::Ptr>
+UnaryExp::_translate_logical() {
+  std::list<IR::Ptr> ret;
+
+  if (this->translate_to_logical()) {
+    //   if (subexp) <do nothing>; else goto this_success_label;
+    //   goto this_fail_label;
+    // this_success_label:
+    // ... <codes that execute on success>
+    // this_fail_label:
+    // ... <codes that execute on fail>
+
+    // 要求子表达式翻译为逻辑表达式
+    this->exp_->cast_to_regular = false;
+    this->exp_->cast_to_logical = true;
+
+    int this_success = context.allocator.allocate_label();
+    this->exp_->label_fail = this_success;
+
+    ret.splice(ret.end(), this->exp_->translate());
+
+    ret.emplace_back(std::make_shared<SingalOpIR>(
+      IR::Op::JMP, IR_Addr::make_label(this->label_fail)
+    ));
+    ret.emplace_back(std::make_shared<SingalOpIR>(
+      IR::Op::LABEL, IR_Addr::make_label(this_success)
+    ));
+  } 
+  else {
+    // 要求子表达式翻译为算术表达式
+    this->exp_->cast_to_regular = true;
+    this->exp_->cast_to_logical = false;
+
+    // 为子表达式分配存储空间
+    this->exp_->addr = (this->exp_->addr==-1) ? context.allocator.allocate_addr() : this->exp_->addr;
+    this->exp_->addr = context.allocator.allocate_addr();
+
+    // 计算子表达式值
+    ret.splice(ret.end(), this->exp_->translate());
+
+    // cmp subexp->addr, 0
+    // moveq this->addr, 1
+    // movne this->addr, 0
+    ret.emplace_back(std::make_shared<UnaryOpIR>(
+      IR::Op::CMP, IR_Addr::make_var(this->exp_->addr), IR_Addr::make_imm(0)
+    ));
+    ret.emplace_back(std::make_shared<SingalOpIR>(
+      IR::Op::MOVEQ, IR_Addr::make_label(this->addr), IR_Addr::make_imm(1)
+    ));
+    ret.emplace_back(std::make_shared<SingalOpIR>(
+      IR::Op::MOVEQ, IR_Addr::make_label(this->addr), IR_Addr::make_imm(0)
+    ));
+  }
+
+  return ret;
+}
+
+std::list<IR::Ptr>
+UnaryExp::_translate_regular() {
+  std::list<IR::Ptr> ret;
+
+  if (this->translate_to_logical()) {
+    // 要求生成逻辑表达式
+    // 直接生成一个临时性的关系表达式，利用它生成中间代码
+    BinaryExp *temp = new BinaryExp(Expression::Op::EQ, this, new NumberExp(0));
+    temp->label_fail = this->label_fail;
+
+    ret.splice(ret.end(), temp->translate());
+
+    temp->left_ = nullptr;
+    delete temp;
+  }
+  else {
+    // 要求生成算术表达式
+    this->exp_->addr = this->addr;
+    ret.splice(ret.end(), this->exp_->translate());
+
+    if (Expression::Op::SUB) {
+      ret.emplace_back(std::make_shared<BinaryOpIR>(
+        IR::Op::SUB, IR_Addr::make_imm(0), IR_Addr::make_var(this->addr);
+      ));
+    }
+  }
+
+  return ret;
+}
+
+std::list<IR::Ptr>
 UnaryExp::translate() {
-  vector<IR::Ptr> ret;
-  // FIX
-  if (evaluable()) {
-    return std::make_tuple(vector<IR::Ptr>(), symtab->frame()->newImmAccess(
-                                                  symtab->frame(), eval()));
-  }
-  FrameAccess result = symtab->frame()->newTempAccess(symtab->frame());
+  // 当编译期可求表达式的值时，就拒绝翻译
+  if (this->is_evaluable()) return std::list<IR::Ptr>();
 
-  wrap_tie(vec, access, exp_, symtab);
+  std::list<IR::Ptr> ret;
 
-  IR::Ptr ir;
-  switch (op_) {
-  case Op::ADD:
-    result = access;
-    break;
-  case Op::SUB:
-    ir = std::make_shared<BinOpIR>(
-        IR::Op::SUB, result, symtab->frame()->newImmAccess(symtab->frame(), 0),
-        access);
-    ret.push_back(ir);
-    break;
-  case Op::NOT:
-    // FIX
-    jmp_revert = !jmp_revert;
-    return exp_->translate(symtab);
-  default:
-    break;
+  if (this->op_logical()) {
+    // !
+    ret.splice(ret.end(), this->_translate_logical());
+  } else {
+    // +, -
+    ret.splice(ret.end(), this->_translate_regular());
   }
-  return std::make_tuple(ret, result);
+
+  return ret;
 }
 
-std::tuple<vector<IR::Ptr>, FrameAccess>
-NumberExp::translate(SymbolTable::Ptr symtab) {
-  return std::make_tuple(vector<IR::Ptr>(), symtab->frame()->newImmAccess(
-                                                symtab->frame(), value_));
+std::list<IR::Ptr>
+NumberExp::translate() {
+  // 常量，无需翻译
+  return std::list<IR::Ptr>();
 }
 
-std::tuple<vector<IR::Ptr>, FrameAccess>
-VarDeclStmt::translate(SymbolTable::Ptr symtab) {
-  vector<IR::Ptr> ret;
+std::list<IR::Ptr>
+VarDeclStmt::translate() {
+  std::list<IR::Ptr> ret;
   for (Variable *var : vars_) {
-    FrameAccess access = symtab->push(var);
     if (var->initialized() && !var->global()) {
       if (var->is_array()) {
         // TODO

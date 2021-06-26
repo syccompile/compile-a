@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../context/context.h"
+#include "context/context.h"
 
 #include <string>
 #include <vector>
@@ -77,7 +77,7 @@ public:
   int addr;
   // 为（条件）表达式分配的标号编号
   // 只分配表达式为假时的标号
-  // 表达式为真时，直接继续执行
+  // 表达式为真时，直接顺序执行
   int label_fail;
 
 protected:
@@ -196,6 +196,9 @@ public:
   virtual std::list<IR::Ptr> translate() override;
 
 private:
+  virtual std::list<IR::Ptr> _translate_logical() override;
+  virtual std::list<IR::Ptr> _translate_regular() override;
+
   Expression *exp_;
 };
 
