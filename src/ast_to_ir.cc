@@ -1,6 +1,6 @@
 #include "ast.h"
 #include "ir.h"
-#include "../context/context.h"
+#include "context/context.h"
 
 #include <cassert>
 static FunctionDecl *now_func;
@@ -84,10 +84,7 @@ Expression::Op reverse_op(Expression::Op op) {
 
 std::list<IR::Ptr>
 VarExp::translate() {
-  // 先从符号表取出对应表项
-  auto entry = context.vartab_cur->get(this->ident_);
-  // 然后从表项中取出虚地址，作为该语法单位的地址
-  this->addr = entry->address_number;
+  return std::list<IR::Ptr>();
 }
 
 std::list<IR::Ptr>
@@ -99,21 +96,33 @@ FuncCallExp::translate() {
     
     // 首先计算各个函数参数的值
     for (Expression *exp : *params_) {
+      // 常量优化
+      // 遇到可编译期求值的变量，跳过计算
+      if (exp->is_evaluable()) continue;
+
       exp->cast_to_regular = true;
+      exp->cast_to_logical = false;
+
+      if (exp->addr!=-1) exp->addr = context.allocator.allocate_addr();      
       ret.splice(ret.end(), exp->translate());
       ++i;
     }
 
     // 然后生成传参中间代码
     for (Expression *exp : *params_) {
-      auto param_spec_ir = std::make_shared<SingalOpIR>(IR::Op::PARAM);
       // TODO p_s_i.setAddress(exp.address);
-      ret.emplace_back(std::move(param_spec_ir));
+      ret.emplace_back(std::make_shared<SingalOpIR>(
+        IR::Op::PARAM,
+        exp->is_evaluable() ? IR_Addr::make_imm(exp->eval()) : IR_Addr::make_var(exp->addr)
+      ));
     }
   }
 
+  // TODO warning when call an undeclared function
   // 最后生成函数调用的代码
-  ret.emplace_back(std::make_shared<SingalOpIR>(IR::Op::CALL));
+  ret.emplace_back(std::make_shared<SingalOpIR>(
+    IR::Op::CALL, IR_Addr::make_named_label(this->name_)
+  ));
 
   return ret;
 }
@@ -136,6 +145,7 @@ BinaryExp::_translate_logical() {
       // 逻辑“与”
 
       // 常量优化部分
+      // 左右表达式有一个为0时，就可以通过is_evaluable()和eval()来计算值=0
       if (this->left_->is_evaluable() && this->left_->eval()) {
         // 左表达式求值为“1”，右表达式不是编译期常量
         // 此时可看作右表达式的单元(Unary)表达式
@@ -461,8 +471,8 @@ UnaryExp::_translate_regular() {
     ret.splice(ret.end(), this->exp_->translate());
 
     if (Expression::Op::SUB) {
-      ret.emplace_back(std::make_shared<BinaryOpIR>(
-        IR::Op::SUB, IR_Addr::make_imm(0), IR_Addr::make_var(this->addr);
+      ret.emplace_back(std::make_shared<BinOpIR>(
+        IR::Op::SUB, IR_Addr::make_imm(0), IR_Addr::make_var(this->addr)
       ));
     }
   }
@@ -498,6 +508,12 @@ std::list<IR::Ptr>
 VarDeclStmt::translate() {
   std::list<IR::Ptr> ret;
   for (Variable *var : vars_) {
+    if (var->is_array()) {
+      if /
+    }
+    else {
+
+    }
     if (var->initialized() && !var->global()) {
       if (var->is_array()) {
         // TODO

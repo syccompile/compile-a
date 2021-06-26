@@ -4,6 +4,7 @@
 
 #include <string>
 #include <vector>
+#include <list>
 #include <cassert>
 
 using std::string;
@@ -148,11 +149,14 @@ private:
   Expression::List *params_;
 };
 
+class UnaryExp;
 /**
  * 二元表达式，例如" 1 + 2 "，" 4 * 3 "
  */
 class BinaryExp : public Expression {
 public:
+  friend class UnaryExp;
+
   BinaryExp(Op op, Expression *left, Expression *right);
   virtual ~BinaryExp();
 
