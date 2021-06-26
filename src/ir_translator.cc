@@ -110,9 +110,9 @@ logic_translate(BinaryExp *exp, SymbolTable::Ptr symtab) {
     }
   } else if (exp->op_ == Expression::Op::OR) {
     if (jmp_revert) {
-      jmp_revert = true;
-      wrap_tie_logic(lhs_vec, lhs_access, exp->left_, symtab);
       jmp_revert = false;
+      wrap_tie_logic(lhs_vec, lhs_access, exp->left_, symtab);
+      jmp_revert = true;
       wrap_tie_logic(rhs_vec, rhs_access, exp->right_, symtab);
       vec_push_all2(ret, lhs_vec, rhs_vec);
       vec_push_ir(ret, SingalOpIR, LABEL, lhs_access);
@@ -428,22 +428,28 @@ IfStmt::translate(SymbolTable::Ptr symtab) {
   }
 
   vector<IR::Ptr> ret;
-  FrameAccess next_label = symtab->frame()->newLabelAccess(symtab->frame());
 
-  jmp_revert = false;
-  wrap_tie_logic(condition_vec, yes_label, condition_, symtab);
-  vec_push_all1(ret, condition_vec);
-  if (no_) {
+  if (!no_) {
+    jmp_revert = true;
+    wrap_tie_logic(condition_vec, no_label, condition_, symtab);
+    wrap_tie(yes_vec, yes_access, yes_, yes_->symtab_);
+    vec_push_all2(ret, condition_vec, condition_vec);
+    vec_push_ir(ret, SingalOpIR, LABEL, no_label);
+    return std::make_tuple(ret, nullptr);
+  }else {
+    FrameAccess next_label = symtab->frame()->newLabelAccess(symtab->frame());
+    jmp_revert = false;
+    wrap_tie_logic(condition_vec, yes_label, condition_, symtab);
     wrap_tie(no_vec, access, no_, no_->symtab_);
-    vec_push_all1(ret, no_vec);
-  }
-  vec_push_ir(ret, SingalOpIR, JMP, next_label);
+    vec_push_all2(ret, condition_vec, no_vec);
+    vec_push_ir(ret, SingalOpIR, JMP, next_label);
+    vec_push_ir(ret, SingalOpIR, LABEL, yes_label);
+    wrap_tie(yes_vec, yes_access, yes_, yes_->symtab_);
+    vec_push_all1(ret, yes_vec);
+    vec_push_ir(ret, SingalOpIR, LABEL, next_label);
+    return std::make_tuple(ret, nullptr);
 
-  vec_push_ir(ret, SingalOpIR, LABEL, yes_label);
-  wrap_tie(yes_vec, yes_access, yes_, yes_->symtab_);
-  vec_push_all1(ret, yes_vec);
-  vec_push_ir(ret, SingalOpIR, LABEL, next_label);
-  return std::make_tuple(ret, nullptr);
+  }
 }
 /**
  * while语句翻译为中间代码的模式如下
