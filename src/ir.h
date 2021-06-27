@@ -41,7 +41,7 @@ public:
   };
   IR(Op op): op_(op) {}
   virtual ~IR() {}
-  virtual void internal_print() override;
+  virtual void internal_print() const override;
   virtual std::vector<std::string> translate_arm(Frame::Ptr) override;
 protected:
   Op op_;

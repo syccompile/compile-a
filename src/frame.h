@@ -48,7 +48,7 @@ struct _FrameAccess : public Debug_impl {
     locate_ = that->locate_;
     frame_ = that->frame_;
   }
-  virtual void internal_print() override;
+  virtual void internal_print() const override;
 
   Kind kind_;
   std::string name_; // Label名称，也用于debug
