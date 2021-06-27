@@ -24,7 +24,7 @@ class Variable;
 
 class Expression: public AST_base {
 public:
-  using List = std::list<Expression>;
+  using List = std::list<Expression*>;
   enum Op: int {
     // logical operators
     AND=0, //  '&&'
@@ -78,7 +78,7 @@ public:
   int addr;
   // 为（条件）表达式分配的标号编号
   // 只分配表达式为假时的标号
-  // 表达式为真时，直接顺序执行
+  // 表达式为真时，直接继续执行
   int label_fail;
 
 protected:
@@ -200,8 +200,8 @@ public:
   virtual std::list<IR::Ptr> translate() override;
 
 private:
-  virtual std::list<IR::Ptr> _translate_logical() override;
-  virtual std::list<IR::Ptr> _translate_regular() override;
+  std::list<IR::Ptr> _translate_regular();
+  std::list<IR::Ptr> _translate_logical();
 
   Expression *exp_;
 };
@@ -242,7 +242,7 @@ enum class BType { INT, VOID, UNKNOWN };
 class Variable: public AST_base {
 public:
   friend class VarDeclStmt;
-  using List = vector<Variable *>;
+  using List = std::list<Variable *>;
 
   Variable(BType type, string *name, bool immutable);
   Variable(BType type, string *name, bool immutable, Expression *initval);
@@ -337,6 +337,7 @@ public:
   Array(BType type, string *name, bool immutable, Expression::List *size,
         InitVal *container);
   ~Array();
+
   virtual bool is_array() override { return true; }
   virtual void internal_print() override;
 
@@ -394,7 +395,7 @@ public:
   void set_global();
 private:
   // 声明的变量
-  vector<Variable *> vars_;
+  Variable::List vars_;
 };
 
 /**

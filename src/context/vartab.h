@@ -21,7 +21,7 @@ public:
   // 是否为常量
   bool is_constant;
 
-  VarTabEntry(std::string name, std::vector<int> &&shape, int addr, bool is_const);
+  VarTabEntry(std::string name, std::vector<int> &&shape, int addr, std::vector<int> &&init_val, bool is_const);
   // 判断是否为数组，规则请参考成员shape的说明
   bool is_array() const { return type.arr_shape.size()==0; }
 };
@@ -35,7 +35,7 @@ private:
 
 public:
   // 添加一个变量名称
-  void put(std::string name, std::vector<int> shape, int addr, bool is_const = false);
+  void put(std::string name, std::vector<int> shape, int addr, std::vector<int> initVal, bool is_const = false);
   
   // 判断符号表是否为全局表
   bool is_global() const { return fa==nullptr; }

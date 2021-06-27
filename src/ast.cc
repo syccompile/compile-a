@@ -43,10 +43,8 @@ BinaryExp::~BinaryExp() {
   delete left_;
   delete right_;
 }
-
 UnaryExp::UnaryExp(Op op, Expression *exp) : Expression(op, false), exp_(exp) {
   assert(exp);
-  set_evaluable(exp->evaluable());
 }
 UnaryExp::~UnaryExp() { delete exp_; }
 

@@ -505,29 +505,81 @@ NumberExp::translate() {
 }
 
 std::list<IR::Ptr>
-VarDeclStmt::translate() {
+Variable::_translate_immutable() {
   std::list<IR::Ptr> ret;
-  for (Variable *var : vars_) {
-    if (var->is_array()) {
-      if /
-    }
-    else {
 
+  // 常量要求初始化，且必须用编译期常量初始化
+  // TODO 错误处理
+  assert(this->initval_ != nullptr);
+  assert(this->initval_->is_evaluable());
+
+  // 处理初始化值
+  std::vector<int> init_val = this->initval_->eval();
+
+  // 加入符号表
+  context.vartab_cur->put(
+    this->name(),
+    std::vector<int>(),
+    -1,
+    std::move(init_val),
+    true
+  );
+
+  return ret;
+}
+
+std::list<IR::Ptr>
+Variable::_translate_variable() {
+  std::list<IR::Ptr> ret;
+
+  // 先分配地址
+  int var_addr = context.allocator.allocate_addr();
+
+  // 再处理初始值
+  std::vector<int> init_val;
+  if (this->initval_ != nullptr) {
+    // 常量初始化函数
+    if (this->initval_->is_evaluable()) {
+      init_val.push_back(this->initval_->eval());
+      ret.emplace_back(std::make_shared<UnaryOpIR>(
+        IR::Op::MOV, IR_Addr::make_var(var_addr), IR_Addr::make_imm(init_val.back())
+      ));
     }
-    if (var->initialized() && !var->global()) {
-      if (var->is_array()) {
-        // TODO
-      } else {
-        wrap_tie(rhs_vec, rhs_access, var->initval_, symtab);
-        ret.insert(ret.end(), rhs_vec.begin(), rhs_vec.end());
-        ret.push_back(
-            std::make_shared<UnaryOpIR>(IR::Op::MOV, access, rhs_access));
-      }
-    } else if (var->initialized() && var->global()) {
-      // TODO
+    // 变量初始化函数
+    else {
+      // 表达式计算结果放到变量分配的地址中
+      this->initval_->addr = var_addr;
+      ret.splice(ret.end(), this->initval_->translate());
     }
   }
-  return std::make_tuple(ret, nullptr);
+  
+  // 加入符号表
+  context.vartab_cur->put(
+    this->name(),
+    std::vector<int>(),
+    var_addr,
+    std::move(init_val),
+    false
+  );
+  
+  return ret;
+}
+
+std::list<IR::Ptr>
+Variable::translate() {
+  std::list<IR::Ptr> ret;
+
+  if (this->immutable()) ret.splice(ret.end(), this->_translate_immutable());
+  else                   ret.splice(ret.end(), this->_translate_variable());
+
+  return ret;
+}
+
+std::list<IR::Ptr>
+VarDeclStmt::translate() {
+  std::list<IR::Ptr> ret;
+  for (Variable *var : this->vars_) ret.splice(ret.end(), var->translate());
+  return ret;  
 }
 
 std::tuple<vector<IR::Ptr>, FrameAccess>
