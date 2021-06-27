@@ -45,7 +45,7 @@ const string yellow = "\033[0;33m";
 const string blue = "\033[0;34m";
 const string white = "\033[0;37m";
 
-void UnaryExp::internal_print() {
+void UnaryExp::internal_print() const {
   switch (op_) {
   case Op::NOT:
     printer << yellow << "!";
@@ -63,7 +63,7 @@ void UnaryExp::internal_print() {
     break;
   }
 }
-void VarExp::internal_print() {
+void VarExp::internal_print() const {
   std::cout << red << ident_;
   if (dimens_) {
     for (Expression *exp : *dimens_) {
@@ -74,7 +74,7 @@ void VarExp::internal_print() {
   }
 }
 
-void BinaryExp::internal_print() {
+void BinaryExp::internal_print() const {
   switch (op_) {
   case Op::ADD:
     printer << yellow << "(";
@@ -171,7 +171,7 @@ void BinaryExp::internal_print() {
   }
 }
 
-void FuncCallExp::internal_print() {
+void FuncCallExp::internal_print() const {
   printer << red << name_ << white << "(";
   if (params_) {
     for (Expression *e : *params_) {
@@ -184,8 +184,8 @@ void FuncCallExp::internal_print() {
   printer << white << ")";
 }
 
-void NumberExp::internal_print() { printer << green << string_; }
-void Variable::internal_print() {
+void NumberExp::internal_print() const { printer << green << string_; }
+void Variable::internal_print() const {
   if (immutable_) {
     printer << blue << "const ";
   }
@@ -206,9 +206,9 @@ void Variable::internal_print() {
   }
 }
 
-void Array::InitValExp::internal_print() { exp_->internal_print(); }
+void Array::InitValExp::internal_print() const { exp_->internal_print(); }
 
-void Array::InitValContainer::internal_print() {
+void Array::InitValContainer::internal_print() const {
   printer << white << "{";
   for (InitVal *initval : initval_container_) {
     initval->internal_print();
@@ -219,7 +219,7 @@ void Array::InitValContainer::internal_print() {
   printer << white << "}";
 }
 
-void Array::internal_print() {
+void Array::internal_print() const {
   Variable::internal_print();
   for (Expression *e : *dimens_) {
     printer << white << "[";
@@ -234,7 +234,7 @@ void Array::internal_print() {
   }
 }
 
-void VarDeclStmt::internal_print() {
+void VarDeclStmt::internal_print() const {
   for (Variable *var : vars_) {
     var->internal_print();
     if (*(vars_.rbegin()) != var) {
@@ -244,21 +244,21 @@ void VarDeclStmt::internal_print() {
   printer << white << ";" << IndentPrinter::endl;
 }
 
-void BreakStmt::internal_print() {
+void BreakStmt::internal_print() const {
   printer << white << "break;" << IndentPrinter::endl;
 }
-void ReturnStmt::internal_print() {
+void ReturnStmt::internal_print() const {
   printer << white << "return ";
   if (ret_exp_) {
     ret_exp_->internal_print();
   }
   printer << white << ";" << IndentPrinter::endl;
 }
-void ContinueStmt::internal_print() {
+void ContinueStmt::internal_print() const {
   printer << white << "continue ;" << IndentPrinter::endl;
 }
 
-void BlockStmt::internal_print() {
+void BlockStmt::internal_print() const {
   printer << white << "{" << IndentPrinter::endl;
   printer.add_level();
   for (Stmt *stmt : stmts_) {
@@ -268,7 +268,7 @@ void BlockStmt::internal_print() {
   printer << white << "}" << IndentPrinter::endl;
 }
 
-void IfStmt::internal_print() {
+void IfStmt::internal_print() const {
   printer << blue << "if" << white << " (";
   condition_->internal_print();
   printer << white << ")" << IndentPrinter::endl;
@@ -279,14 +279,14 @@ void IfStmt::internal_print() {
   no_->internal_print();
 }
 
-void WhileStmt::internal_print() {
+void WhileStmt::internal_print() const {
   printer << blue << "while" << white << " (";
   condition_->internal_print();
   printer << white << ")" << IndentPrinter::endl;
   body_->internal_print();
 }
 
-void AssignmentStmt::internal_print() {
+void AssignmentStmt::internal_print() const {
   printer << green << name_;
   if (dimens_) {
     for (Expression *e : *dimens_) {
@@ -300,7 +300,7 @@ void AssignmentStmt::internal_print() {
   printer << white << ";" << IndentPrinter::endl;
 }
 
-void FunctionDecl::internal_print() {
+void FunctionDecl::internal_print() const {
   switch (ret_type_) {
   case BType::INT:
     printer << blue << "int ";
@@ -324,12 +324,12 @@ void FunctionDecl::internal_print() {
   printer << white << ")" << IndentPrinter::endl;
   body_->internal_print();
 }
-void IR::internal_print() {
+void IR::internal_print() const {
   printer.add_level();
   switch (op_) {
   case IR::Op::LABEL:
     printer.sub_level();
-    dynamic_cast<SingalOpIR *>(this)->dst_->internal_print();
+    dynamic_cast<const SingalOpIR *>(this)->dst_->internal_print();
     printer << ":" << IndentPrinter::endl;
     printer.add_level();
     break;
@@ -343,14 +343,14 @@ void IR::internal_print() {
     printer << "ZERO\t";
     goto S;
   S:
-    dynamic_cast<SingalOpIR *>(this)->dst_->internal_print();
+    dynamic_cast<const SingalOpIR *>(this)->dst_->internal_print();
     printer << IndentPrinter::endl;
     break;
   case IR::Op::MOV:
     printer << "MOV\t";
-    dynamic_cast<UnaryOpIR *>(this)->src_->internal_print();
+    dynamic_cast<const UnaryOpIR *>(this)->src_->internal_print();
     printer << white << "\t\t->\t";
-    dynamic_cast<UnaryOpIR *>(this)->dst_->internal_print();
+    dynamic_cast<const UnaryOpIR *>(this)->dst_->internal_print();
     printer << IndentPrinter::endl;
     break;
   case IR::Op::SUB:
@@ -374,11 +374,11 @@ void IR::internal_print() {
   case IR::Op::TEST:
     printer << "TEST\t";
   A:
-    dynamic_cast<BinOpIR *>(this)->src1_->internal_print();
+    dynamic_cast<const BinOpIR *>(this)->src1_->internal_print();
     printer << white << ",\t";
-    dynamic_cast<BinOpIR *>(this)->src2_->internal_print();
+    dynamic_cast<const BinOpIR *>(this)->src2_->internal_print();
     printer << white << "\t->\t";
-    dynamic_cast<BinOpIR *>(this)->dst_->internal_print();
+    dynamic_cast<const BinOpIR *>(this)->dst_->internal_print();
     printer << IndentPrinter::endl;
     break;
   case IR::Op::CALL:
@@ -423,7 +423,7 @@ void IR::internal_print() {
   case IR::Op::SETGT:
     printer << "SETGT\t";
   B:
-    dynamic_cast<SingalOpIR *>(this)->dst_->internal_print();
+    dynamic_cast<const SingalOpIR *>(this)->dst_->internal_print();
     printer << IndentPrinter::endl;
     break;
   case IR::Op::RET:
@@ -436,7 +436,7 @@ void IR::internal_print() {
   printer.sub_level();
 }
 
-void _FrameAccess::internal_print() {
+void _FrameAccess::internal_print() const {
   switch (kind_) {
   case Kind::TEMP:
   case Kind::REG:

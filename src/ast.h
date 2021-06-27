@@ -39,26 +39,25 @@ public:
     CALL, //  function call
     NIL   //  NULL
   };
-  Expression(Op op, bool evaluable) : op_(op), evaluable_(evaluable) {}
+  Expression(const Op op, bool evaluable) : op_(op), evaluable_(evaluable) {}
   virtual ~Expression() {}
-  bool evaluable() { return evaluable_; }
-  Op op() { return op_; }
-  virtual int eval();
-  virtual void internal_print() override {}
+  bool evaluable() const { return evaluable_; }
+  Op op() const { return op_; }
+  virtual int eval() const ;
+  virtual void internal_print() const override {}
 
   virtual std::tuple<vector<IR::Ptr>, FrameAccess>
-  translate(SymbolTable::Ptr symtab) override {
+  translate(SymbolTable::Ptr symtab) const override {
     return std::make_tuple(vector<IR::Ptr>(), nullptr);
   }
 
 protected:
-  void set_evaluable(bool evaluable) { evaluable_ = evaluable; }
 
   /**
    * @member op_
    * 表达式类型
    */
-  Op op_;
+  const Op op_;
   /**
    * @member evaluable_
    * 是否可以在编译时求值
@@ -73,23 +72,23 @@ class VarExp : public Expression {
 public:
   VarExp(string *ident, Expression::List *dimens);
   ~VarExp();
-  virtual void internal_print() override;
+  virtual void internal_print() const override;
   virtual std::tuple<vector<IR::Ptr>, FrameAccess>
-  translate(SymbolTable::Ptr symtab) override;
-  virtual int eval() override;
+  translate(SymbolTable::Ptr symtab) const override;
+  virtual int eval() const override;
 
 private:
   /**
    * @member ident_
    * 变量名称
    */
-  string ident_;
+  const string ident_;
   /**
    * @member dimens_
    * 若为普通变量，该项为空
    * 若为数组，该项表示维度信息
    */
-  Expression::List *dimens_;
+  const Expression::List *dimens_;
 };
 
 /*
@@ -97,25 +96,25 @@ private:
  */
 class FuncCallExp : public Expression {
 public:
-  FuncCallExp(string *func_name, vector<Expression *> *params);
-  FuncCallExp(string *func_name);
+  FuncCallExp(const string *func_name, const vector<Expression *> *params);
+  FuncCallExp(const string *func_name);
   ~FuncCallExp();
-  virtual void internal_print() override;
+  virtual void internal_print() const override;
   virtual std::tuple<vector<IR::Ptr>, FrameAccess>
-  translate(SymbolTable::Ptr symtab) override;
-  virtual int eval() override;
+  translate(SymbolTable::Ptr symtab) const override;
+  virtual int eval() const override;
 
 private:
   /**
    * @member name_
    * 函数名称
    */
-  string name_;
+  const string name_;
   /**
    * @member params_
    * 函数实参，指针可能为空
    */
-  Expression::List *params_;
+  const Expression::List *params_;
 };
 
 /**
@@ -124,19 +123,19 @@ private:
 class BinaryExp : public Expression {
 public:
   friend std::tuple<vector<IR::Ptr>, FrameAccess>
-    logic_translate(BinaryExp* exp, SymbolTable::Ptr symtab);
+    logic_translate(const BinaryExp* exp, SymbolTable::Ptr symtab);
   friend std::tuple<vector<IR::Ptr>, FrameAccess>
-    arithmetic_translate(BinaryExp* exp, SymbolTable::Ptr symtab);
-  BinaryExp(Op op, Expression *left, Expression *right);
+    arithmetic_translate(const BinaryExp* exp, SymbolTable::Ptr symtab);
+  BinaryExp(const Op op, const Expression *left, const Expression *right);
   ~BinaryExp();
-  virtual void internal_print() override;
+  virtual void internal_print() const override;
   virtual std::tuple<vector<IR::Ptr>, FrameAccess>
-  translate(SymbolTable::Ptr symtab) override;
-  virtual int eval() override;
+  translate(SymbolTable::Ptr symtab) const override;
+  virtual int eval() const override;
 
 private:
-  Expression *left_;
-  Expression *right_;
+  const Expression *left_;
+  const Expression *right_;
 };
 
 /**
@@ -144,15 +143,15 @@ private:
  */
 class UnaryExp : public Expression {
 public:
-  UnaryExp(Op op, Expression *exp);
+  UnaryExp(const Op op, const Expression *exp);
   ~UnaryExp();
-  virtual void internal_print() override;
+  virtual void internal_print() const override;
   virtual std::tuple<vector<IR::Ptr>, FrameAccess>
-  translate(SymbolTable::Ptr symtab) override;
-  virtual int eval() override;
+  translate(SymbolTable::Ptr symtab) const override;
+  virtual int eval() const override;
 
 private:
-  Expression *exp_;
+  const Expression *exp_;
 };
 
 /**
@@ -160,24 +159,24 @@ private:
  */
 class NumberExp : public Expression {
 public:
-  NumberExp(string *str);
+  NumberExp(const string *str);
   ~NumberExp();
-  virtual void internal_print() override;
+  virtual void internal_print() const override;
   virtual std::tuple<vector<IR::Ptr>, FrameAccess>
-  translate(SymbolTable::Ptr symtab) override;
-  virtual int eval() override;
+  translate(SymbolTable::Ptr symtab) const override;
+  virtual int eval() const override;
 
 private:
   /**
    * @member string_
    * 存储数字的字符串表示，例如"0xff", "2021", "08876"
    */
-  string string_;
+  const string string_;
   /**
    * @member value_
    * 数字的实际值，假设不会超过int的表示范围
    */
-  int value_;
+  const int value_;
 };
 
 // 基本类型
@@ -191,8 +190,8 @@ public:
   friend class VarDeclStmt;
   using List = vector<Variable *>;
 
-  Variable(BType type, string *name, bool immutable);
-  Variable(BType type, string *name, bool immutable, Expression *initval);
+  Variable(const BType type, const string *name, bool immutable);
+  Variable(const BType type, const string *name, bool immutable, const Expression *initval);
   virtual ~Variable();
 
   /**
@@ -203,28 +202,24 @@ public:
    * 设置变量的可变性
    */
   void set_immutable(bool flag) { immutable_ = flag; }
-  /**
-   * 设置变量是否初始化
-   */
-  void set_initialzied(bool flag) { initialized_ = flag; }
 
   /**
    * 设置是否是全局变量
    */
   void set_global(bool global) { global_ = global; }
 
-  string name() { return name_; }
-  bool immutable() { return immutable_; }
-  bool global() { return global_; }
-  bool initialized() { return initialized_; }
+  string name() const { return name_; }
+  bool immutable() const { return immutable_; }
+  bool global() const { return global_; }
+  bool initialized() const { return initialized_; }
 
   /**
    * 判断变量是否是数组
    * 数组类应该重写该方法
    */
-  virtual bool is_array() { return false; }
+  virtual bool is_array() const { return false; }
 
-  virtual void internal_print() override;
+  virtual void internal_print() const override;
 
 protected:
   /**
@@ -241,7 +236,7 @@ protected:
    * @member name_
    * 变量名称
    */
-  string name_;
+  const string name_;
   /**
    * @member immutable_
    * 若使用const修饰，变量不可变，该项为真
@@ -251,12 +246,12 @@ protected:
    * @member initialized_
    * 若变量初始化，该项为真
    */
-  bool initialized_;
+  const bool initialized_;
   /**
    * @member initval_
    * 若变量初始化，该项表示初始化值，否则为空
    */
-  Expression *initval_;
+  const Expression *initval_;
 };
 
 class Array : public Variable {
@@ -270,7 +265,7 @@ public:
      */
   public:
     virtual ~InitVal() {}
-    virtual bool is_exp() { return false; }
+    virtual bool is_exp() const { return false; }
   };
 
   class InitValExp : public InitVal {
@@ -281,12 +276,12 @@ public:
   public:
     InitValExp(Expression *exp);
     ~InitValExp();
-    Expression* exp() { return exp_; }
-    virtual bool is_exp() override final { return true; }
-    virtual void internal_print() override;
+    const Expression* exp() const { return exp_; }
+    virtual bool is_exp() const override final { return true; }
+    virtual void internal_print() const override;
 
   private:
-    Expression *exp_;
+    const Expression *exp_;
   };
 
   class InitValContainer : public InitVal {
@@ -299,22 +294,22 @@ public:
     ~InitValContainer();
     void push_back(InitVal *initval) { initval_container_.push_back(initval);
     }
-    vector<InitVal*> container() { return initval_container_; }
-    virtual bool is_exp() override final { return false; }
-    virtual void internal_print() override;
+    vector<InitVal*> container() const { return initval_container_; }
+    virtual bool is_exp() const override final { return false; }
+    virtual void internal_print() const override;
 
   private:
     vector<InitVal *> initval_container_;
   };
 
-  Array(BType type, string *name, bool immutable, Expression::List *size);
-  Array(BType type, string *name, bool immutable, Expression::List *size,
+  Array(const BType type, const string *name, bool immutable, const Expression::List *size);
+  Array(const BType type, const string *name, bool immutable, const Expression::List *size,
         InitVal *container);
   ~Array();
-  Expression::List *dimens() { return dimens_; }
-  InitValContainer* container() { return initval_container_; }
-  virtual bool is_array() override { return true; }
-  virtual void internal_print() override;
+  const Expression::List *dimens() const { return dimens_; }
+  const InitValContainer* container() const { return initval_container_; }
+  virtual bool is_array() const override { return true; }
+  virtual void internal_print() const override;
 
 private:
   /**
@@ -324,12 +319,12 @@ private:
    * dimes_的内容应为{nullptr, 10, 32}
    * dimens_的内容应该要么为空指针, 要么是可编译时求值的
    */
-  Expression::List *dimens_;
+  const Expression::List *dimens_;
   /**
    * @member initval_container_
    * 表示数组的初始化值
    */
-  InitValContainer *initval_container_;
+  const InitValContainer *initval_container_;
 };
 
 /**
@@ -345,7 +340,7 @@ public:
   virtual void set_lineno(int lineno) { lineno_ = lineno; }
 
   virtual std::tuple<vector<IR::Ptr>, FrameAccess>
-  translate(SymbolTable::Ptr) override {
+  translate(SymbolTable::Ptr) const override {
     return std::make_tuple(vector<IR::Ptr>(), nullptr);
   }
 
@@ -366,9 +361,9 @@ public:
    */
   void push_back(Variable *var) { vars_.push_back(var); }
   void set_global();
-  virtual void internal_print() override;
+  virtual void internal_print() const override;
   virtual std::tuple<vector<IR::Ptr>, FrameAccess>
-      translate(SymbolTable::Ptr) override;
+      translate(SymbolTable::Ptr) const override;
 
 private:
   /**
@@ -383,23 +378,18 @@ private:
  */
 class ReturnStmt : public Stmt {
 public:
-  ReturnStmt(Expression *ret);
+  ReturnStmt(const Expression *ret);
   ~ReturnStmt();
-  virtual void internal_print() override;
+  virtual void internal_print() const override;
   virtual std::tuple<vector<IR::Ptr>, FrameAccess>
-      translate(SymbolTable::Ptr) override;
-  /**
-   * @member parent_
-   * return语句对应的函数
-   */
-  FunctionDecl *parent_;
+      translate(SymbolTable::Ptr) const override;
 
 private:
   /**
    * @member ret_exp_
    * return 语句的返回值, 指针可能为空
    */
-  Expression *ret_exp_;
+  const Expression *ret_exp_;
 };
 
 class WhileStmt;
@@ -408,14 +398,9 @@ class WhileStmt;
  */
 class BreakStmt : public Stmt {
 public:
-  virtual void internal_print() override;
+  virtual void internal_print() const override;
   virtual std::tuple<vector<IR::Ptr>, FrameAccess>
-      translate(SymbolTable::Ptr) override;
-  /**
-   * @member parent_
-   * break语句对应的while语句
-   */
-  WhileStmt *parent_;
+      translate(SymbolTable::Ptr) const override;
 };
 
 /**
@@ -423,14 +408,9 @@ public:
  */
 class ContinueStmt : public Stmt {
 public:
-  virtual void internal_print() override;
+  virtual void internal_print() const override;
   virtual std::tuple<vector<IR::Ptr>, FrameAccess>
-      translate(SymbolTable::Ptr) override;
-  /**
-   * @member parent_
-   * continue语句对应的while语句
-   */
-  WhileStmt *parent_;
+      translate(SymbolTable::Ptr) const override;
 };
 
 /**
@@ -441,10 +421,10 @@ public:
   ExpStmt(Expression *edp);
   ~ExpStmt();
   virtual std::tuple<vector<IR::Ptr>, FrameAccess>
-      translate(SymbolTable::Ptr) override;
+      translate(SymbolTable::Ptr) const override;
 
 private:
-  Expression *exp_;
+  const Expression *exp_;
 };
 
 /**
@@ -469,9 +449,9 @@ public:
       stmts_.push_back(stmt);
     }
   }
-  virtual void internal_print() override;
+  virtual void internal_print() const override;
   virtual std::tuple<vector<IR::Ptr>, FrameAccess>
-      translate(SymbolTable::Ptr) override;
+      translate(SymbolTable::Ptr) const override;
 
 private:
   /**
@@ -492,31 +472,31 @@ private:
  */
 class IfStmt : public Stmt {
 public:
-  IfStmt(Expression *condition, BlockStmt *yes, BlockStmt *no);
-  IfStmt(Expression *condition, BlockStmt *yes);
+  IfStmt(const Expression *condition, const BlockStmt *yes, const BlockStmt *no);
+  IfStmt(const Expression *condition, const BlockStmt *yes);
   ~IfStmt();
-  BlockStmt *yes() { return yes_; }
-  BlockStmt *no() { return no_; }
-  virtual void internal_print() override;
+  const BlockStmt *yes() const { return yes_; }
+  const BlockStmt *no() const { return no_; }
+  virtual void internal_print() const override;
   virtual std::tuple<vector<IR::Ptr>, FrameAccess>
-      translate(SymbolTable::Ptr) override;
+      translate(SymbolTable::Ptr) const override;
 
 private:
   /**
    * @member condition_
    * if语句的条件表达式, 保证该指针非空
    */
-  Expression *condition_;
+  const Expression *condition_;
   /**
    * @member yes_
    * if语句的条件成立时的块语句, 保证该指针非空
    */
-  BlockStmt *yes_;
+  const BlockStmt *yes_;
   /**
    * @member no_
    * if语句条件不成立时的块语句, 不保证指针非空
    */
-  BlockStmt *no_;
+  const BlockStmt *no_;
 };
 
 /**
@@ -526,23 +506,23 @@ class WhileStmt : public Stmt {
 public:
   friend class BreakStmt;
   friend class ContinueStmt;
-  WhileStmt(Expression *condition, BlockStmt *body);
+  WhileStmt(const Expression *condition, const BlockStmt *body);
   ~WhileStmt();
-  virtual void internal_print() override;
+  virtual void internal_print() const override;
   virtual std::tuple<vector<IR::Ptr>, FrameAccess>
-      translate(SymbolTable::Ptr) override;
+      translate(SymbolTable::Ptr) const override;
 
 private:
   /**
    * @member condition_
    * while语句的条件表达式, 保证不为空
    */
-  Expression *condition_;
+  const Expression *condition_;
   /**
    * @member body_
    * while语句的循环体, 保证不为空
    */
-  BlockStmt *body_;
+  const BlockStmt *body_;
 
   /**
    * @member break_access_
@@ -561,28 +541,28 @@ private:
  */
 class AssignmentStmt : public Stmt {
 public:
-  AssignmentStmt(string *name, Expression::List *dimens, Expression *rval);
+  AssignmentStmt(const string *name, const Expression::List *dimens, const Expression *rval);
   ~AssignmentStmt();
-  virtual void internal_print() override;
+  virtual void internal_print() const override;
   virtual std::tuple<vector<IR::Ptr>, FrameAccess>
-      translate(SymbolTable::Ptr) override;
+      translate(SymbolTable::Ptr) const override;
 
 private:
   /**
    * @member name_
    * 左值变量的名字
    */
-  string name_;
+  const string name_;
   /**
    * @member dimens_
    * 若左值为普通变量, 该项为空；若左值为数组，该项表示数组的维度
    */
-  Expression::List *dimens_;
+  const Expression::List *dimens_;
   /**
    * @member rval_
    * 右值，保证不为空
    */
-  Expression *rval_;
+  const Expression *rval_;
 };
 
 /**
@@ -594,8 +574,8 @@ public:
                BlockStmt *block);
   ~FunctionDecl();
 
-  string name() { return name_; }
-  BType ret_type() { return ret_type_; }
+  const string name() const { return name_; }
+  const BType ret_type() const { return ret_type_; }
 
   /**
    * 返回对应形参的FrameAccess
@@ -606,39 +586,39 @@ public:
   /**
    * 返回函数返回值的FrameAccess
    */
-  FrameAccess get_return_access() { return ret_access_; }
+  FrameAccess get_return_access() const{ return ret_access_; }
 
-  virtual void internal_print() override;
+  virtual void internal_print() const override;
   virtual std::tuple<vector<IR::Ptr>, FrameAccess>
-      translate(SymbolTable::Ptr) override;
+      translate(SymbolTable::Ptr) const override;
 
 private:
   /**
    * @member ret_type_
    * 函数返回值类型
    */
-  BType ret_type_;
+  const BType ret_type_;
   /**
    * @member name_
    * 函数名称
    */
-  string name_;
+  const string name_;
   /**
    * @member params_
    * 函数形参，指针可能为空
    */
-  Variable::List *params_;
+  const Variable::List *params_;
   /**
    * @member body_
    * 函数体，保证该指针非空
    */
-  BlockStmt *body_;
+  const BlockStmt *body_;
 
   /**
    * @member frame_
    * 函数的栈帧
    */
-  Frame::Ptr frame_;
+  const Frame::Ptr frame_;
 
   /**
    * @member symtab_
