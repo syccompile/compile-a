@@ -45,7 +45,7 @@ const string yellow = "\033[0;33m";
 const string blue = "\033[0;34m";
 const string white = "\033[0;37m";
 
-void UnaryExp::internal_print() {
+void UnaryExp::internal_print() const {
   switch (op_) {
   case Op::NOT:
     printer << yellow << "!";
@@ -63,8 +63,8 @@ void UnaryExp::internal_print() {
     break;
   }
 }
-void VarExp::internal_print() { var_->internal_print(); }
-void BinaryExp::internal_print() {
+void VarExp::internal_print() const { var_->internal_print(); }
+void BinaryExp::internal_print() const {
   switch (op_) {
   case Op::AND:
     left_->internal_print();
@@ -140,7 +140,7 @@ void BinaryExp::internal_print() {
   }
 }
 
-void FuncCallExp::internal_print() {
+void FuncCallExp::internal_print() const {
   printer << red << name_ << white << "(";
   if (params_) {
     for (Expression *e : *params_) {
@@ -153,8 +153,8 @@ void FuncCallExp::internal_print() {
   printer << white << ")";
 }
 
-void NumberExp::internal_print() { printer << green << string_; }
-void Variable::internal_print() {
+void NumberExp::internal_print() const { printer << green << string_; }
+void Variable::internal_print() const {
   if (immutable_) {
     printer << blue << "const ";
   }
@@ -175,9 +175,9 @@ void Variable::internal_print() {
   }
 }
 
-void Array::InitValExp::internal_print() { exp_->internal_print(); }
+void Array::InitValExp::internal_print() const { exp_->internal_print(); }
 
-void Array::InitValContainer::internal_print() {
+void Array::InitValContainer::internal_print() const {
   printer << white << "{";
   for (InitVal *initval : initval_container_) {
     initval->internal_print();
@@ -188,7 +188,7 @@ void Array::InitValContainer::internal_print() {
   printer << white << "}";
 }
 
-void Array::internal_print() {
+void Array::internal_print() const {
   Variable::internal_print();
   for (Expression *e : *dimens_) {
     printer << white << "[";
@@ -201,7 +201,7 @@ void Array::internal_print() {
   }
 }
 
-void VarDeclStmt::internal_print() {
+void VarDeclStmt::internal_print() const {
   for (Variable *var : vars_) {
     var->internal_print();
     if (*(vars_.rbegin()) != var) {
@@ -211,21 +211,21 @@ void VarDeclStmt::internal_print() {
   printer << white << ";" << IndentPrinter::endl;
 }
 
-void BreakStmt::internal_print() {
+void BreakStmt::internal_print() const {
   printer << white << "break;" << IndentPrinter::endl;
 }
-void ReturnStmt::internal_print() {
+void ReturnStmt::internal_print() const {
   printer << white << "return ";
   if (ret_exp_) {
     ret_exp_->internal_print();
   }
   printer << white << ";" << IndentPrinter::endl;
 }
-void ContinueStmt::internal_print() {
+void ContinueStmt::internal_print() const {
   printer << white << "continue ;" << IndentPrinter::endl;
 }
 
-void BlockStmt::internal_print() {
+void BlockStmt::internal_print() const {
   printer << white << "{" << IndentPrinter::endl;
   printer.add_level();
   for (Stmt *stmt : stmts_) {
@@ -235,7 +235,7 @@ void BlockStmt::internal_print() {
   printer << white << "}" << IndentPrinter::endl;
 }
 
-void IfStmt::internal_print() {
+void IfStmt::internal_print() const {
   printer << blue << "if" << white << " (";
   condition_->internal_print();
   printer << white << ")" << IndentPrinter::endl;
@@ -246,14 +246,14 @@ void IfStmt::internal_print() {
   no_->internal_print();
 }
 
-void WhileStmt::internal_print() {
+void WhileStmt::internal_print() const {
   printer << blue << "while" << white << " (";
   condition_->internal_print();
   printer << white << ")" << IndentPrinter::endl;
   body_->internal_print();
 }
 
-void AssignmentStmt::internal_print() {
+void AssignmentStmt::internal_print() const {
   printer << green << name_;
   if (dimens_) {
     for (Expression *e : *dimens_) {
@@ -267,7 +267,7 @@ void AssignmentStmt::internal_print() {
   printer << white << ";" << IndentPrinter::endl;
 }
 
-void FunctionDecl::internal_print() {
+void FunctionDecl::internal_print() const {
   switch (ret_type_) {
   case BType::INT:
     printer << blue << "int ";
