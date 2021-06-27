@@ -2,5 +2,5 @@
 
 class Debug_impl {
 public:
-  virtual void internal_print(){};
+  virtual void internal_print() const {};
 };

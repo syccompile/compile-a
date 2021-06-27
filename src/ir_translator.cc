@@ -8,12 +8,12 @@
 #include "ir.h"
 
 #include <cassert>
-static FunctionDecl *now_func;
-static WhileStmt *now_while;
+const static FunctionDecl *now_func;
+const static WhileStmt *now_while;
 static bool jmp_revert = false;
 
 std::tuple<vector<IR::Ptr>, FrameAccess>
-VarExp::translate(SymbolTable::Ptr symtab) {
+VarExp::translate(SymbolTable::Ptr symtab) const{
   SymbolTable::SymTabEntry entry = symtab->find(ident_);
   if (entry.pointer_.var_ptr->immutable()) {
     return std::make_tuple(vector<IR::Ptr>(), entry.access_);
@@ -22,7 +22,7 @@ VarExp::translate(SymbolTable::Ptr symtab) {
 }
 
 std::tuple<vector<IR::Ptr>, FrameAccess>
-FuncCallExp::translate(SymbolTable::Ptr symtab) {
+FuncCallExp::translate(SymbolTable::Ptr symtab) const {
   vector<IR::Ptr> ret;
   SymbolTable::SymTabEntry entry = symtab->find(name_);
   if (params_) {
@@ -40,7 +40,7 @@ FuncCallExp::translate(SymbolTable::Ptr symtab) {
 }
 
 std::tuple<vector<IR::Ptr>, FrameAccess>
-LogicExp::translate(SymbolTable::Ptr symtab) {
+LogicExp::translate(SymbolTable::Ptr symtab) const{
   vector<IR::Ptr> ret;
   FrameAccess result;
   if (op_ == Op::AND) {
@@ -158,7 +158,7 @@ LogicExp::translate(SymbolTable::Ptr symtab) {
 }
 
 std::tuple<vector<IR::Ptr>, FrameAccess>
-BinaryExp::translate(SymbolTable::Ptr symtab) {
+BinaryExp::translate(SymbolTable::Ptr symtab) const{
   vector<IR::Ptr> ret;
   // FIX: 现在的计算还有些问题
   if (evaluable()) {
@@ -200,7 +200,7 @@ BinaryExp::translate(SymbolTable::Ptr symtab) {
 }
 
 std::tuple<vector<IR::Ptr>, FrameAccess>
-UnaryExp::translate(SymbolTable::Ptr symtab) {
+UnaryExp::translate(SymbolTable::Ptr symtab) const{
   vector<IR::Ptr> ret;
   // FIX
   if (evaluable()) {
@@ -233,13 +233,13 @@ UnaryExp::translate(SymbolTable::Ptr symtab) {
 }
 
 std::tuple<vector<IR::Ptr>, FrameAccess>
-NumberExp::translate(SymbolTable::Ptr symtab) {
+NumberExp::translate(SymbolTable::Ptr symtab) const{
   return std::make_tuple(vector<IR::Ptr>(), symtab->frame()->newImmAccess(
                                                 symtab->frame(), value_));
 }
 
 std::tuple<vector<IR::Ptr>, FrameAccess>
-VarDeclStmt::translate(SymbolTable::Ptr symtab) {
+VarDeclStmt::translate(SymbolTable::Ptr symtab) const{
   vector<IR::Ptr> ret;
   for (Variable *var : vars_) {
     FrameAccess access = symtab->push(var);
@@ -260,12 +260,12 @@ VarDeclStmt::translate(SymbolTable::Ptr symtab) {
 }
 
 std::tuple<vector<IR::Ptr>, FrameAccess>
-ExpStmt::translate(SymbolTable::Ptr symtab) {
+ExpStmt::translate(SymbolTable::Ptr symtab) const{
   return std::make_tuple(vector<IR::Ptr>(), nullptr);
 }
 
 std::tuple<vector<IR::Ptr>, FrameAccess>
-BlockStmt::translate(SymbolTable::Ptr symtab) {
+BlockStmt::translate(SymbolTable::Ptr symtab) const{
   vector<IR::Ptr> ret;
   for (Stmt *stmt : stmts_) {
     wrap_tie(vec, access, stmt, symtab_);
@@ -275,7 +275,7 @@ BlockStmt::translate(SymbolTable::Ptr symtab) {
 }
 
 std::tuple<vector<IR::Ptr>, FrameAccess>
-IfStmt::translate(SymbolTable::Ptr symtab) {
+IfStmt::translate(SymbolTable::Ptr symtab) const{
   yes_->symtab_->set_parent(symtab);
   if (no_) {
     no_->symtab_->set_parent(symtab);
@@ -315,9 +315,9 @@ IfStmt::translate(SymbolTable::Ptr symtab) {
  *          # ...
  */
 std::tuple<vector<IR::Ptr>, FrameAccess>
-WhileStmt::translate(SymbolTable::Ptr symtab) {
+WhileStmt::translate(SymbolTable::Ptr symtab) const{
   body_->symtab_->set_parent(symtab);
-  WhileStmt *temp = now_while;
+  const WhileStmt *temp = now_while;
   now_while = this;
   // TODO
   vector<IR::Ptr> ret;
@@ -337,43 +337,40 @@ WhileStmt::translate(SymbolTable::Ptr symtab) {
 }
 
 std::tuple<vector<IR::Ptr>, FrameAccess>
-ReturnStmt::translate(SymbolTable::Ptr symtab) {
+ReturnStmt::translate(SymbolTable::Ptr symtab) const{
   assert(now_func);
-  parent_ = now_func;
 
   vector<IR::Ptr> ret;
   if (ret_exp_) {
     wrap_tie(vec, access, ret_exp_, symtab);
     ret.insert(ret.end(), vec.begin(), vec.end());
     ret.push_back(std::make_shared<UnaryOpIR>(
-        IR::Op::MOV, parent_->get_return_access(), access));
+        IR::Op::MOV, now_func->get_return_access(), access));
   }
   ret.push_back(std::make_shared<NoOpIR>(IR::Op::RET));
   return std::make_tuple(ret, nullptr);
 }
 
 std::tuple<vector<IR::Ptr>, FrameAccess>
-BreakStmt::translate(SymbolTable::Ptr symtab) {
+BreakStmt::translate(SymbolTable::Ptr symtab) const{
   assert(now_while);
-  parent_ = now_while;
   vector<IR::Ptr> ret;
   ret.push_back(
-      std::make_shared<SingalOpIR>(IR::Op::JMP, parent_->break_access_));
+      std::make_shared<SingalOpIR>(IR::Op::JMP, now_while->break_access_));
   return std::make_tuple(ret, nullptr);
 }
 
 std::tuple<vector<IR::Ptr>, FrameAccess>
-ContinueStmt::translate(SymbolTable::Ptr symtab) {
+ContinueStmt::translate(SymbolTable::Ptr symtab) const{
   assert(now_while);
-  parent_ = now_while;
   vector<IR::Ptr> ret;
   ret.push_back(
-      std::make_shared<SingalOpIR>(IR::Op::JMP, parent_->continue_access_));
+      std::make_shared<SingalOpIR>(IR::Op::JMP, now_while->continue_access_));
   return std::make_tuple(ret, nullptr);
 }
 
 std::tuple<vector<IR::Ptr>, FrameAccess>
-AssignmentStmt::translate(SymbolTable::Ptr symtab) {
+AssignmentStmt::translate(SymbolTable::Ptr symtab) const{
   // TODO
   vector<IR::Ptr> ret;
   auto entry = symtab->find(name_);
@@ -392,10 +389,10 @@ AssignmentStmt::translate(SymbolTable::Ptr symtab) {
 }
 
 std::tuple<vector<IR::Ptr>, FrameAccess>
-FunctionDecl::translate(SymbolTable::Ptr symtab) {
+FunctionDecl::translate(SymbolTable::Ptr symtab) const{
   symtab_->set_parent(symtab);
   body_->symtab_->set_parent(symtab_);
-  FunctionDecl *temp = now_func;
+  const FunctionDecl *temp = now_func;
   now_func = this;
 
   vector<IR::Ptr> ret;
