@@ -3,6 +3,8 @@
 #include "context/context.h"
 
 #include <cassert>
+#include <stack>
+
 static FunctionDecl *now_func;
 static WhileStmt *now_while;
 static bool jmp_revert = false;
@@ -575,11 +577,134 @@ Variable::translate() {
   return ret;
 }
 
+std::vector<int>
+Array::_get_shape() {
+  std::vector<int> ret;
+
+  // 检查表达式是否都是常数，并计算
+  // TODO 报错
+  for (Expression *i: *(this->dimens_)) {
+    assert(i->is_evaluable());
+    ret.push_back(i->eval());
+  }
+
+  return ret;
+}
+
+std::vector<int>
+Array::_get_const_initval(const std::vector<int> &shape, int shape_ptr, InitValContainer *container) {
+  std::vector<int> ret;
+
+  // 如果只余下一个维度，就特殊处理
+  if (shape_ptr+1==shape.size()) {
+    // 循环DFS
+    // TODO 可以报个警告，说初始化表达式深度过大
+    std::stack<std::tuple<InitValContainer*, int> > iter_stack;
+    iter_stack.push(std::make_tuple(container, 0));
+    while (!(iter_stack.empty())) {
+      InitValContainer *now_container;
+      int now_start_pos;
+      
+      // 解包tuple
+      std::tie(now_container, now_start_pos) = iter_stack.top();
+      iter_stack.pop();
+
+      for (int i=now_start_pos ; i<now_container->initval_container_.size() ; i++) {
+        if (now_container->initval_container_[i]->is_exp()) {
+          InitValExp *exp = static_cast<InitValExp*>(now_container->initval_container_[i]);
+          // 如果表达式数量超过需求量，就忽略后面的表达式
+          if (ret.size()>=shape[shape_ptr]) goto loop_end;
+          // TODO 要求表达式是常量，报错
+          assert(exp->exp_->is_evaluable());
+          // 加入表达式
+          ret.push_back(exp->exp_->eval());
+        }
+        else {
+          InitValContainer *sub_container = static_cast<InitValContainer*>(now_container->initval_container_[i]);
+          // 如果表达式数量超过需求量，就忽略后面的表达式
+          if (ret.size()>=shape[shape_ptr]) goto loop_end;
+          
+          iter_stack.push(std::make_tuple(now_container, i+1));
+          iter_stack.push(std::make_tuple(sub_container, 0));
+          break;
+        }
+      }
+    }
+    loop_end:
+    while (ret.size()<shape[shape_ptr]) ret.push_back(0);
+    return ret;
+  }
+
+  //     int a[x][y][z]
+  // shape_ptr ^
+  // 这个函数调用负责生成 a[0][y][z], a[1][y][z], ... , a[x-1][y][z]的初值
+  int required_size = 1;
+  for (int i=shape_ptr+1 ; i<shape.size() ; i++) required_size *= shape[i];
+  
+  for (InitVal *val: container->initval_container_) {
+    if (val->is_exp()) {
+      // 如果val是表达式，就直接按照数组展平的方式填充
+
+      InitValExp *exp = static_cast<InitValExp*>(val);
+      // 如果表达式数量超过需求量，就忽略后面的表达式
+      if (ret.size()>=required_size*shape[shape_ptr]) break;
+
+      // TODO 要求表达式是常量，报错
+      assert(exp->exp_->is_evaluable());
+      // 加入表达式
+      ret.push_back(exp->exp_->eval());
+    }
+    else {
+      // 如果val是列表容器，就递归生成
+
+      InitValContainer *sub_container = static_cast<InitValContainer*>(val);
+      // 首先对齐边界
+      while (ret.size()%required_size) ret.push_back(0);
+      // 如果表达式数量超过需求量，就忽略后面的表达式
+      if (ret.size()>=required_size*shape[shape_ptr]) break;
+
+      // 否则递归调用
+      auto tmp = this->_get_const_initval(shape, shape_ptr+1, sub_container);
+    }
+
+  // 补满余下的
+  while (ret.size()<required_size*shape[shape_ptr]) ret.push_back(0);
+
+  return ret;
+}
+
+std::list<IR::Ptr>
+Array::_translate_immutable() {
+  std::list<IR::Ptr> ret;
+
+  // 获取数组形状
+  std::vector<int> shape = this->_get_shape();
+
+  // 再生成初值序列
+  std::vector<int> init_val = this->_get_const_initval(shape, 0, this->initval_container_);
+  
+  return ret;
+}
+
+std::list<IR::Ptr>
+Array::translate() {
+  std::list<IR::Ptr> ret;
+
+  if (this->immutable()) {
+    ret.splice(ret.end(), this->_translate_immutable());
+  }
+  else {
+    ret.splice(ret.end(), this->_translate_variable());
+  }
+
+  return ret;
+}
+
 std::list<IR::Ptr>
 VarDeclStmt::translate() {
   std::list<IR::Ptr> ret;
   for (Variable *var : this->vars_) ret.splice(ret.end(), var->translate());
-  return ret;  
+  return ret;
 }
 
 std::tuple<vector<IR::Ptr>, FrameAccess>

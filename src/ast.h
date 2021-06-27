@@ -286,10 +286,16 @@ protected:
   
   // 若变量初始化，该项表示初始化值，否则为空
   Expression *initval_;
+
+private:
+  std::list<IR::Ptr> _translate_immutable();
+  std::list<IR::Ptr> _translate_variable();
 };
 
 class Array : public Variable {
 public:
+  friend class VarDeclStmt;
+
   /**
    * 表示数组的初始化值
    */
@@ -313,7 +319,6 @@ public:
     virtual bool is_exp() override final { return true; }
     virtual void internal_print() override;
 
-  private:
     Expression *exp_;
   };
 
@@ -329,7 +334,6 @@ public:
     virtual bool is_exp() override final { return false; }
     virtual void internal_print() override;
 
-  private:
     vector<InitVal *> initval_container_;
   };
 
@@ -340,6 +344,8 @@ public:
 
   virtual bool is_array() override { return true; }
   virtual void internal_print() override;
+
+  virtual std::list<IR::Ptr> translate() override;
 
 private:
   /**
