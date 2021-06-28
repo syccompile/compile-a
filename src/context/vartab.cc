@@ -1,7 +1,7 @@
 #include "vartab.h"
 
-VarTabEntry::VarTabEntry(std::string name, std::vector<int> &&shape, int addr, std::vector<int> &&init_val, bool is_const, int param_order)
-  : is_constant(is_const), param_order(param_order), address_number(addr), name(name), type(std::move(shape)), init_val(std::move(init_val)) { }
+VarTabEntry::VarTabEntry(std::string name, std::vector<int> &&shape, IR::Addr::Ptr addr, std::vector<int> &&init_val, bool is_const, int param_order)
+  : is_constant(is_const), param_order(param_order), addr(addr), name(name), type(std::move(shape)), init_val(std::move(init_val)) { }
 
 void VarTab::put(std::shared_ptr<VarTabEntry> ent) {
   this->symtab.emplace(std::make_pair(ent->name, ent));

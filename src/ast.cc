@@ -15,6 +15,46 @@ VarExp::~VarExp() {
   }
 }
 
+bool 
+VarExp::is_evaluable() const {
+  // 取得符号表里的对应表项，查看标识符是否为编译期常量
+  auto entry = context.vartab_cur->get(this->ident_);
+  assert(entry!=nullptr);
+  if (!(entry->is_constant)) return false;
+
+  // 再查看数组下标是否均为编译期常量
+  if (this->dimens_) (Expression *exp: *(this->dimens_)) if (!(exp->is_evaluable())) return false;
+  return true;
+}
+
+int
+VarExp::eval() {
+  auto entry = context.vartab_cur->get(this->ident_);
+  assert(entry!=nullptr);
+
+  const std::vector<int> &shape = entry->type.arr_shape;
+  std::vector<int> dimension;
+
+  if (this->dimens_) {
+    // 数组
+    for (Expression *exp: this->dimens_) dimension.push_back(exp->eval());
+    assert(dimension.size()==entry.size());
+
+    int offset = dimension.back();
+    int acc = shape.back();
+
+    for (int i=dimension.size()-2 ; i>0 ; i--) {
+      offset += dimension[i] * acc;
+      acc *= shape[i];
+    }
+
+    return entry->init_val[offset];
+  } else {
+    // 单变量
+    return entry->init_val[0];
+  }
+}
+
 // FIX: 将string 转换为int
 NumberExp::NumberExp(string *str)
     : Expression(Op::NUM, true), string_(*str), value_(stoi(string_)) {

@@ -50,7 +50,7 @@ public:
     NIL   //  NULL
   };
 
-  Expression(Op op, bool evaluable) : op_(op), addr(-1), label_fail(-1) { }
+  Expression(Op op, bool evaluable) : op_(op), addr(nullptr), label_fail(nullptr) { }
   virtual ~Expression() {}
 
   Op op() { return op_; }
@@ -76,11 +76,11 @@ public:
   virtual std::list<IR::Ptr> translate() override;
 
   // 为（变量型的）表达式单位分配的临时变量虚地址
-  int addr;
+  IR::Addr::Ptr addr;
   // 为（条件）表达式分配的标号编号
   // 只分配表达式为假时的标号
   // 表达式为真时，直接继续执行
-  int label_fail;
+  IR::Addr::Ptr label_fail;
 
 protected:
   // 表达式类型
@@ -97,12 +97,7 @@ public:
 
   // 可否编译期求值
   // TODO error handling
-  virtual bool is_evaluable() const override {
-    // 取得符号表里的对应表项，查看标识符是否为常量
-    auto entry = context.vartab_cur->get(this->ident_);
-    assert(entry!=nullptr);
-    return entry->is_constant;
-  }
+  virtual bool is_evaluable() const override;
   // 为常量时求值
   virtual int eval() override;
 
@@ -455,7 +450,7 @@ public:
   // debug
   virtual void internal_print() override;
   // IR generate
-  virtual std::list<IR::Ptr> translate() override { return std::list<IR::Ptr>(); }
+  virtual std::list<IR::Ptr> translate() override;
 
   // continue语句对应的while语句
   WhileStmt *parent_;
@@ -498,14 +493,14 @@ public:
   // debug
   virtual void internal_print() override;
   // IR generate
-  virtual std::list<IR::Ptr> translate() override { return std::list<IR::Ptr>(); }
+  virtual std::list<IR::Ptr> translate() override;
 
 private:
+  // 没在块中定义，但是逻辑上属于块的变量（例如函数参数）
+  std::vector<std::shared_ptr<VarTabEntry> > pre_defined;
+
   // 块语句中的所有语句
   vector<Stmt *> stmts_;
-
-  // 每个块语句有一个符号表
-  SymbolTable::Ptr symtab_;
 };
 
 /**
@@ -523,7 +518,7 @@ public:
   // debug
   virtual void internal_print() override;
   // IR generate
-  virtual std::list<IR::Ptr> translate() override { return std::list<IR::Ptr>(); }
+  virtual std::list<IR::Ptr> translate() override;
 
 private:
   // if语句的条件表达式, 保证该指针非空
