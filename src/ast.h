@@ -379,7 +379,7 @@ public:
   // debug
   virtual void internal_print() override;
   // IR generate
-  virtual std::list<IR::Ptr> translate() override { return std::list<IR::Ptr>(); }
+  virtual std::list<IR::Ptr> translate() override;
 
   int lineno_;
 };
@@ -396,7 +396,7 @@ public:
   // debug
   virtual void internal_print() override;
   // IR generate
-  virtual std::list<IR::Ptr> translate() override { return std::list<IR::Ptr>(); }
+  virtual std::list<IR::Ptr> translate() override;
 
   // 加入变量声明
   void push_back(Variable *var) { vars_.push_back(var); }
@@ -417,8 +417,7 @@ public:
   // debug
   virtual void internal_print() override;
   // IR generate
-  virtual std::list<IR::Ptr> translate() override { return std::list<IR::Ptr>(); }
-
+  virtual std::list<IR::Ptr> translate() override;
   // return语句对应的函数
   FunctionDecl *parent_;
 
@@ -436,7 +435,7 @@ public:
   // debug
   virtual void internal_print() override;
   // IR generate
-  virtual std::list<IR::Ptr> translate() override { return std::list<IR::Ptr>(); }
+  virtual std::list<IR::Ptr> translate() override;
 
   // break语句对应的while语句
   WhileStmt *parent_;
@@ -545,7 +544,7 @@ public:
   // debug
   virtual void internal_print() override;
   // IR generate
-  virtual std::list<IR::Ptr> translate() override { return std::list<IR::Ptr>(); }
+  virtual std::list<IR::Ptr> translate() override;
 
 private:
   // while语句的条件表达式, 保证不为空
@@ -554,11 +553,11 @@ private:
   // while语句的循环体, 保证不为空
   BlockStmt *body_;
 
-  // break语句跳转的Label
-  FrameAccess break_access_;
+  // 结束标号
+  IR::Addr::Ptr label_cond;
   
-  // break语句跳转的Label
-  FrameAccess continue_access_;
+  // 条件判断标号
+  IR::Addr::Ptr label_end;
 };
 
 /**
@@ -572,7 +571,7 @@ public:
   // debug
   virtual void internal_print() override;
   // IR generate
-  virtual std::list<IR::Ptr> translate() override { return std::list<IR::Ptr>(); }
+  virtual std::list<IR::Ptr> translate() override;
 
 private:
   // 左值变量的名字

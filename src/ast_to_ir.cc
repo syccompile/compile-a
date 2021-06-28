@@ -104,7 +104,9 @@ FuncCallExp::translate() {
       }
       
       // 否则，就给这个表达式分配一个地址
-      exp->addr = IR::Addr::make_var(context.allocator.allocate_addr());
+      exp->addr = (exp->addr==nullptr) ?
+        IR::Addr::make_var(context.allocator.allocate_addr()) :
+        exp->addr;
 
       exp->cast_to_regular = true;
       exp->cast_to_logical = false;
@@ -794,17 +796,25 @@ std::list<IR::Ptr>
 WhileStmt::translate() {
   std::list<IR::Ptr> ret;
 
+  context.while_chain.push_back(this);
+
+  // 为自己分配标号
+  this->label_cond = IR::Addr::make_label(context.allocator.allocate_label());
+  this->label_end  = IR::Addr::make_label(context.allocator.allocate_label());
+
   // 常量优化
   if (this->condition_->is_evaluable()) {
     if (this->condition_->eval()) {
       // 无限循环
-      int label_loop = context.allocator.allocate_label();
       ret.emplace_back(IR::make_unary(
-        IR::Op::LABEL, IR::Addr::make_label(label_loop)
+        IR::Op::LABEL, this->label_cond
       ));
       ret.splice(ret.end(), this->body_->translate());
       ret.emplace_back(IR::make_unary(
-        IR::Op::JMP, IR::Addr::make_label(label_loop)
+        IR::Op::JMP, this->label_cond
+      ));
+      ret.emplace_back(IR::make_unary(
+        IR::Op::LABEL, this->label_end
       ));
       return ret;
     } else {
@@ -832,43 +842,64 @@ WhileStmt::translate() {
     IR::Op::LABEL, IR::Addr::make_label(label_end)
   ));
 
+  context.while_chain.pop_back();
+
   return ret;
 }
 
-std::tuple<vector<IR::Ptr>, FrameAccess>
-ReturnStmt::translate(SymbolTable::Ptr symtab) {
-  assert(now_func);
-  parent_ = now_func;
-
-  vector<IR::Ptr> ret;
-  if (ret_exp_) {
-    wrap_tie(vec, access, ret_exp_, symtab);
-    ret.insert(ret.end(), vec.begin(), vec.end());
-    ret.push_back(std::make_shared<UnaryOpIR>(
-        IR::Op::MOV, parent_->get_return_access(), access));
+std::list<IR::Ptr>
+ReturnStmt::translate() {
+  std::list<IR::Ptr> ret;
+  
+  if (this->ret_exp_!=nullptr) {
+    if (this->ret_exp_->is_evaluable()) {
+      ret.emplace_back(IR::make_unary(
+        IR::Op::RET, IR::Addr::make_imm(this->ret_exp_->eval())
+      ));
+    } else {
+      this->ret_exp_->addr = (this->ret_exp_->addr==nullptr) ?
+        IR::Addr::make_var(context.allocator.allocate_addr()):
+        this->ret_exp_->addr;
+      ret.splice(ret.end(), this->ret_exp_->translate());
+      ret.emplace_back(IR::make_unary(
+        IR::Op::RET, this->ret_exp_->addr
+      ));
+    }
   }
-  ret.push_back(std::make_shared<NoOpIR>(IR::Op::RET));
-  return std::make_tuple(ret, nullptr);
+
+  else {
+    ret.emplace_back(IR::make_unary(
+      IR::Op::RET, IR::Addr::make_imm(0)
+    ));
+  }
+
+  return ret;
 }
 
-std::tuple<vector<IR::Ptr>, FrameAccess>
-BreakStmt::translate(SymbolTable::Ptr symtab) {
-  assert(now_while);
-  parent_ = now_while;
-  vector<IR::Ptr> ret;
-  ret.push_back(
-      std::make_shared<SingalOpIR>(IR::Op::JMP, parent_->break_access_));
-  return std::make_tuple(ret, nullptr);
+std::list<IR::Ptr>
+BreakStmt::translate() {
+  std::list<IR::Ptr> ret;
+
+  assert(!(context.while_chain.empty()));
+  
+  ret.push_back(IR::make_unary(
+    IR::Op::JMP, context.while_chain.back()->label_end
+  ));
+
+  return ret;
 }
 
-std::tuple<vector<IR::Ptr>, FrameAccess>
-ContinueStmt::translate(SymbolTable::Ptr symtab) {
-  assert(now_while);
-  parent_ = now_while;
-  vector<IR::Ptr> ret;
-  ret.push_back(
-      std::make_shared<SingalOpIR>(IR::Op::JMP, parent_->continue_access_));
-  return std::make_tuple(ret, nullptr);
+std::list<IR::Ptr>
+ContinueStmt::translate() {
+  std::list<IR::Ptr> ret;
+
+  assert(!(context.while_chain.empty()));
+  
+  ret.push_back(IR::make_unary(
+    IR::Op::JMP, context.while_chain.back()->label_cond
+  ));
+
+  return ret;
 }
 
 std::tuple<vector<IR::Ptr>, FrameAccess>

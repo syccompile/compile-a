@@ -5,6 +5,7 @@
 #include "vartab.h"
 #include "virtalloc.h"
 #include "functab.h"
+#include "../ast.h"
 
 class Context {
 public:
@@ -16,6 +17,10 @@ public:
 
   // 全局函数表
   std::shared_ptr<FuncTab> functab;
+
+  // while链
+  // 用于支持break和break(constexpr)语句
+  std::vector<WhileStmt*> while_chain;
 
   // 开始作用域
   // 建立新的符号表作为当前符号表，将父级符号表放入其指针域
