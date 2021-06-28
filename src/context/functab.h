@@ -12,7 +12,7 @@ public:
   std::string name;
 
   // 参数表
-  std::list<Type> param_types;
+  std::vector<VarTabEntry> param_list;
 };
 
 class FuncTab {

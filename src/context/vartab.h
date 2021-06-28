@@ -17,11 +17,13 @@ public:
   std::vector<int> init_val;
 
   // 分配的形式地址（虚地址、虚拟寄存器号）
-  int  address_number;
+  int address_number;
   // 是否为常量
   bool is_constant;
+  // 如果该符号是参数，则为参数序号，否则为-1
+  int param_order;
 
-  VarTabEntry(std::string name, std::vector<int> &&shape, int addr, std::vector<int> &&init_val, bool is_const);
+  VarTabEntry(std::string name, std::vector<int> &&shape, int addr, std::vector<int> &&init_val, bool is_const=false, int param_order=-1);
   // 判断是否为数组，规则请参考成员shape的说明
   bool is_array() const { return type.arr_shape.size()==0; }
 };
@@ -35,7 +37,7 @@ private:
 
 public:
   // 添加一个变量名称
-  void put(std::string name, std::vector<int> shape, int addr, std::vector<int> initVal, bool is_const = false);
+  void put(std::shared_ptr<VarTabEntry> ent);
   
   // 判断符号表是否为全局表
   bool is_global() const { return fa==nullptr; }

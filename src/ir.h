@@ -6,7 +6,7 @@ struct IR_Addr {
 public:
   using Ptr = std::shared_ptr<IR_Addr>;
 
-  enum Kind: int { VAR, IMM, BRANCH_LABEL, NAMED_LABEL } kind;
+  enum Kind: int { VAR, PARAM, IMM, BRANCH_LABEL, NAMED_LABEL } kind;
   int val;
   std::string name;
 
@@ -14,6 +14,7 @@ public:
   IR_Addr(Kind kind, std::string name): kind(kind), name(name), val(-1) { }
   
   static Ptr make_var(int v)   { return std::make_shared<IR_Addr>(Kind::VAR, v); }
+  static Ptr make_param(int v) { return std::make_shared<IR_Addr>(Kind::PARAM, v); }
   static Ptr make_imm(int v)   { return std::make_shared<IR_Addr>(Kind::IMM, v); }
   static Ptr make_label(int v) { return std::make_shared<IR_Addr>(Kind::BRANCH_LABEL, v); }
   static Ptr make_named_label(std::string s) { return std::make_shared<IR_Addr>(Kind::BRANCH_LABEL, s); }
@@ -52,7 +53,7 @@ public:
     PARAM,
     CALL,
     RET,
-    CMOVE,
+    INDEX,
 
     NOP
     // ...

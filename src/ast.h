@@ -1,6 +1,7 @@
 #pragma once
 
 #include "context/context.h"
+#include "ir.h"
 
 #include <string>
 #include <vector>
@@ -361,6 +362,12 @@ private:
    * 表示数组的初始化值
    */
   InitValContainer *initval_container_;
+
+  std::vector<int> _get_shape();
+  std::vector<int> _get_const_initval(const std::vector<int> &shape, int shape_ptr, InitValContainer *container);
+
+  std::list<IR::Ptr> _translate_immutable();
+  std::list<IR::Ptr> _translate_variable();
 };
 
 /**
@@ -462,7 +469,7 @@ public:
   ExpStmt(Expression *edp);
   ~ExpStmt();
   // IR generate
-  virtual std::list<IR::Ptr> translate() override { return std::list<IR::Ptr>(); }
+  virtual std::list<IR::Ptr> translate() override;
 
 private:
   Expression *exp_;

@@ -1,12 +1,10 @@
 #include "vartab.h"
 
-VarTabEntry::VarTabEntry(std::string name, std::vector<int> &&shape, int addr, std::vector<int> &&init_val, bool is_const)
-  : is_constant(is_const), address_number(addr), name(name), type(std::move(shape)), init_val(std::move(init_val)) { }
+VarTabEntry::VarTabEntry(std::string name, std::vector<int> &&shape, int addr, std::vector<int> &&init_val, bool is_const, int param_order)
+  : is_constant(is_const), param_order(param_order), address_number(addr), name(name), type(std::move(shape)), init_val(std::move(init_val)) { }
 
-void VarTab::put(std::string name, std::vector<int> shape, int addr, std::vector<int> init_val, bool is_const) {
-  this->symtab.emplace(std::make_pair(name, std::make_shared<VarTabEntry>(
-    name, std::move(shape), std::move(init_val), addr, is_const
-  )));
+void VarTab::put(std::shared_ptr<VarTabEntry> ent) {
+  this->symtab.emplace(std::make_pair(ent->name, ent));
 }
 
 VarTab::EntPtr_const VarTab::get(std::string name) const {

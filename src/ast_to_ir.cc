@@ -516,16 +516,16 @@ Variable::_translate_immutable() {
   assert(this->initval_->is_evaluable());
 
   // 处理初始化值
-  std::vector<int> init_val = this->initval_->eval();
+  std::vector<int> init_val = {this->initval_->eval()};
 
   // 加入符号表
-  context.vartab_cur->put(
+  context.vartab_cur->put(std::make_shared<VarTabEntry>(
     this->name(),
     std::vector<int>(),
     -1,
     std::move(init_val),
     true
-  );
+  ));
 
   return ret;
 }
@@ -556,13 +556,13 @@ Variable::_translate_variable() {
   }
   
   // 加入符号表
-  context.vartab_cur->put(
+  context.vartab_cur->put(std::make_shared<VarTabEntry>(
     this->name(),
     std::vector<int>(),
     var_addr,
     std::move(init_val),
     false
-  );
+  ));
   
   return ret;
 }
@@ -666,6 +666,7 @@ Array::_get_const_initval(const std::vector<int> &shape, int shape_ptr, InitValC
       // 否则递归调用
       auto tmp = this->_get_const_initval(shape, shape_ptr+1, sub_container);
     }
+  }
 
   // 补满余下的
   while (ret.size()<required_size*shape[shape_ptr]) ret.push_back(0);
@@ -707,19 +708,18 @@ VarDeclStmt::translate() {
   return ret;
 }
 
-std::tuple<vector<IR::Ptr>, FrameAccess>
-ExpStmt::translate(SymbolTable::Ptr symtab) {
-  return std::make_tuple(vector<IR::Ptr>(), nullptr);
+std::list<IR::Ptr>
+ExpStmt::translate() {
+  return std::list<IR::Ptr>();
 }
 
-std::tuple<vector<IR::Ptr>, FrameAccess>
-BlockStmt::translate(SymbolTable::Ptr symtab) {
-  vector<IR::Ptr> ret;
-  for (Stmt *stmt : stmts_) {
-    wrap_tie(vec, access, stmt, symtab_);
-    ret.insert(ret.end(), vec.begin(), vec.end());
-  }
-  return std::make_tuple(ret, nullptr);
+std::list<IR::Ptr>
+BlockStmt::translate() {
+  context.new_scope();
+
+  
+
+  context.end_scope();
 }
 
 std::tuple<vector<IR::Ptr>, FrameAccess>
