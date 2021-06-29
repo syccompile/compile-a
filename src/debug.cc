@@ -74,7 +74,7 @@ void VarExp::internal_print() {
   }
 }
 
-void LogicExp::internal_print() {
+void BinaryExp::internal_print() {
   switch (op_) {
   case Op::AND:
     left_->internal_print();
@@ -116,12 +116,6 @@ void LogicExp::internal_print() {
     printer << yellow << "<";
     right_->internal_print();
     break;
-  default:
-    break;
-  }
-}
-void BinaryExp::internal_print() {
-  switch (op_) {
   case Op::ADD:
     left_->internal_print();
     printer << yellow << "+";
@@ -306,95 +300,65 @@ void FunctionDecl::internal_print() {
   body_->internal_print();
 }
 void IR::internal_print() {
-  printer.add_level();
+
+#define CASE(OP) case IR::Op:: OP : std::cout << #OP << "\t"; break
+
   switch (op_) {
-  case IR::Op::LABEL:
-    printer.sub_level();
-    dynamic_cast<SingalOpIR *>(this)->dst_->internal_print();
-    printer << ":" << IndentPrinter::endl;
-    printer.add_level();
-    break;
-  case IR::Op::MOV:
-    printer << "MOV\t";
-    dynamic_cast<UnaryOpIR *>(this)->src_->internal_print();
-    printer << white << "->";
-    dynamic_cast<UnaryOpIR *>(this)->dst_->internal_print();
-    printer << IndentPrinter::endl;
-    break;
-  case IR::Op::SUB:
-    printer << "SUB\t";
-    goto A;
-  case IR::Op::ADD:
-    printer << "ADD\t";
-    goto A;
-  case IR::Op::MUL:
-    printer << "MUL\t";
-    goto A;
-  case IR::Op::DIV:
-    printer << "DIV\t";
-    goto A;
-  case IR::Op::MOD:
-    printer << "MOD\t";
-    goto A;
-  case IR::Op::CMP:
-    printer << "CMP\t";
-  A:
-    dynamic_cast<BinOpIR *>(this)->src1_->internal_print();
-    printer << white << ", ";
-    dynamic_cast<BinOpIR *>(this)->src2_->internal_print();
-    printer << white << "->";
-    dynamic_cast<BinOpIR *>(this)->dst_->internal_print();
-    printer << IndentPrinter::endl;
-    break;
-  case IR::Op::CALL:
-    printer << "CALL\t";
-    goto B;
-  case IR::Op::JMP:
-    printer << "JMP\t";
-    goto B;
-  case IR::Op::JE:
-    printer << "JE\t";
-    goto B;
-  case IR::Op::JNE:
-    printer << "JNE\t";
-    goto B;
-  case IR::Op::JLE:
-    printer << "JLE\t";
-    goto B;
-  case IR::Op::JGE:
-    printer << "JGE\t";
-    goto B;
-  case IR::Op::JLT:
-    printer << "JLT\t";
-    goto B;
-  case IR::Op::JGT:
-    printer << "JGT\t";
-  B:
-    dynamic_cast<SingalOpIR *>(this)->dst_->internal_print();
-    printer << IndentPrinter::endl;
-    break;
-  case IR::Op::RET:
-    printer << "RET" << IndentPrinter::endl;
-    break;
-  default:
-    printer << "NOP" << IndentPrinter::endl;
-    break;
+    CASE(LABEL);
+    CASE(ADD);
+    CASE(SUB);
+    CASE(MUL);
+    CASE(DIV);
+    CASE(MOD);
+    CASE(JMP);
+    CASE(JLE);
+    CASE(JLT);
+    CASE(JGE);
+    CASE(JGT);
+    CASE(JE);
+    CASE(JNE);
+    CASE(MOV);
+    CASE(MOVLE);
+    CASE(MOVLT);
+    CASE(MOVGE);
+    CASE(MOVGT);
+    CASE(MOVEQ);
+    CASE(MOVNE);
+    CASE(CMP);
+    CASE(FUNCDEF);
+    CASE(FUNCEND);
+    CASE(PARAM);
+    CASE(CALL);
+    CASE(RET);
+    CASE(LOAD);
+    CASE(STORE);
+    CASE(NOP);
   }
-  printer.sub_level();
+
+#undef CASE
+
+  if (this->a0!=nullptr) this->a0->internal_print();
+  printer << "\t";
+  if (this->a1!=nullptr) this->a1->internal_print();
+  printer << "\t";
+  if (this->a2!=nullptr) this->a2->internal_print();
+  printer << "\n";
 }
 
-void _FrameAccess::internal_print() {
-  switch (kind_) {
-  case Kind::TEMP:
-  case Kind::REG:
-  case Kind::LABEL:
-    printer << yellow << name_;
-    break;
-  case Kind::IMM:
-    printer << green << std::to_string(locate_.offset);
-    break;
-  default:
-    printer << "$$";
-    break;
-  }
+void IR::Addr::internal_print() {
+
+#define CASE(KIND, SYM) case IR::Addr::Kind:: KIND : std::cout << SYM;\
+this->kind==IR::Addr::Kind::NAMED_LABEL ? (std::cout << this->name) : (std::cout << this->val);\
+break;
+
+  switch(this->kind) {
+    CASE(VAR, '%');
+    CASE(PARAM, 'p');
+    CASE(IMM, '#');
+    CASE(BRANCH_LABEL, ".L");
+    CASE(NAMED_LABEL, "");
+  };
+
+#undef CASE
+
 }

@@ -1,8 +1,10 @@
 #pragma once
 
+#include "debug.h"
+
 #include <memory>
 
-class IR {
+class IR: public Debug_impl {
 public:
   using Ptr = std::shared_ptr<IR>;
   enum class Op {
@@ -32,16 +34,20 @@ public:
 
     CMP,
 
+    FUNCDEF,
+    FUNCEND,
     PARAM,
     CALL,
     RET,
-    INDEX,
+
+    LOAD,
+    STORE,
 
     NOP
     // ...
   };
 
-  struct Addr {
+  struct Addr: public Debug_impl {
   public:
     using Ptr = std::shared_ptr<Addr>;
 
@@ -51,12 +57,13 @@ public:
 
     Addr(Kind kind, int val): kind(kind), name(), val(val) { }
     Addr(Kind kind, std::string name): kind(kind), name(name), val(-1) { }
+    virtual void internal_print() override;
     
     static Ptr make_var(int v)   { return std::make_shared<Addr>(Kind::VAR, v); }
     static Ptr make_param(int v) { return std::make_shared<Addr>(Kind::PARAM, v); }
     static Ptr make_imm(int v)   { return std::make_shared<Addr>(Kind::IMM, v); }
     static Ptr make_label(int v) { return std::make_shared<Addr>(Kind::BRANCH_LABEL, v); }
-    static Ptr make_named_label(std::string s) { return std::make_shared<IR_Addr>(Kind::BRANCH_LABEL, s); }
+    static Ptr make_named_label(std::string s) { return std::make_shared<Addr>(Kind::BRANCH_LABEL, s); }
   };
 
   IR(Op op, Addr::Ptr a0, Addr::Ptr a1, Addr::Ptr a2): op_(op), a0(a0), a1(a1), a2(a2) { }

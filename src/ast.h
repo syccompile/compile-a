@@ -2,6 +2,7 @@
 
 #include "context/context.h"
 #include "ir.h"
+#include "debug.h"
 
 #include <string>
 #include <vector>
@@ -11,13 +12,10 @@
 using std::string;
 using std::vector;
 
-class AST_base {
+class AST_base: public Debug_impl {
 public:
   // 翻译为中间代码
   virtual std::list<IR::Ptr> translate() = 0;
-
-  // 调试输出
-  virtual void internal_print(){};
 };
 
 // Forward Declartion for @class Expression
@@ -50,7 +48,7 @@ public:
     NIL   //  NULL
   };
 
-  Expression(Op op, bool evaluable) : op_(op), addr(nullptr), label_fail(nullptr) { }
+  Expression(Op op, bool evaluable) : op_(op), addr_(nullptr), label_fail_(nullptr) { }
   virtual ~Expression() {}
 
   Op op() { return op_; }
@@ -74,17 +72,27 @@ public:
   virtual void internal_print() override;
   // IR generate
   virtual std::list<IR::Ptr> translate() override;
+  
+  // 获取变量地址
+  // 如果没有分配，它会自动分配一个
+  virtual IR::Addr::Ptr get_var_addr();
 
-  // 为（变量型的）表达式单位分配的临时变量虚地址
-  IR::Addr::Ptr addr;
-  // 为（条件）表达式分配的标号编号
-  // 只分配表达式为假时的标号
-  // 表达式为真时，直接继续执行
-  IR::Addr::Ptr label_fail;
+  // 获取值为假时跳转的标号
+  // 如果没有分配，它会自动分配一个
+  IR::Addr::Ptr get_fail_label();
+  // 指定标号
+  void set_fail_label(IR::Addr::Ptr label);
 
 protected:
   // 表达式类型
   Op op_;
+
+  // 为（变量型的）表达式单位分配的临时变量虚地址
+  IR::Addr::Ptr addr_;
+  // 为（条件）表达式分配的标号编号
+  // 只分配表达式为假时的标号
+  // 表达式为真时，直接继续执行
+  IR::Addr::Ptr label_fail_;
 };
 
 /**
@@ -106,6 +114,13 @@ public:
   // IR generate
   virtual std::list<IR::Ptr> translate() override;
 
+  // 获取变量地址
+  // 如果没有分配，它会自动分配一个
+  virtual IR::Addr::Ptr get_var_addr();
+  // 获取、设置失败后跳转的标号
+  virtual IR::Addr::Ptr get_fail_label();
+  virtual IR::Addr::Ptr set_fail_label(IR::Addr::Ptr label);
+
 private:
 
   // 变量名称
@@ -126,16 +141,22 @@ public:
   FuncCallExp(string *func_name);
   ~FuncCallExp();
 
-  
   // 可否编译期求值
-  virtual bool is_evaluable() const { return false; }
+  virtual bool is_evaluable() const;
   // evaluate when it's const
-  virtual int eval() override { return 0; }
+  virtual int eval() override;
 
   // debug
   virtual void internal_print() override;
   // IR generate
   virtual std::list<IR::Ptr> translate() override;
+
+  // 获取变量地址
+  // 如果没有分配，它会自动分配一个
+  virtual IR::Addr::Ptr get_var_addr();
+  // 获取、设置失败后跳转的标号
+  virtual IR::Addr::Ptr get_fail_label();
+  virtual IR::Addr::Ptr set_fail_label(IR::Addr::Ptr label);
 
 private:
   // 函数名
@@ -152,12 +173,13 @@ class UnaryExp;
 class BinaryExp : public Expression {
 public:
   friend class UnaryExp;
+  friend class VarExp;
 
   BinaryExp(Op op, Expression *left, Expression *right);
   virtual ~BinaryExp();
 
   // 可否编译期求值
-  virtual bool is_evaluable() { return this->left_->is_evaluable() && this->right_->is_evaluable(); }
+  virtual bool is_evaluable() const;
   // evaluate when it's const
   // 请注意：无论是算术还是逻辑表达式，求值结果均是整数类型
   virtual int eval() override;
@@ -166,6 +188,13 @@ public:
   virtual void internal_print() override;
   // IR generate
   virtual std::list<IR::Ptr> translate() override;
+
+  // 获取变量地址
+  // 如果没有分配，它会自动分配一个
+  virtual IR::Addr::Ptr get_var_addr();
+  // 获取、设置失败后跳转的标号
+  virtual IR::Addr::Ptr get_fail_label();
+  virtual IR::Addr::Ptr set_fail_label(IR::Addr::Ptr label);
 
 protected:
   // 分两种不同的翻译形式
@@ -186,7 +215,7 @@ public:
   ~UnaryExp();
 
   // 可否编译期求值
-  virtual bool is_evaluable() const { return this->exp_->is_evaluable(); }
+  virtual bool is_evaluable() const;
   // evaluate when it's const
   virtual int eval() override;
 
@@ -266,6 +295,9 @@ public:
   virtual void internal_print() override;
   // IR generate
   virtual std::list<IR::Ptr> translate() override;
+
+  // 翻译过程中为自己创建的符号表项
+  VarTabEntry::Ptr vartab_ent;
 
 protected:
   // 变量类型
@@ -596,17 +628,10 @@ public:
   string name() { return name_; }
   BType ret_type() { return ret_type_; }
 
-  // 返回对应形参的FrameAccess
-  // FrameAccess get_params_access(size_t index) {
-  //   return symtab_->find(params_->at(index)).access_;
-  // }
-  // 返回函数返回值的FrameAccess
-  FrameAccess get_return_access() { return ret_access_; }
-
   // debug
   virtual void internal_print() override;
   // IR generate
-  virtual std::list<IR::Ptr> translate() override { return std::list<IR::Ptr>(); }
+  virtual std::list<IR::Ptr> translate() override;
 
 private:
   
@@ -621,10 +646,4 @@ private:
   
   // 函数体，保证该指针非空
   BlockStmt *body_;
-   
-  // member frame_
-  Frame::Ptr frame_;
-
-  // 返回值的FrameAccess
-  FrameAccess ret_access_;
 };

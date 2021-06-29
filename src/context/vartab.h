@@ -10,6 +10,9 @@
 // 表示单一常变量、数组常变量的信息
 struct VarTabEntry {
 public:
+  using Ptr = std::shared_ptr<VarTabEntry>;
+  using Ptr_const = std::shared_ptr<const VarTabEntry>;
+
   Type type;
 
   // 名字，存储的主要目的是方便给全局变量生成标号
@@ -31,21 +34,18 @@ public:
 
 class VarTab {
 private:
-  using EntPtr = std::shared_ptr<VarTabEntry>;
-  using EntPtr_const = std::shared_ptr<const VarTabEntry>;
-
-  std::unordered_map<std::string, EntPtr> symtab;
+  std::unordered_map<std::string, VarTabEntry::Ptr> symtab;
 
 public:
   // 添加一个变量名称
-  void put(std::shared_ptr<VarTabEntry> ent);
+  void put(VarTabEntry::Ptr ent);
   
   // 判断符号表是否为全局表
   bool is_global() const { return fa==nullptr; }
 
   // 根据名称获取符号
   // 当不存在符号时，返回std::shared_ptr(nullptr)
-  EntPtr_const get(std::string name) const;
+  VarTabEntry::Ptr get(std::string name) const;
 
   std::shared_ptr<VarTab> fa;
 };

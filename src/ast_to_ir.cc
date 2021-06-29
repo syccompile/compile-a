@@ -5,6 +5,11 @@
 #include <cassert>
 #include <stack>
 
+#define ADD_TRP(OP, A0, A1, A2) ret.emplace_back(IR::make_triple(IR::Op:: OP , A0, A1, A2))
+#define ADD_BIN(OP, A0, A1    ) ret.emplace_back(IR::make_binary(IR::Op:: OP , A0, A1))
+#define ADD_UNR(OP, A0        ) ret.emplace_back(IR::make_unary (IR::Op:: OP , A0))
+#define ADD_NOP(OP, A0        ) ret.emplace_back(IR::make_no_operand (IR::Op:: OP))
+
 static FunctionDecl *now_func;
 static WhileStmt *now_while;
 static bool jmp_revert = false;
@@ -82,9 +87,166 @@ Expression::Op reverse_op(Expression::Op op) {
 
 }
 
+// 获取多维数组的偏移量（编译期可求值的）
+int
+get_offset(const std::vector<int> &shape, const std::vector<int> &dimens) {
+  int offset = dimens.back();
+  int acc    = shape.back();
+
+  for (int i=dimens.size()-2 ; i>0 ; i--) {
+    offset += (acc*dimens[i]);
+    acc    *= shape[i];
+  }
+
+  return offset;
+}
+
+// 获取多维数组的偏移量（编译期不可求值的）
+std::pair<IR::Addr::Ptr, std::list<IR::Ptr> >
+get_offset(const std::vector<int> &shape, Expression::List &dimens) {
+  std::list<IR::Ptr> ret;
+
+  // 先计算各个表达式的值
+  std::vector<IR::Addr::Ptr> dims;
+  // 先解析各个下标表达式
+  for (Expression *exp: dimens) {
+    IR::Addr::Ptr addr = exp->get_var_addr();
+    ret.splice(ret.end(), exp->translate());
+    dims.push_back(addr);
+  }
+  
+  // 再根据数组形状计算偏移量
+  IR::Addr::Ptr offset_addr = IR::Addr::make_var(context.allocator.allocate_addr());
+  ADD_BIN(MOV, offset_addr, dims.back());
+
+  int acc = shape.back();
+  for (int i=dims.size()-2 ; i>0 ; i++) {
+    ADD_TRP(MUL, dims[i], dims[i], IR::Addr::make_imm(acc));
+    ADD_TRP(ADD, offset_addr, offset_addr, dims[i]);
+    acc *= shape[i];
+  }
+
+  return std::make_pair(offset_addr, ret);
+}
+
+IR::Addr::Ptr
+Expression::get_fail_label() {
+  if (this->label_fail_!=nullptr) return this->label_fail_;
+  return IR::Addr::make_label(context.allocator.allocate_label());
+}
+
+void
+Expression::set_fail_label(IR::Addr::Ptr label) {
+  this->label_fail_ = label;
+}
+
+bool
+VarExp::is_evaluable() const {
+  auto ent = context.vartab_cur->get(this->ident_);
+  // TODO 未定义变量
+  assert(ent!=nullptr);
+
+  // 首先检查（数组表达式的）下标是否编译期可求值
+  if (this->dimens_!=nullptr) for (Expression *each_index: *(this->dimens_)) {
+    if (each_index->is_evaluable()) continue;
+    return false;
+  }
+
+  // 再检查变量本身是不是编译期常量
+  return ent->is_constant;
+}
+
+int
+VarExp::eval() {
+  auto ent = context.vartab_cur->get(this->ident_);
+  // TODO 未定义变量
+  assert(ent!=nullptr);
+
+  if (ent->is_array()) {
+    // 该变量是数组
+    // 首先获取下标
+    std::vector<int> dims;
+    for (Expression *exp: *(this->dimens_)) dims.push_back(exp->eval());
+    int offset = get_offset(ent->type.arr_shape, dims);
+  }
+}
+
+IR::Addr::Ptr
+VarExp::get_var_addr() {
+  if (this->addr_!=nullptr) return this->addr_;
+  auto ent = context.vartab_cur->get(this->ident_);
+
+  // TODO 变量未定义
+  assert(ent!=nullptr);
+
+  // 如果该表达式是可求值的，就给该表达式分配常量地址
+  if (this->is_evaluable()) this->addr_ = IR::Addr::make_imm(this->eval());
+  // 如果该表达式不可求值，且是数组型，就需要给该表达式分配一个临时变量，作为变址取数的目的地址
+  else if (ent->is_array()) this->addr_ = IR::Addr::make_var(context.allocator.allocate_addr());
+  // 表达式是不可求值的单一变量
+  else this->addr_ = ent->addr;
+
+  return this->addr_;
+}
+
 std::list<IR::Ptr>
 VarExp::translate() {
-  return std::list<IR::Ptr>();
+  // 如果编译期可求值，就不翻译
+  if (this->is_evaluable()) return std::list<IR::Ptr>();
+
+  // 如果编译期不可求值
+  std::list<IR::Ptr> ret;
+
+  // 转为逻辑表达式
+  if (this->translate_to_logical()) {
+    // 生成临时表达式 (this==0)
+    BinaryExp *tmp = new BinaryExp(Op::EQ, this, new NumberExp(0));
+    
+    // 要求这个临时表达式转为逻辑表达式，赋予本表达式的失败标号
+    tmp->cast_to_logical = true;
+    tmp->cast_to_regular = true;
+    tmp->set_fail_label(this->label_fail_);
+
+    ret.splice(ret.end(), tmp->translate());
+
+    // 防止析构掉 this
+    tmp->left_ = nullptr;
+    delete tmp;
+  }
+  // 转为算术表达式
+  else {
+    auto ent = context.vartab_cur->get(this->ident_);
+    assert(ent!=nullptr);
+
+    // 如果是数组
+    if (ent->is_array()) {
+      auto offset_rel = get_offset(ent->type.arr_shape, *(this->dimens_));
+      ret.splice(ret.end(), offset_rel.second);
+      ADD_TRP(LOAD, this->addr_, ent->addr, offset_rel.first);
+    }
+    // 如果是单一变量
+    else {
+      this->addr_ = ent->addr;
+    }
+  }
+
+  return ret;
+}
+
+bool
+FuncCallExp::is_evaluable() const {
+  return false;
+}
+
+int
+FuncCallExp::eval() {
+  return 0;
+}
+
+IR::Addr::Ptr
+FuncCallExp::get_var_addr() {
+  if (this->addr_!=nullptr) return this->addr_;
+  return (this->addr_=IR::Addr::make_var(context.allocator.allocate_addr()));
 }
 
 std::list<IR::Ptr>
@@ -96,43 +258,45 @@ FuncCallExp::translate() {
     
     // 首先计算各个函数参数的值
     for (Expression *exp : *params_) {
-      // 常量优化
-      if (exp->is_evaluable()) {
-        // 遇到可编译期求值的表达式，就跳过计算
-        exp->addr = IR::Addr::make_imm(exp->eval());
-        continue;
-      }
-      
-      // 否则，就给这个表达式分配一个地址
-      exp->addr = (exp->addr==nullptr) ?
-        IR::Addr::make_var(context.allocator.allocate_addr()) :
-        exp->addr;
-
-      exp->cast_to_regular = true;
-      exp->cast_to_logical = false;
-
+      auto addr = exp->get_var_addr();
       ret.splice(ret.end(), exp->translate());
       ++i;
     }
 
     // 然后生成传参中间代码
-    for (Expression *exp : *params_) {
-      // TODO p_s_i.setAddress(exp.address);
-      ret.emplace_back(IR::make_unary(
-        IR::Op::PARAM,
-        exp->addr
-      ));
-    }
+    for (Expression *exp : *params_) ADD_UNR(PARAM, exp->get_var_addr());
   }
 
   // TODO warning when call an undeclared function
   // 最后生成函数调用的代码
-  ret.emplace_back(IR::make_unary(
-    IR::Op::CALL,
-    IR::Addr::make_named_label(this->name_)
-  ));
+  ADD_UNR(CALL, IR::Addr::make_named_label(this->name_));
 
   return ret;
+}
+
+bool
+BinaryExp::is_evaluable() const {
+  return this->left_->is_evaluable() && this->right_->is_evaluable();
+}
+
+int
+BinaryExp::eval() {
+
+#define CASE(EXPR_OP, ACTUAL_OP) case Expression::Op:: EXPR_OP : return this->left_->eval() ACTUAL_OP this->right_->eval()
+
+  switch(this->op_) {
+    CASE(AND, &&);
+    CASE(OR,  ||);
+    CASE(ADD, +);
+    CASE(SUB, -);
+    CASE(MUL, *);
+    CASE(DIV, /);
+    CASE(MOD, %);
+    default: return 0;  // TODO WARNING
+  }
+
+#undef CASE
+
 }
 
 std::list<IR::Ptr>
@@ -145,8 +309,7 @@ BinaryExp::_translate_logical() {
 
   // 如果上级表达式没有分配标号，则自己分配标号
   // 上级表达式要求转为算术表达式时，不会分配标号
-  if (this->label_fail==nullptr)
-    this->label_fail = IR::Addr::make_label(context.allocator.allocate_label());
+  IR::Addr::Ptr lbl_fail = this->get_fail_label();
 
   // 根据表达式类型，选择不同翻译模式
   switch(this->op()) {
@@ -158,13 +321,13 @@ BinaryExp::_translate_logical() {
       if (this->left_->is_evaluable() && this->left_->eval()) {
         // 左表达式求值为“1”，右表达式不是编译期常量
         // 此时可看作右表达式的单元(Unary)表达式
-        this->right_->label_fail = this->label_fail;
+        this->right_->set_fail_label(this->label_fail_);
         ret.splice(ret.end(), this->right_->translate());
       }
       else if (this->right_->is_evaluable() && this->right_->eval()) {
         // 右表达式求值为“1”，左表达式不是编译期常量
         // 此时可看作左表达式的单元(Unary)表达式
-        this->left_->label_fail = this->label_fail;
+        this->left_->set_fail_label(this->label_fail_);
         ret.splice(ret.end(), this->left_->translate());
       }
       // 常量优化部分结束
@@ -175,8 +338,8 @@ BinaryExp::_translate_logical() {
         // ... <codes that execute on success>
         // fail:
         // ... <codes that execute on fail>
-        this->left_->label_fail  = this->label_fail;
-        this->right_->label_fail = this->label_fail;
+        this->left_->set_fail_label(this->label_fail_);
+        this->right_->set_fail_label(this->label_fail_);
 
         ret.splice(ret.end(), this->left_->translate());
         ret.splice(ret.end(), this->right_->translate());
@@ -190,13 +353,13 @@ BinaryExp::_translate_logical() {
       if (this->left_->is_evaluable() && !(this->left_->eval())) {
         // 左表达式求值为“0”，右表达式不是编译期常量
         // 此时可看作右表达式的单元表达式
-        this->right_->label_fail = this->label_fail;
+        this->right_->set_fail_label(this->label_fail_);
         ret.splice(ret.end(), this->right_->translate());
       }  
       else if (this->right_->is_evaluable() && !(this->right_->eval())) {
         // 右表达式求值为“0”，左表达式不是编译期常量
         // 此时可看作左表达式的单元表达式
-        this->left_->label_fail = this->label_fail;
+        this->left_->set_fail_label(this->label_fail_);
         ret.splice(ret.end(), this->left_->translate());
       }
       // 常量优化部分结束
@@ -213,36 +376,22 @@ BinaryExp::_translate_logical() {
         int lhs_fail_label    = context.allocator.allocate_label();
         int lhs_success_label = context.allocator.allocate_label();
 
-        this->left_->label_fail  = IR::Addr::make_label(lhs_fail_label);
-        this->right_->label_fail = this->label_fail;
+        this->left_->set_fail_label(IR::Addr::make_label(lhs_fail_label));
+        this->right_->set_fail_label(this->label_fail);
 
         ret.splice(ret.end(), this->left_->translate());
-
-        ret.emplace_back(IR::make_unary(
-          IR::Op::JMP,
-          IR::Addr::make_label(lhs_success_label)
-        ));
-        ret.emplace_back(IR::make_unary(
-          IR::Op::LABEL,
-          IR::Addr::make_label(lhs_fail_label)
-        ));
-
+        ADD_UNR(JMP,   IR::Addr::make_label(lhs_success_label));
+        ADD_UNR(LABEL, IR::Addr::make_label(lhs_fail_label));
         ret.splice(ret.end(), this->right_->translate());
-        
-        ret.emplace_back(IR::make_unary(
-          IR::Op::LABEL,
-          IR::Addr::make_label(lhs_success_label)
-        ));
+        ADD_UNR(LABEL, IR::Addr::make_label(lhs_success_label));
       }
       break;
     default:
-      this->left_->label_fail  = nullptr;
-      this->right_->label_fail = nullptr;
       break;
   }
 
   // 如果表达式被要求转为算术表达式，则加入以下代码
-  if (this->cast_to_regular) {
+  if (!(this->translate_to_logical())) {
     // mov <this address> , imm(1)
     // jmp end
     // fail:
@@ -250,21 +399,11 @@ BinaryExp::_translate_logical() {
     // end:
     int end_label = context.allocator.allocate_label();
 
-    ret.emplace_back(IR::make_binary(
-        IR::Op::MOV, this->addr, IR::Addr::make_imm(1)
-    ));
-    ret.emplace_back(IR::make_unary(
-        IR::Op::JMP, IR::Addr::make_label(end_label)
-    ));
-    ret.emplace_back(IR::make_unary(
-        IR::Op::LABEL, this->label_fail
-    ));
-    ret.emplace_back(IR::make_binary(
-        IR::Op::MOV, this->addr, IR::Addr::make_imm(0)
-    ));
-    ret.emplace_back(IR::make_unary(
-        IR::Op::LABEL, IR::Addr::make_label(end_label)
-    ));
+    ADD_BIN(MOV, this->addr_, IR::Addr::make_imm(1));
+    ADD_UNR(JMP, IR::Addr::make_label(end_label));
+    ADD_UNR(LABEL, this->label_fail_);
+    ADD_BIN(MOV, this->addr_, IR::Addr::make_imm(0));
+    ADD_UNR(LABEL, IR::Addr::make_label(end_label));
   }
 
   return ret;
@@ -279,57 +418,27 @@ BinaryExp::_translate_rel() {
   this->left_->cast_to_regular = this->right_->cast_to_regular = true;
 
   // 如果左/右子表达式不可编译期求值，就给左右表达式分配变量地址，并生成计算左/右子表达式的代码
-  if (!(this->left_->is_evaluable()))  {
-    this->left_->addr = (this->left_->addr==nullptr) ?
-      IR::Addr::make_var(context.allocator.allocate_addr()):
-      this->left_->addr;
-    ret.splice(ret.end(), this->left_->translate());
-  } else {
-    this->left_->addr = IR::Addr::make_imm(this->left_->eval());
-  }
+  auto l_addr = this->left_->get_var_addr();
+  auto r_addr = this->right_->get_var_addr();
 
-  if (!(this->right_->is_evaluable())) {
-    this->right_->addr = (this->right_->addr==nullptr) ?
-      IR::Addr::make_var(context.allocator.allocate_addr()):
-      this->right_->addr;
-    ret.splice(ret.end(), this->right_->translate());
-  } else {
-    this->right_->addr = IR::Addr::make_imm(this->right_->eval());
-  }
+  // 生成计算子表达式的代码
+  ret.splice(ret.end(), this->left_->translate());
+  ret.splice(ret.end(), this->right_->translate());
 
   // 比较子表达式
-  ret.emplace_back(IR::make_binary(
-    IR::Op::CMP,
-    // 地址生成思路：如果表达式可以求值，就直接翻译为立即数地址，否则翻译为表达式的变量地址
-    this->left_->addr,
-    this->right_->addr
-  ));
+  ADD_BIN(CMP, l_addr, r_addr);
 
   if (this->translate_to_logical()) {
     // 要求翻译为逻辑表达式
-    ret.emplace_back(IR::make_unary(
-      // 因为是失败时跳转，所以需要反义操作符
-      get_ir_jmp_op(reverse_op(this->op())),
-      this->label_fail
-    ));
+    // 因为是失败时跳转，所以需要反义操作符
+    ret.emplace_back(std::make_shared<IR>(get_ir_jmp_op(reverse_op(this->op())), this->label_fail_));
   }
   else {
     // 要求翻译为算术表达式
-    // 为假，就移0进来
-    ret.emplace_back(IR::make_binary(
-      // 此处加了个reserve，表示为假时的情况
-      get_ir_mov_op(reverse_op(this->op())),
-      this->addr,
-      IR::Addr::make_imm(0)
-      )
-    );
-    // 为真，就移1进来
-    ret.emplace_back(IR::make_binary(
-        get_ir_mov_op(this->op()),
-        this->addr,
-        IR::Addr::make_imm(1)
-      )
-    );
+    // 为假，就移0进去（加了个reverse）
+    ret.emplace_back(IR::make_binary(get_ir_mov_op(reverse_op(this->op())), this->addr_, IR::Addr::make_imm(0)));
+    // 为真，就移1进去
+    ret.emplace_back(IR::make_binary(get_ir_mov_op(this->op()), this->addr_, IR::Addr::make_imm(1)));
   }
 
   return ret;
@@ -342,44 +451,29 @@ BinaryExp::_translate_regular() {
   if (this->translate_to_logical()) {
     // 要求生成一个逻辑表达式
     // 那么就直接生成一个临时性的关系表达式，利用它生成中间代码
-    BinaryExp *temp = new BinaryExp(Expression::Op::EQ, this, new NumberExp(0));
-    temp->label_fail = this->label_fail;
+    BinaryExp *tmp = new BinaryExp(Expression::Op::EQ, this, new NumberExp(0));
+    tmp->cast_to_logical = true;
+    tmp->cast_to_regular = false;
+    tmp->set_fail_label(this->label_fail_);
 
-    ret.splice(ret.end(), temp->translate());
+    ret.splice(ret.end(), tmp->translate());
 
-    temp->left_ = nullptr;
-    delete temp;
+    // 防止析构 this
+    tmp->left_ = nullptr;
+    delete tmp;
   }
   else {
     // 要求生成一个算术表达式
     // 如果左/右子表达式不可编译期求值，就给左右表达式分配变量地址，并生成计算左/右子表达式的代码
-    if (!(this->left_->is_evaluable()))  {
-      // 左表达式可以编译期求值
-      this->left_->addr = IR::Addr::make_imm(this->left_->eval());
-    } else {
-      this->left_->addr = (this->left_->addr==nullptr) ?
-        IR::Addr::make_var(context.allocator.allocate_addr()) :
-        this->left_->addr;
-      ret.splice(ret.end(), this->left_->translate());
-    }
+    auto l_addr = this->left_->get_var_addr();
+    auto r_addr = this->right_->get_var_addr();
 
-    if (this->right_->is_evaluable()) {
-      // 右表达式可以编译期求值
-      this->right_->addr = IR::Addr::make_imm(this->right_->eval());
-    } else {
-      this->right_->addr = (this->right_->addr==nullptr) ?
-        IR::Addr::make_var(context.allocator.allocate_addr()) :
-        this->right_->addr;
-      ret.splice(ret.end(), this->right_->translate());
-    }
+    // 生成计算左右表达式的代码
+    ret.splice(ret.end(), this->left_->translate());
+    ret.splice(ret.end(), this->right_->translate());
 
     // 综合计算左右表达式
-    ret.emplace_back(IR::make_binary(
-      get_ir_regular_op(this->op()),
-      // 地址生成思路：如果表达式可以求值，就直接翻译为立即数地址，否则翻译为表达式的变量地址
-      this->left_->addr,
-      this->right_->addr
-    ));
+    ret.emplace_back(IR::make_binary(get_ir_regular_op(this->op()), l_addr, r_addr));
   }
 
   return ret;
@@ -406,6 +500,25 @@ BinaryExp::translate() {
   return ret;
 }
 
+bool
+UnaryExp::is_evaluable() const {
+  return this->exp_->is_evaluable();
+}
+
+int
+UnaryExp::eval() {
+  switch(this->op_) {
+    case Expression::Op::NOT:
+      return !(this->exp_->eval());
+    case Expression::Op::ADD:
+      return this->exp_->eval();
+    case Expression::Op::SUB:
+      return -(this->exp_->eval());
+    default:
+      return 0;  // TODO 报错
+  }
+}
+
 std::list<IR::Ptr>
 UnaryExp::_translate_logical() {
   std::list<IR::Ptr> ret;
@@ -422,17 +535,13 @@ UnaryExp::_translate_logical() {
     this->exp_->cast_to_regular = false;
     this->exp_->cast_to_logical = true;
 
-    int this_success = context.allocator.allocate_label();
-    this->exp_->label_fail = IR::Addr::make_label(this_success);
+    // 子表达式的fail标志就是本表达式的success标志
+    auto this_success = this->exp_->get_fail_label();
 
     ret.splice(ret.end(), this->exp_->translate());
 
-    ret.emplace_back(IR::make_unary(
-      IR::Op::JMP, this->label_fail
-    ));
-    ret.emplace_back(IR::make_unary(
-      IR::Op::LABEL, IR::Addr::make_label(this_success)
-    ));
+    ADD_UNR(JMP, this->label_fail_);
+    ADD_UNR(LABEL, this_success);
   } 
   else {
     // 要求子表达式翻译为算术表达式
@@ -440,9 +549,7 @@ UnaryExp::_translate_logical() {
     this->exp_->cast_to_logical = false;
 
     // 为子表达式分配存储空间
-    this->exp_->addr = (this->exp_->addr==nullptr) ?
-      IR::Addr::make_var(context.allocator.allocate_addr()):
-      this->exp_->addr;
+    auto sub_addr = this->exp_->get_var_addr();
 
     // 计算子表达式值
     ret.splice(ret.end(), this->exp_->translate());
@@ -450,15 +557,9 @@ UnaryExp::_translate_logical() {
     // cmp subexp->addr, 0
     // moveq this->addr, 1
     // movne this->addr, 0
-    ret.emplace_back(IR::make_binary(
-      IR::Op::CMP, this->exp_->addr, IR::Addr::make_imm(0)
-    ));
-    ret.emplace_back(IR::make_binary(
-      IR::Op::MOVEQ, this->addr, IR::Addr::make_imm(1)
-    ));
-    ret.emplace_back(IR::make_binary(
-      IR::Op::MOVEQ, this->addr, IR::Addr::make_imm(0)
-    ));
+    ADD_BIN(CMP, this->exp_->get_var_addr(), IR::Addr::make_imm(0));
+    ADD_BIN(MOVEQ, this->addr_, IR::Addr::make_imm(1));
+    ADD_BIN(MOVNE, this->addr_, IR::Addr::make_imm(0));
   }
 
   return ret;
@@ -471,24 +572,28 @@ UnaryExp::_translate_regular() {
   if (this->translate_to_logical()) {
     // 要求生成逻辑表达式
     // 直接生成一个临时性的关系表达式，利用它生成中间代码
-    BinaryExp *temp = new BinaryExp(Expression::Op::EQ, this, new NumberExp(0));
-    temp->label_fail = this->label_fail;
+    BinaryExp *tmp = new BinaryExp(Expression::Op::EQ, this, new NumberExp(0));
 
-    ret.splice(ret.end(), temp->translate());
+    tmp->cast_to_logical = true;
+    tmp->cast_to_regular = false;
+    tmp->set_fail_label(this->label_fail_);
 
-    temp->left_ = nullptr;
-    delete temp;
+    ret.splice(ret.end(), tmp->translate());
+
+    tmp->left_ = nullptr;
+    delete tmp;
   }
   else {
     // 要求生成算术表达式
-    this->exp_->addr = this->addr;
-    ret.splice(ret.end(), this->exp_->translate());
+    this->exp_->cast_to_logical = false;
+    this->exp_->cast_to_regular = true;
 
-    if (Expression::Op::SUB) {
-      ret.emplace_back(IR::make_triple(
-        IR::Op::SUB, this->addr, IR::Addr::make_imm(0), this->addr
-      ));
-    }
+    auto sub_addr = this->exp_->get_var_addr();
+
+    ret.splice(ret.end(), this->exp_->translate());
+    ADD_BIN(MOV, this->addr_, sub_addr);
+    if (Expression::Op::SUB)
+      ADD_TRP(SUB, this->addr_, IR::Addr::make_imm(0), this->addr_);
   }
 
   return ret;
@@ -512,6 +617,16 @@ UnaryExp::translate() {
   return ret;
 }
 
+bool
+NumberExp::is_evaluable() const {
+  return true;
+}
+
+int
+NumberExp::eval() {
+  return this->value_;
+}
+
 std::list<IR::Ptr>
 NumberExp::translate() {
   // 常量，无需翻译
@@ -524,20 +639,20 @@ Variable::_translate_immutable() {
 
   // 常量要求初始化，且必须用编译期常量初始化
   // TODO 错误处理
-  assert(this->initval_ != nullptr);
+  assert(this->initval_!=nullptr);
   assert(this->initval_->is_evaluable());
 
   // 处理初始化值
   std::vector<int> init_val = {this->initval_->eval()};
 
-  // 加入符号表
-  context.vartab_cur->put(std::make_shared<VarTabEntry>(
+  // 建立符号表项
+  this->vartab_ent = std::make_shared<VarTabEntry>(
     this->name(),
-    std::vector<int>(),
-    -1,
-    std::move(init_val),
+    std::vector<int>(),   // shape
+    nullptr,              // addr
+    std::move(init_val),  // initial value
     true
-  ));
+  );
 
   return ret;
 }
@@ -551,30 +666,22 @@ Variable::_translate_variable() {
 
   // 再处理初始值
   std::vector<int> init_val;
-  if (this->initval_ != nullptr) {
-    // 常量初始化函数
-    if (this->initval_->is_evaluable()) {
-      init_val.push_back(this->initval_->eval());
-      ret.emplace_back(IR::make_binary(
-        IR::Op::MOV, IR::Addr::make_var(var_addr), IR::Addr::make_imm(init_val.back())
-      ));
-    }
-    // 变量初始化函数
-    else {
-      // 表达式计算结果放到变量分配的地址中
-      this->initval_->addr = IR::Addr::make_var(var_addr);
-      ret.splice(ret.end(), this->initval_->translate());
-    }
+  if (this->initval_!=nullptr) {
+    auto init_val_addr = this->initval_->get_var_addr();
+    if (init_val_addr->kind==IR::Addr::Kind::IMM) init_val.push_back(init_val_addr->val);
+
+    ret.splice(ret.end(), this->initval_->translate());
+    ADD_BIN(MOV, IR::Addr::make_var(var_addr), init_val_addr);
   }
   
-  // 加入符号表
-  context.vartab_cur->put(std::make_shared<VarTabEntry>(
+  // 建立符号表项
+  this->vartab_ent = std::make_shared<VarTabEntry>(
     this->name(),
-    std::vector<int>(),
-    IR::Addr::make_var(var_addr),
-    std::move(init_val),
+    std::vector<int>(),            // shape
+    IR::Addr::make_var(var_addr),  // addr
+    std::move(init_val),           // init_val
     false
-  ));
+  );
   
   return ret;
 }
@@ -695,6 +802,15 @@ Array::_translate_immutable() {
 
   // 再生成初值序列
   std::vector<int> init_val = this->_get_const_initval(shape, 0, this->initval_container_);
+
+  // 建立符号表项
+  this->vartab_ent = std::make_shared<VarTabEntry>(
+    this->name_,
+    shape,
+    nullptr,
+    init_val,
+    true
+  );
   
   return ret;
 }
@@ -703,12 +819,8 @@ std::list<IR::Ptr>
 Array::translate() {
   std::list<IR::Ptr> ret;
 
-  if (this->immutable()) {
-    ret.splice(ret.end(), this->_translate_immutable());
-  }
-  else {
-    ret.splice(ret.end(), this->_translate_variable());
-  }
+  if (this->immutable()) ret.splice(ret.end(), this->_translate_immutable());
+  else                   ret.splice(ret.end(), this->_translate_variable());
 
   return ret;
 }
@@ -722,6 +834,7 @@ VarDeclStmt::translate() {
 
 std::list<IR::Ptr>
 ExpStmt::translate() {
+  // 没有 ++等影响变量值的操作，不翻译
   return std::list<IR::Ptr>();
 }
 
@@ -731,7 +844,7 @@ BlockStmt::translate() {
   // 建立块作用域
   context.new_scope();
 
-  // 将预定义符号加入符号表中
+  // 将预定义符号（函数参数）加入符号表中
   for (auto i: this->pre_defined) context.vartab_cur->put(i);
   // 再逐条翻译语句
   for (Stmt *s: this->stmts_) ret.splice(ret.end(), s->translate());
@@ -765,7 +878,7 @@ IfStmt::translate() {
   // 为条件表达式分配标号
   int label_else = context.allocator.allocate_label();
   int label_end  = context.allocator.allocate_label();
-  this->condition_->label_fail = IR::Addr::make_label(label_else);
+  this->condition_->set_fail_label(IR::Addr::make_label(label_else));
 
   // 翻译条件表达式
   this->condition_->cast_to_logical = true;
@@ -775,19 +888,13 @@ IfStmt::translate() {
   // true expressions
   ret.splice(ret.end(), this->yes_->translate());
   // jmp label_end
-  ret.emplace_back(IR::make_unary(
-    IR::Op::JMP, IR::Addr::make_label(label_end)
-  ));
+  ADD_UNR(JMP, IR::Addr::make_label(label_end));
   // set label label_else
-  ret.emplace_back(IR::make_unary(
-    IR::Op::LABEL, IR::Addr::make_label(label_else)
-  ));
+  ADD_UNR(LABEL, IR::Addr::make_label(label_else));
   // false expressions
   ret.splice(ret.end(), this->no_->translate());
   // set label label_end
-  ret.emplace_back(IR::make_unary(
-    IR::Op::LABEL, IR::Addr::make_label(label_end)
-  ));
+  ADD_UNR(LABEL, IR::Addr::make_label(label_end));
 
   return ret;
 }
@@ -806,72 +913,42 @@ WhileStmt::translate() {
   if (this->condition_->is_evaluable()) {
     if (this->condition_->eval()) {
       // 无限循环
-      ret.emplace_back(IR::make_unary(
-        IR::Op::LABEL, this->label_cond
-      ));
+      ADD_UNR(LABEL, this->label_cond);
       ret.splice(ret.end(), this->body_->translate());
-      ret.emplace_back(IR::make_unary(
-        IR::Op::JMP, this->label_cond
-      ));
-      ret.emplace_back(IR::make_unary(
-        IR::Op::LABEL, this->label_end
-      ));
-      return ret;
+      ADD_UNR(JMP, this->label_cond);
+      ADD_UNR(LABEL, this->label_end);
     } else {
       // 不执行
-      return ret;
     }
   }
   // 常量优化结束
 
-  // 为条件表达式分配标号
-  int label_cond = context.allocator.allocate_label();
-  int label_end  = context.allocator.allocate_label();
-  this->condition_->label_fail = IR::Addr::make_label(label_end);
+  else {
+    // 为条件表达式分配标号
+    this->condition_->set_fail_label(this->label_end);
 
-  // 翻译条件表达式
-  ret.emplace_back(IR::make_unary(
-    IR::Op::LABEL, IR::Addr::make_label(label_cond)
-  ));
-  ret.splice(ret.end(), this->condition_->translate());
-  ret.splice(ret.end(), this->body_->translate());
-  ret.emplace_back(IR::make_unary(
-    IR::Op::JMP, IR::Addr::make_label(label_cond)
-  ));
-  ret.emplace_back(IR::make_unary(
-    IR::Op::LABEL, IR::Addr::make_label(label_end)
-  ));
+    // 翻译条件表达式
+    ADD_UNR(LABEL, this->label_cond);
+    ret.splice(ret.end(), this->condition_->translate());
+    ret.splice(ret.end(), this->body_->translate());
+    ADD_UNR(JMP, this->label_cond);
+    ADD_UNR(LABEL, this->label_end);
+  }
 
   context.while_chain.pop_back();
-
   return ret;
 }
 
 std::list<IR::Ptr>
 ReturnStmt::translate() {
   std::list<IR::Ptr> ret;
-  
-  if (this->ret_exp_!=nullptr) {
-    if (this->ret_exp_->is_evaluable()) {
-      ret.emplace_back(IR::make_unary(
-        IR::Op::RET, IR::Addr::make_imm(this->ret_exp_->eval())
-      ));
-    } else {
-      this->ret_exp_->addr = (this->ret_exp_->addr==nullptr) ?
-        IR::Addr::make_var(context.allocator.allocate_addr()):
-        this->ret_exp_->addr;
-      ret.splice(ret.end(), this->ret_exp_->translate());
-      ret.emplace_back(IR::make_unary(
-        IR::Op::RET, this->ret_exp_->addr
-      ));
-    }
-  }
 
-  else {
-    ret.emplace_back(IR::make_unary(
-      IR::Op::RET, IR::Addr::make_imm(0)
-    ));
-  }
+  IR::Addr::Ptr retexp_addr = nullptr;
+  if (this->ret_exp_) retexp_addr = this->ret_exp_->get_var_addr();
+  else                retexp_addr = IR::Addr::make_imm(0);
+
+  if (this->ret_exp_) ret.splice(ret.end(), ret_exp_->translate());
+  ADD_UNR(RET, retexp_addr);
 
   return ret;
 }
@@ -879,12 +956,9 @@ ReturnStmt::translate() {
 std::list<IR::Ptr>
 BreakStmt::translate() {
   std::list<IR::Ptr> ret;
-
   assert(!(context.while_chain.empty()));
   
-  ret.push_back(IR::make_unary(
-    IR::Op::JMP, context.while_chain.back()->label_end
-  ));
+  ADD_UNR(JMP, context.while_chain.back()->label_end);
 
   return ret;
 }
@@ -892,48 +966,60 @@ BreakStmt::translate() {
 std::list<IR::Ptr>
 ContinueStmt::translate() {
   std::list<IR::Ptr> ret;
-
   assert(!(context.while_chain.empty()));
   
-  ret.push_back(IR::make_unary(
-    IR::Op::JMP, context.while_chain.back()->label_cond
-  ));
+  ADD_UNR(JMP, context.while_chain.back()->label_cond);
 
   return ret;
 }
 
-std::tuple<vector<IR::Ptr>, FrameAccess>
-AssignmentStmt::translate(SymbolTable::Ptr symtab) {
-  // TODO
-  vector<IR::Ptr> ret;
-  auto entry = symtab->find(name_);
-  auto var_ptr = entry.pointer_.var_ptr;
-  assert(entry.type_ == SymbolTable::SymTabEntry::SymType::VARIABLE);
-  assert(!var_ptr->immutable());
-  if (var_ptr->is_array()) {
+std::list<IR::Ptr>
+AssignmentStmt::translate() {
+  std::list<IR::Ptr> ret;
+  auto ent = context.vartab_cur->get(this->name_);
 
-  } else {
-    wrap_tie(vec, access, rval_, symtab);
-    ret.insert(ret.end(), vec.begin(), vec.end());
-    ret.push_back(
-        std::make_shared<UnaryOpIR>(IR::Op::MOV, entry.access_, access));
+  // TODO 未定义符号、符号是常数
+  assert(ent!=nullptr);
+  assert(!(ent->is_constant));
+
+  // 计算右表达式的值
+  auto rval_addr = this->rval_->get_var_addr();
+  ret.splice(ret.end(), this->rval_->translate());
+
+  if (ent->is_array()) {
+    const std::vector<int> &shape = ent->type.arr_shape;
+    // 数组下标与形状不一致
+    assert(shape.size()==this->dimens_->size());
+
+    // 根据数组形状计算偏移量
+    auto offset_pair = get_offset(shape, *(this->dimens_));
+    ret.splice(ret.end(), offset_pair.second);
+
+    ADD_TRP(STORE, rval_addr, ent->addr, offset_pair.first);
   }
-  return std::make_tuple(ret, nullptr);
+  else {
+    // 不是数组
+    ADD_BIN(MOV, ent->addr, rval_addr);
+  }
+
+  return ret;
 }
 
-std::tuple<vector<IR::Ptr>, FrameAccess>
-FunctionDecl::translate(SymbolTable::Ptr symtab) {
-  symtab_->set_parent(symtab);
-  body_->symtab_->set_parent(symtab_);
-  FunctionDecl *temp = now_func;
-  now_func = this;
+std::list<IR::Ptr>
+FunctionDecl::translate() {
+  std::list<IR::Ptr> ret;
 
-  vector<IR::Ptr> ret;
-  ret.push_back(std::make_shared<SingalOpIR>(
-      IR::Op::LABEL, frame_->newLabelAccess(frame_, name_)));
-  wrap_tie(vec, access, body_, body_->symtab_);
-  ret.insert(ret.end(), vec.begin(), vec.end());
+  int cnt = 0;
+  if (this->params_) for (Variable *i: *(this->params_)) {
+    i->translate();
+    auto i_ent = i->vartab_ent;
+    i_ent->param_order = cnt++;
+    this->body_->pre_defined.push_back(i_ent);
+  }
 
-  now_func = temp;
-  return std::make_tuple(ret, nullptr);
+  ADD_UNR(FUNCDEF, IR::Addr::make_named_label(this->name_));
+  ret.splice(ret.end(), this->body_->translate());
+  ADD_NOP(FUNCEND);
+
+  return ret;
 }
