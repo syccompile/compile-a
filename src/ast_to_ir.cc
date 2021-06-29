@@ -8,7 +8,7 @@
 #define ADD_TRP(OP, A0, A1, A2) ret.emplace_back(IR::make_triple(IR::Op:: OP , A0, A1, A2))
 #define ADD_BIN(OP, A0, A1    ) ret.emplace_back(IR::make_binary(IR::Op:: OP , A0, A1))
 #define ADD_UNR(OP, A0        ) ret.emplace_back(IR::make_unary (IR::Op:: OP , A0))
-#define ADD_NOP(OP, A0        ) ret.emplace_back(IR::make_no_operand (IR::Op:: OP))
+#define ADD_NOP(OP            ) ret.emplace_back(IR::make_no_operand (IR::Op:: OP))
 
 static FunctionDecl *now_func;
 static WhileStmt *now_while;
