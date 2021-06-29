@@ -193,8 +193,6 @@ void BlockStmt::push_back(Stmt *stmt) {
   // TODO
 }
 
-int Expression::eval() const { return 0; }
-
 int VarExp::eval() const { return 0; }
 int FuncCallExp::eval() const { return 0; }
 int LogicExp::eval() const {
