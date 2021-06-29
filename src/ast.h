@@ -43,13 +43,11 @@ public:
   virtual ~Expression() {}
   bool evaluable() const { return evaluable_; }
   Op op() const { return op_; }
-  virtual int eval() const ;
-  virtual void internal_print() const override {}
+  virtual int eval() const = 0;
+  virtual void internal_print() const override = 0;
 
   virtual std::tuple<vector<IR::Ptr>, FrameAccess>
-  translate(SymbolTable::Ptr symtab) const override {
-    return std::make_tuple(vector<IR::Ptr>(), nullptr);
-  }
+  translate(SymbolTable::Ptr symtab) const override = 0;
 
 protected:
 
@@ -186,7 +184,7 @@ enum class BType { INT, VOID, UNKNOWN };
 /**
  * 普通变量
  */
-class Variable : public Debug_impl, public IrTranslator_impl {
+class Variable : public Debug_impl {
 public:
   friend class VarDeclStmt;
   using List = vector<Variable *>;
@@ -260,7 +258,7 @@ public:
   /**
    * 表示数组的初始化值
    */
-  class InitVal : public Debug_impl, public IrTranslator_impl {
+  class InitVal : public Debug_impl {
     /**
      * 使用InitVal来表示其中的"1"， "2"， "{3， 4}"
      */
