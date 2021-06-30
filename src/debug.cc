@@ -329,28 +329,28 @@ void IR::internal_print() const {
   switch (op_) {
   case IR::Op::LABEL:
     printer.sub_level();
-    dynamic_cast<const SingalOpIR *>(this)->dst_->internal_print();
+    dynamic_cast<const DstIR *>(this)->dst_->internal_print();
     printer << ":" << IndentPrinter::endl;
     printer.add_level();
     break;
   case IR::Op::DWORD:
     printer << "DWORD\t";
-    goto S;
+    goto I;
   case IR::Op::WORD:
     printer << "WORD\t";
-    goto S;
+    goto I;
   case IR::Op::ZERO:
     printer << "ZERO\t";
-    goto S;
-  S:
-    dynamic_cast<const SingalOpIR *>(this)->dst_->internal_print();
+    goto I;
+  I:
+    dynamic_cast<const InstructionIR*>(this)->arg_->internal_print();
     printer << IndentPrinter::endl;
     break;
   case IR::Op::MOV:
     printer << "MOV\t";
-    dynamic_cast<const UnaryOpIR *>(this)->src_->internal_print();
+    dynamic_cast<const UnarySrcIR *>(this)->src_->internal_print();
     printer << white << "\t\t->\t";
-    dynamic_cast<const UnaryOpIR *>(this)->dst_->internal_print();
+    dynamic_cast<const UnarySrcIR *>(this)->dst_->internal_print();
     printer << IndentPrinter::endl;
     break;
   case IR::Op::SUB:
@@ -374,11 +374,11 @@ void IR::internal_print() const {
   case IR::Op::TEST:
     printer << "TEST\t";
   A:
-    dynamic_cast<const BinOpIR *>(this)->src1_->internal_print();
+    dynamic_cast<const BinSrcIR *>(this)->src1_->internal_print();
     printer << white << ",\t";
-    dynamic_cast<const BinOpIR *>(this)->src2_->internal_print();
+    dynamic_cast<const BinSrcIR *>(this)->src2_->internal_print();
     printer << white << "\t->\t";
-    dynamic_cast<const BinOpIR *>(this)->dst_->internal_print();
+    dynamic_cast<const BinSrcIR *>(this)->dst_->internal_print();
     printer << IndentPrinter::endl;
     break;
   case IR::Op::CALL:
@@ -423,7 +423,7 @@ void IR::internal_print() const {
   case IR::Op::SETGT:
     printer << "SETGT\t";
   B:
-    dynamic_cast<const SingalOpIR *>(this)->dst_->internal_print();
+    dynamic_cast<const DstIR *>(this)->dst_->internal_print();
     printer << IndentPrinter::endl;
     break;
   case IR::Op::RET:

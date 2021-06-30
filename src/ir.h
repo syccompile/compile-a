@@ -1,22 +1,27 @@
 #pragma once
 
-#include "frame.h"
 #include "asm_translator.h"
 #include "debug.h"
+#include "frame.h"
 
-class IR : public Debug_impl, public AsmTranslator_impl{
+class IR : public Debug_impl, public AsmTranslator_impl {
 public:
   using Ptr = std::shared_ptr<IR>;
   enum class Op {
-    LABEL,
-
-    MOV,
+    // BinSrcIR
+    TEST,
+    CMP,
     ADD,
     SUB,
     MUL,
     DIV,
     MOD,
 
+    // UnarySrcIR
+    MOV,
+
+    // DstIR
+    LABEL,
     JMP,
     JLE,
     JLT,
@@ -31,52 +36,61 @@ public:
     SETLT,
     SETLE,
 
-    CMP,
-
     CALL,
-    TEST,
+
+    // NoOpIR
     RET,
     CMOVE,
 
+    // Instruction IR
     WORD,
     DWORD,
     ZERO,
     // ...
   };
-  IR(Op op): op_(op) {}
+  IR(Op op) : op_(op) {}
   virtual ~IR() {}
   virtual void internal_print() const override;
   virtual std::vector<std::string> translate_arm(Frame::Ptr) override;
+
 protected:
   Op op_;
 };
 
-class BinOpIR : public IR{
+class BinSrcIR : public IR {
 public:
-  BinOpIR(Op op, FrameAccess dst, FrameAccess src1, FrameAccess src2)
+  BinSrcIR(Op op, FrameAccess dst, FrameAccess src1, FrameAccess src2)
       : src1_(src1), src2_(src2), dst_(dst), IR(op) {}
   virtual std::vector<std::string> translate_arm(Frame::Ptr) override;
   FrameAccess src1_;
   FrameAccess src2_;
   FrameAccess dst_;
 };
-class UnaryOpIR : public IR {
+class UnarySrcIR : public IR {
 public:
-  UnaryOpIR(Op op, FrameAccess dst, FrameAccess src) : src_(src), dst_(dst), IR(op){}
+  UnarySrcIR(Op op, FrameAccess dst, FrameAccess src)
+      : src_(src), dst_(dst), IR(op) {}
   virtual std::vector<std::string> translate_arm(Frame::Ptr) override;
   FrameAccess src_;
   FrameAccess dst_;
 };
- 
-class SingalOpIR : public IR {
-public :
-  SingalOpIR(Op op, FrameAccess dst) : dst_(dst), IR(op) {}
+
+class DstIR : public IR {
+public:
+  DstIR(Op op, FrameAccess dst) : dst_(dst), IR(op) {}
   virtual std::vector<std::string> translate_arm(Frame::Ptr) override;
   FrameAccess dst_;
 };
 
 class NoOpIR : public IR {
-public :
+public:
   NoOpIR(Op op) : IR(op) {}
   virtual std::vector<std::string> translate_arm(Frame::Ptr) override;
+};
+
+class InstructionIR : public IR {
+public:
+  InstructionIR(Op op, FrameAccess arg) : IR(op), arg_(arg) {}
+  virtual std::vector<std::string> translate_arm(Frame::Ptr) override;
+  FrameAccess arg_;
 };
