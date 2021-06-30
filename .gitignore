@@ -1,0 +1,4 @@
+*.o
+analyzer.cc
+analyzer.hh
+flex.cc
