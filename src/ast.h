@@ -50,7 +50,6 @@ public:
   translate(SymbolTable::Ptr symtab) const override = 0;
 
 protected:
-
   /**
    * @member op_
    * 表达式类型
@@ -121,9 +120,9 @@ private:
 class BinaryExp : public Expression {
 public:
   friend std::tuple<vector<IR::Ptr>, FrameAccess>
-    logic_translate(const BinaryExp* exp, SymbolTable::Ptr symtab);
+  logic_translate(const BinaryExp *exp, SymbolTable::Ptr symtab);
   friend std::tuple<vector<IR::Ptr>, FrameAccess>
-    arithmetic_translate(const BinaryExp* exp, SymbolTable::Ptr symtab);
+  arithmetic_translate(const BinaryExp *exp, SymbolTable::Ptr symtab);
   BinaryExp(const Op op, const Expression *left, const Expression *right);
   ~BinaryExp();
   virtual void internal_print() const override;
@@ -189,7 +188,8 @@ public:
   using List = vector<Variable *>;
 
   Variable(const BType type, const string *name, bool immutable);
-  Variable(const BType type, const string *name, bool immutable, const Expression *initval);
+  Variable(const BType type, const string *name, bool immutable,
+           const Expression *initval);
   virtual ~Variable();
 
   /**
@@ -274,7 +274,7 @@ public:
   public:
     InitValExp(Expression *exp);
     ~InitValExp();
-    const Expression* exp() const { return exp_; }
+    const Expression *exp() const { return exp_; }
     virtual bool is_exp() const override final { return true; }
     virtual void internal_print() const override;
 
@@ -290,9 +290,8 @@ public:
   public:
     InitValContainer();
     ~InitValContainer();
-    void push_back(InitVal *initval) { initval_container_.push_back(initval);
-    }
-    vector<InitVal*> container() const { return initval_container_; }
+    void push_back(InitVal *initval) { initval_container_.push_back(initval); }
+    vector<InitVal *> container() const { return initval_container_; }
     virtual bool is_exp() const override final { return false; }
     virtual void internal_print() const override;
 
@@ -300,12 +299,13 @@ public:
     vector<InitVal *> initval_container_;
   };
 
-  Array(const BType type, const string *name, bool immutable, const Expression::List *size);
-  Array(const BType type, const string *name, bool immutable, const Expression::List *size,
-        InitVal *container);
+  Array(const BType type, const string *name, bool immutable,
+        const Expression::List *size);
+  Array(const BType type, const string *name, bool immutable,
+        const Expression::List *size, InitVal *container);
   ~Array();
   const Expression::List *dimens() const { return dimens_; }
-  const InitValContainer* container() const { return initval_container_; }
+  const InitValContainer *container() const { return initval_container_; }
   virtual bool is_array() const override { return true; }
   virtual void internal_print() const override;
 
@@ -470,7 +470,8 @@ private:
  */
 class IfStmt : public Stmt {
 public:
-  IfStmt(const Expression *condition, const BlockStmt *yes, const BlockStmt *no);
+  IfStmt(const Expression *condition, const BlockStmt *yes,
+         const BlockStmt *no);
   IfStmt(const Expression *condition, const BlockStmt *yes);
   ~IfStmt();
   const BlockStmt *yes() const { return yes_; }
@@ -539,7 +540,8 @@ private:
  */
 class AssignmentStmt : public Stmt {
 public:
-  AssignmentStmt(const string *name, const Expression::List *dimens, const Expression *rval);
+  AssignmentStmt(const string *name, const Expression::List *dimens,
+                 const Expression *rval);
   ~AssignmentStmt();
   virtual void internal_print() const override;
   virtual std::tuple<vector<IR::Ptr>, FrameAccess>
@@ -584,7 +586,7 @@ public:
   /**
    * 返回函数返回值的FrameAccess
    */
-  FrameAccess get_return_access() const{ return ret_access_; }
+  FrameAccess get_return_access() const { return ret_access_; }
 
   virtual void internal_print() const override;
   virtual std::tuple<vector<IR::Ptr>, FrameAccess>

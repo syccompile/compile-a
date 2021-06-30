@@ -36,7 +36,7 @@ const static WhileStmt *now_while;
  */
 static bool jmp_revert = false;
 
-/** 
+/**
  * @Variable arich2logic
  * 将算术表达式视为逻辑表达式生成中间代码
  * 只影响最高层运算符，见函数BinaryExp::translate
@@ -50,7 +50,8 @@ VarExp::translate(SymbolTable::Ptr symtab) const {
   Frame::Ptr frame = symtab->frame();
   if (arith2logic) {
     vector<IR::Ptr> ret;
-    vec_push_ir(ret, BinSrcIR, CMP, frame->newTempAccess(frame), entry.access_, frame->newImmAccess(frame, 0));
+    vec_push_ir(ret, BinSrcIR, CMP, frame->newTempAccess(frame), entry.access_,
+                frame->newImmAccess(frame, 0));
     if (jmp_revert) {
       FrameAccess jmp = frame->newLabelAccess(frame);
       vec_push_ir(ret, DstIR, JE, jmp);
@@ -73,7 +74,7 @@ VarExp::translate(SymbolTable::Ptr symtab) const {
 }
 
 std::tuple<vector<IR::Ptr>, FrameAccess>
-FuncCallExp::translate(SymbolTable::Ptr symtab) const{
+FuncCallExp::translate(SymbolTable::Ptr symtab) const {
   // TODO: arith2logic
   vector<IR::Ptr> ret;
   SymbolTable::SymTabEntry entry = symtab->find(name_);
@@ -82,7 +83,8 @@ FuncCallExp::translate(SymbolTable::Ptr symtab) const{
     for (Expression *exp : *params_) {
       wrap_tie(vec, access, exp, symtab);
       vec_push_all1(ret, vec);
-      vec_push_ir(ret, UnarySrcIR, MOV, entry.pointer_.func_ptr->get_params_access(i), access);
+      vec_push_ir(ret, UnarySrcIR, MOV,
+                  entry.pointer_.func_ptr->get_params_access(i), access);
       i++;
     }
   }
@@ -136,7 +138,8 @@ logic_translate(const BinaryExp *exp, SymbolTable::Ptr symtab) {
   switch (exp->op_) {
   case Expression::Op::LE:
     vec_push_all2(ret, lhs_vec, rhs_vec);
-    vec_push_ir(ret, BinSrcIR, CMP, frame->newTempAccess(frame), lhs_access, rhs_access);
+    vec_push_ir(ret, BinSrcIR, CMP, frame->newTempAccess(frame), lhs_access,
+                rhs_access);
     result = frame->newLabelAccess(frame);
     if (jmp_revert) {
       vec_push_ir(ret, DstIR, JGT, result);
@@ -146,7 +149,8 @@ logic_translate(const BinaryExp *exp, SymbolTable::Ptr symtab) {
     break;
   case Expression::Op::GE:
     vec_push_all2(ret, lhs_vec, rhs_vec);
-    vec_push_ir(ret, BinSrcIR, CMP, frame->newTempAccess(frame), lhs_access, rhs_access);
+    vec_push_ir(ret, BinSrcIR, CMP, frame->newTempAccess(frame), lhs_access,
+                rhs_access);
     result = frame->newLabelAccess(frame);
     if (jmp_revert) {
       vec_push_ir(ret, DstIR, JLT, result);
@@ -156,7 +160,8 @@ logic_translate(const BinaryExp *exp, SymbolTable::Ptr symtab) {
     break;
   case Expression::Op::LT:
     vec_push_all2(ret, lhs_vec, rhs_vec);
-    vec_push_ir(ret, BinSrcIR, CMP, frame->newTempAccess(frame), lhs_access, rhs_access);
+    vec_push_ir(ret, BinSrcIR, CMP, frame->newTempAccess(frame), lhs_access,
+                rhs_access);
     result = frame->newLabelAccess(frame);
     if (jmp_revert) {
       vec_push_ir(ret, DstIR, JGE, result);
@@ -165,7 +170,8 @@ logic_translate(const BinaryExp *exp, SymbolTable::Ptr symtab) {
     }
   case Expression::Op::GT:
     vec_push_all2(ret, lhs_vec, rhs_vec);
-    vec_push_ir(ret, BinSrcIR, CMP, frame->newTempAccess(frame), lhs_access, rhs_access);
+    vec_push_ir(ret, BinSrcIR, CMP, frame->newTempAccess(frame), lhs_access,
+                rhs_access);
     result = frame->newLabelAccess(frame);
     if (jmp_revert) {
       vec_push_ir(ret, DstIR, JLE, result);
@@ -175,7 +181,8 @@ logic_translate(const BinaryExp *exp, SymbolTable::Ptr symtab) {
     break;
   case Expression::Op::EQ:
     vec_push_all2(ret, lhs_vec, rhs_vec);
-    vec_push_ir(ret, BinSrcIR, CMP, frame->newTempAccess(frame), lhs_access, rhs_access);
+    vec_push_ir(ret, BinSrcIR, CMP, frame->newTempAccess(frame), lhs_access,
+                rhs_access);
     result = frame->newLabelAccess(frame);
     if (jmp_revert) {
       vec_push_ir(ret, DstIR, JNE, result);
@@ -185,7 +192,8 @@ logic_translate(const BinaryExp *exp, SymbolTable::Ptr symtab) {
     break;
   case Expression::Op::NEQ:
     vec_push_all2(ret, lhs_vec, rhs_vec);
-    vec_push_ir(ret, BinSrcIR, CMP, frame->newTempAccess(frame), lhs_access, rhs_access);
+    vec_push_ir(ret, BinSrcIR, CMP, frame->newTempAccess(frame), lhs_access,
+                rhs_access);
     result = frame->newLabelAccess(frame);
     if (jmp_revert) {
       vec_push_ir(ret, DstIR, JE, result);
@@ -208,7 +216,8 @@ logic_translate(const BinaryExp *exp, SymbolTable::Ptr symtab) {
     break;
   case Expression::Op::SUB:
     vec_push_all2(ret, lhs_vec, rhs_vec);
-    vec_push_ir(ret, BinSrcIR, CMP, frame->newLabelAccess(frame), lhs_access, rhs_access);
+    vec_push_ir(ret, BinSrcIR, CMP, frame->newLabelAccess(frame), lhs_access,
+                rhs_access);
     result = frame->newLabelAccess(frame);
     if (jmp_revert) {
       vec_push_ir(ret, DstIR, JE, result);
@@ -270,9 +279,8 @@ arithmetic_translate(const BinaryExp *exp, SymbolTable::Ptr symtab) {
   Frame::Ptr frame = symtab->frame();
   // FIX: 现在的计算还有些问题
   if (exp->evaluable()) {
-    return std::make_tuple(
-        vector<IR::Ptr>(),
-        frame->newImmAccess(frame, exp->eval()));
+    return std::make_tuple(vector<IR::Ptr>(),
+                           frame->newImmAccess(frame, exp->eval()));
   }
   FrameAccess result = frame->newTempAccess(frame);
 
@@ -327,7 +335,6 @@ arithmetic_translate(const BinaryExp *exp, SymbolTable::Ptr symtab) {
     vec_push_ir(ret, DstIR, SETNE, result);
     break;
 
-  
   default:
     assert(false);
     break;
@@ -345,34 +352,35 @@ BinaryExp::translate(SymbolTable::Ptr symtab) const {
 }
 
 std::tuple<vector<IR::Ptr>, FrameAccess>
-UnaryExp::translate(SymbolTable::Ptr symtab) const{
+UnaryExp::translate(SymbolTable::Ptr symtab) const {
   vector<IR::Ptr> ret;
   Frame::Ptr frame = symtab->frame();
   // FIX
   if (evaluable()) {
-    return std::make_tuple(vector<IR::Ptr>(), frame->newImmAccess(
-                                                  frame, eval()));
+    return std::make_tuple(vector<IR::Ptr>(),
+                           frame->newImmAccess(frame, eval()));
   }
   FrameAccess result = frame->newTempAccess(frame);
 
   IR::Ptr ir;
   switch (op_) {
-  case Op::ADD: 
-    if(arith2logic){
-    }else{
-      if(evaluable()){
-        return std::make_tuple(vector<IR::Ptr>(), frame->newImmAccess(
-                                                    frame, eval()));
+  case Op::ADD:
+    if (arith2logic) {
+    } else {
+      if (evaluable()) {
+        return std::make_tuple(vector<IR::Ptr>(),
+                               frame->newImmAccess(frame, eval()));
       }
       wrap_tie(vec, access, exp_, symtab);
       result = access;
-    } 
+    }
     break;
   case Op::SUB: {
     wrap_tie(vec, access, exp_, symtab);
     // TODO: 优化多个减号, int a = -----3;
     vec_push_all1(ret, vec);
-    vec_push_ir(ret, BinSrcIR, SUB, result, frame->newImmAccess(frame, 0), access);
+    vec_push_ir(ret, BinSrcIR, SUB, result, frame->newImmAccess(frame, 0),
+                access);
   } break;
   case Op::NOT:
     // FIX
@@ -385,7 +393,7 @@ UnaryExp::translate(SymbolTable::Ptr symtab) const{
 }
 
 std::tuple<vector<IR::Ptr>, FrameAccess>
-NumberExp::translate(SymbolTable::Ptr symtab) const{
+NumberExp::translate(SymbolTable::Ptr symtab) const {
   return std::make_tuple(vector<IR::Ptr>(), symtab->frame()->newImmAccess(
                                                 symtab->frame(), value_));
 }
@@ -394,13 +402,15 @@ NumberExp::translate(SymbolTable::Ptr symtab) const{
  * 而不能是{1,2,{2,3,4}};
  * initval可以为空;
  */
-vector<IR::Ptr> global_array_translate(Frame::Ptr frame, int index, const Expression::List dimens, const Array::InitVal* initval) {
+vector<IR::Ptr> global_array_translate(Frame::Ptr frame, int index,
+                                       const Expression::List dimens,
+                                       const Array::InitVal *initval) {
   const Array::InitValContainer *container =
       dynamic_cast<const Array::InitValContainer *>(initval);
   int initval_size = 0;
   if (!container) {
     initval_size = 0;
-  }else{
+  } else {
     initval_size = container->container().size();
   }
   assert(dimens[index]->evaluable());
@@ -408,11 +418,14 @@ vector<IR::Ptr> global_array_translate(Frame::Ptr frame, int index, const Expres
   vector<IR::Ptr> ret;
   for (int i = 0; i < initval_size; ++i) {
     Array::InitVal *initval = container->container()[i];
-    if(initval->is_exp()){
-      int initval_val = dynamic_cast<Array::InitValExp*>(initval)->exp()->eval();
-      vec_push_ir(ret, InstructionIR, WORD, frame->newImmAccess(frame, initval_val));
-    }else {
-      auto r = global_array_translate(frame, index + 1, dimens, container->container()[i]);
+    if (initval->is_exp()) {
+      int initval_val =
+          dynamic_cast<Array::InitValExp *>(initval)->exp()->eval();
+      vec_push_ir(ret, InstructionIR, WORD,
+                  frame->newImmAccess(frame, initval_val));
+    } else {
+      auto r = global_array_translate(frame, index + 1, dimens,
+                                      container->container()[i]);
       vec_push_all1(ret, r);
     }
   }
@@ -428,7 +441,7 @@ vector<IR::Ptr> global_array_translate(Frame::Ptr frame, int index, const Expres
   return ret;
 }
 std::tuple<vector<IR::Ptr>, FrameAccess>
-VarDeclStmt::translate(SymbolTable::Ptr symtab) const{
+VarDeclStmt::translate(SymbolTable::Ptr symtab) const {
   vector<IR::Ptr> ret;
   Frame::Ptr frame = symtab->frame();
   for (Variable *var : vars_) {
@@ -440,10 +453,11 @@ VarDeclStmt::translate(SymbolTable::Ptr symtab) const{
 
         vec_push_ir(ret, DstIR, LABEL,
                     frame->newLabelAccess(frame, var->name()));
-        // TODO 
-        auto vec = global_array_translate(frame, 0, *array->dimens(), array->container());
+        // TODO
+        auto vec = global_array_translate(frame, 0, *array->dimens(),
+                                          array->container());
         vec_push_all1(ret, vec);
-      }else {
+      } else {
         // TODO
       }
     } else {
@@ -468,12 +482,12 @@ VarDeclStmt::translate(SymbolTable::Ptr symtab) const{
 }
 
 std::tuple<vector<IR::Ptr>, FrameAccess>
-ExpStmt::translate(SymbolTable::Ptr symtab) const{
+ExpStmt::translate(SymbolTable::Ptr symtab) const {
   return std::make_tuple(vector<IR::Ptr>(), nullptr);
 }
 
 std::tuple<vector<IR::Ptr>, FrameAccess>
-BlockStmt::translate(SymbolTable::Ptr symtab) const{
+BlockStmt::translate(SymbolTable::Ptr symtab) const {
   vector<IR::Ptr> ret;
   for (Stmt *stmt : stmts_) {
     wrap_tie(vec, access, stmt, symtab_);
@@ -483,13 +497,12 @@ BlockStmt::translate(SymbolTable::Ptr symtab) const{
 }
 
 std::tuple<vector<IR::Ptr>, FrameAccess>
-IfStmt::translate(SymbolTable::Ptr symtab) const{
+IfStmt::translate(SymbolTable::Ptr symtab) const {
   yes_->symtab_->set_parent(symtab);
   yes_->symtab_->set_frame(symtab->frame());
   if (no_) {
     no_->symtab_->set_parent(symtab);
     no_->symtab_->set_frame(symtab->frame());
-
   }
 
   vector<IR::Ptr> ret;
@@ -501,7 +514,7 @@ IfStmt::translate(SymbolTable::Ptr symtab) const{
     vec_push_all2(ret, condition_vec, yes_vec);
     vec_push_ir(ret, DstIR, LABEL, no_label);
     return std::make_tuple(ret, nullptr);
-  }else {
+  } else {
     FrameAccess next_label = symtab->frame()->newLabelAccess(symtab->frame());
     jmp_revert = false;
     wrap_tie_logic(condition_vec, yes_label, condition_, symtab);
@@ -513,7 +526,6 @@ IfStmt::translate(SymbolTable::Ptr symtab) const{
     vec_push_all1(ret, yes_vec);
     vec_push_ir(ret, DstIR, LABEL, next_label);
     return std::make_tuple(ret, nullptr);
-
   }
 }
 /**
@@ -532,7 +544,7 @@ IfStmt::translate(SymbolTable::Ptr symtab) const{
  *          # ...
  */
 std::tuple<vector<IR::Ptr>, FrameAccess>
-WhileStmt::translate(SymbolTable::Ptr symtab) const{
+WhileStmt::translate(SymbolTable::Ptr symtab) const {
   body_->symtab_->set_parent(symtab);
   body_->symtab_->set_frame(symtab->frame());
   const WhileStmt *temp = now_while;
@@ -555,7 +567,7 @@ WhileStmt::translate(SymbolTable::Ptr symtab) const{
 }
 
 std::tuple<vector<IR::Ptr>, FrameAccess>
-ReturnStmt::translate(SymbolTable::Ptr symtab) const{
+ReturnStmt::translate(SymbolTable::Ptr symtab) const {
   assert(now_func);
 
   vector<IR::Ptr> ret;
@@ -569,7 +581,7 @@ ReturnStmt::translate(SymbolTable::Ptr symtab) const{
 }
 
 std::tuple<vector<IR::Ptr>, FrameAccess>
-BreakStmt::translate(SymbolTable::Ptr symtab) const{
+BreakStmt::translate(SymbolTable::Ptr symtab) const {
   assert(now_while);
   vector<IR::Ptr> ret;
   vec_push_ir(ret, DstIR, JMP, now_while->break_access_);
@@ -577,7 +589,7 @@ BreakStmt::translate(SymbolTable::Ptr symtab) const{
 }
 
 std::tuple<vector<IR::Ptr>, FrameAccess>
-ContinueStmt::translate(SymbolTable::Ptr symtab) const{
+ContinueStmt::translate(SymbolTable::Ptr symtab) const {
   assert(now_while);
   vector<IR::Ptr> ret;
   vec_push_ir(ret, DstIR, JMP, now_while->continue_access_);
@@ -585,7 +597,7 @@ ContinueStmt::translate(SymbolTable::Ptr symtab) const{
 }
 
 std::tuple<vector<IR::Ptr>, FrameAccess>
-AssignmentStmt::translate(SymbolTable::Ptr symtab) const{
+AssignmentStmt::translate(SymbolTable::Ptr symtab) const {
   // TODO
   vector<IR::Ptr> ret;
   auto entry = symtab->find(name_);
@@ -603,7 +615,7 @@ AssignmentStmt::translate(SymbolTable::Ptr symtab) const{
 }
 
 std::tuple<vector<IR::Ptr>, FrameAccess>
-FunctionDecl::translate(SymbolTable::Ptr symtab) const{
+FunctionDecl::translate(SymbolTable::Ptr symtab) const {
   symtab_->set_parent(symtab);
   body_->symtab_->set_parent(symtab_);
   body_->symtab_->set_frame(frame_);

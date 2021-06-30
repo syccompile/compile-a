@@ -22,5 +22,6 @@
 using std::vector;
 
 struct IrTranslator_impl {
-  virtual std::tuple<vector<IR::Ptr>, FrameAccess> translate(SymbolTable::Ptr) const = 0;
+  virtual std::tuple<vector<IR::Ptr>, FrameAccess>
+      translate(SymbolTable::Ptr) const = 0;
 };

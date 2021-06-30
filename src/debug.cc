@@ -343,7 +343,7 @@ void IR::internal_print() const {
     printer << "ZERO\t";
     goto I;
   I:
-    dynamic_cast<const InstructionIR*>(this)->arg_->internal_print();
+    dynamic_cast<const InstructionIR *>(this)->arg_->internal_print();
     printer << IndentPrinter::endl;
     break;
   case IR::Op::MOV:
