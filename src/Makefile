@@ -10,23 +10,26 @@ TARGET = output
 
 TEST_TXT = example.txt
 
-CXX_SOURCE = analyzer.cc flex.cpp debug.cc ast.cc symtab.cc ir_translator.cc frame.cc main.cc 
 OBJS = analyzer.o ast.o debug.o flex.o symtab.o ir_translator.o frame.o main.o
 
 BISON_SOURCE = analyzer.y
 BISON_FLAG  = -Wcounterexamples
-BISON_OUTPUT = analyzer.cc analyzer.hh
+BISON_OUTPUT = analyzer.cpp analyzer.hpp
 
 FLEX_SOURCE = flex.l
-FLEX_OUTPUT = flex.cc
+FLEX_OUTPUT = flex.cpp
 
 $(TARGET) : check $(OBJS)
 	$(CXX) $(OBJS) -o $@
-analyzer.cc : $(BISON_SOURCE)
+analyzer.cpp : $(BISON_SOURCE)
 	$(BISON) -d $^ -o $@ $(BISON_FLAG)
-flex.cc : $(FLEX_SOURCE)
+flex.cpp : $(FLEX_SOURCE)
 	$(FLEX) -o $@ $^
 %.o : %.cc
+	$(CXX) $(CXXFLAGS) -c $^ -o $@ $(DEFINE)
+analyzer.o : analyzer.cpp
+	$(CXX) $(CXXFLAGS) -c $^ -o $@ $(DEFINE)
+flex.o : flex.cpp
 	$(CXX) $(CXXFLAGS) -c $^ -o $@ $(DEFINE)
 
 .PHONY: test
