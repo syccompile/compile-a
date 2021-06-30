@@ -1,5 +1,6 @@
 CXX = clang++
 CXXFLAGS = -std=c++11 -g
+DEFINE = -D CONFIG_ARM
 BISON = bison
 FLEX = flex
 
@@ -7,8 +8,8 @@ TARGET = output
 
 TEST_TXT = example.txt
 
-CXX_SOURCE = analyzer.cc flex.cc debug.cc ast.cc symtab.cc ir_translator.cc frame.cc main.cc asm_translator.cc
-OBJS = analyzer.o ast.o debug.o flex.o symtab.o ir_translator.o frame.o main.o asm_translator.o
+CXX_SOURCE = analyzer.cc flex.cc debug.cc ast.cc symtab.cc ir_translator.cc frame.cc main.cc 
+OBJS = analyzer.o ast.o debug.o flex.o symtab.o ir_translator.o frame.o main.o
 
 BISON_SOURCE = analyzer.y
 BISON_FLAG  = -Wcounterexamples
@@ -24,7 +25,7 @@ analyzer.cc : $(BISON_SOURCE)
 flex.cc : $(FLEX_SOURCE)
 	$(FLEX) -o $@ $^
 %.o : %.cc
-	$(CXX) $(CXXFLAGS) -c $^ -o $@
+	$(CXX) $(CXXFLAGS) -c $^ -o $@ $(DEFINE)
 
 .PHONY: test
 test : $(TARGET)
