@@ -1,5 +1,5 @@
 #include "ast.h"
-#include "analyzer.hh"
+#include "analyzer.hpp"
 
 #include <vector>
 
