@@ -1,10 +1,9 @@
 #pragma once
 
 #include "frame.h"
-#include "asm_translator.h"
 #include "debug.h"
 
-class IR : public Debug_impl, public AsmTranslator_impl{
+class IR : public Debug_impl{
 public:
   using Ptr = std::shared_ptr<IR>;
   enum class Op {
@@ -46,7 +45,6 @@ public:
   IR(Op op): op_(op) {}
   virtual ~IR() {}
   virtual void internal_print() const override;
-  virtual std::vector<std::string> translate_arm(Frame::Ptr) override;
 protected:
   Op op_;
 };
@@ -55,7 +53,6 @@ class BinSrcIR : public IR{
 public:
   BinSrcIR(Op op, FrameAccess dst, FrameAccess src1, FrameAccess src2)
       : src1_(src1), src2_(src2), dst_(dst), IR(op) {}
-  virtual std::vector<std::string> translate_arm(Frame::Ptr) override;
   FrameAccess src1_;
   FrameAccess src2_;
   FrameAccess dst_;
@@ -63,7 +60,6 @@ public:
 class UnarySrcIR : public IR {
 public:
   UnarySrcIR(Op op, FrameAccess dst, FrameAccess src) : src_(src), dst_(dst), IR(op){}
-  virtual std::vector<std::string> translate_arm(Frame::Ptr) override;
   FrameAccess src_;
   FrameAccess dst_;
 };
@@ -71,12 +67,10 @@ public:
 class DstIR : public IR {
 public :
   DstIR(Op op, FrameAccess dst) : dst_(dst), IR(op) {}
-  virtual std::vector<std::string> translate_arm(Frame::Ptr) override;
   FrameAccess dst_;
 };
 
 class NoOpIR : public IR {
 public :
   NoOpIR(Op op) : IR(op) {}
-  virtual std::vector<std::string> translate_arm(Frame::Ptr) override;
 };
