@@ -50,14 +50,14 @@ VarExp::translate(SymbolTable::Ptr symtab) const {
   Frame::Ptr frame = symtab->frame();
   if (arith2logic) {
     vector<IR::Ptr> ret;
-    vec_push_ir(ret, BinOpIR, CMP, frame->newTempAccess(frame), entry.access_, frame->newImmAccess(frame, 0));
+    vec_push_ir(ret, BinSrcIR, CMP, frame->newTempAccess(frame), entry.access_, frame->newImmAccess(frame, 0));
     if (jmp_revert) {
       FrameAccess jmp = frame->newLabelAccess(frame);
-      vec_push_ir(ret, SingalOpIR, JE, jmp);
+      vec_push_ir(ret, DstIR, JE, jmp);
       return std::make_tuple(ret, jmp);
     } else {
       FrameAccess jmp = frame->newLabelAccess(frame);
-      vec_push_ir(ret, SingalOpIR, JNE, jmp);
+      vec_push_ir(ret, DstIR, JNE, jmp);
       return std::make_tuple(ret, jmp);
     }
   }
@@ -77,11 +77,11 @@ FuncCallExp::translate(SymbolTable::Ptr symtab) const {
     for (Expression *exp : *params_) {
       wrap_tie(vec, access, exp, symtab);
       vec_push_all1(ret, vec);
-      vec_push_ir(ret, UnaryOpIR, MOV, entry.pointer_.func_ptr->get_params_access(i), access);
+      vec_push_ir(ret, UnarySrcIR, MOV, entry.pointer_.func_ptr->get_params_access(i), access);
       i++;
     }
   }
-  vec_push_ir(ret, SingalOpIR, CALL, entry.access_);
+  vec_push_ir(ret, DstIR, CALL, entry.access_);
   return std::make_tuple(ret, entry.pointer_.func_ptr->get_return_access());
 }
 
@@ -105,7 +105,7 @@ logic_translate(const BinaryExp *exp, SymbolTable::Ptr symtab) {
       jmp_revert = false;
       wrap_tie_logic(rhs_vec, rhs_access, exp->right_, symtab);
       vec_push_all2(ret, lhs_vec, rhs_vec);
-      vec_push_ir(ret, SingalOpIR, LABEL, lhs_access);
+      vec_push_ir(ret, DstIR, LABEL, lhs_access);
       return std::make_tuple(ret, rhs_access);
     }
   } else if (exp->op_ == Expression::Op::OR) {
@@ -115,7 +115,7 @@ logic_translate(const BinaryExp *exp, SymbolTable::Ptr symtab) {
       jmp_revert = true;
       wrap_tie_logic(rhs_vec, rhs_access, exp->right_, symtab);
       vec_push_all2(ret, lhs_vec, rhs_vec);
-      vec_push_ir(ret, SingalOpIR, LABEL, lhs_access);
+      vec_push_ir(ret, DstIR, LABEL, lhs_access);
       return std::make_tuple(ret, rhs_access);
     } else {
       jmp_revert = false;
@@ -131,126 +131,126 @@ logic_translate(const BinaryExp *exp, SymbolTable::Ptr symtab) {
   switch (exp->op_) {
   case Expression::Op::LE:
     vec_push_all2(ret, lhs_vec, rhs_vec);
-    vec_push_ir(ret, BinOpIR, CMP, frame->newTempAccess(frame), lhs_access, rhs_access);
+    vec_push_ir(ret, BinSrcIR, CMP, frame->newTempAccess(frame), lhs_access, rhs_access);
     result = frame->newLabelAccess(frame);
     if (jmp_revert) {
-      vec_push_ir(ret, SingalOpIR, JGT, result);
+      vec_push_ir(ret, DstIR, JGT, result);
     } else {
-      vec_push_ir(ret, SingalOpIR, JLE, result);
+      vec_push_ir(ret, DstIR, JLE, result);
     }
     break;
   case Expression::Op::GE:
     vec_push_all2(ret, lhs_vec, rhs_vec);
-    vec_push_ir(ret, BinOpIR, CMP, frame->newTempAccess(frame), lhs_access, rhs_access);
+    vec_push_ir(ret, BinSrcIR, CMP, frame->newTempAccess(frame), lhs_access, rhs_access);
     result = frame->newLabelAccess(frame);
     if (jmp_revert) {
-      vec_push_ir(ret, SingalOpIR, JLT, result);
+      vec_push_ir(ret, DstIR, JLT, result);
     } else {
-      vec_push_ir(ret, SingalOpIR, JGE, result);
+      vec_push_ir(ret, DstIR, JGE, result);
     }
     break;
   case Expression::Op::LT:
     vec_push_all2(ret, lhs_vec, rhs_vec);
-    vec_push_ir(ret, BinOpIR, CMP, frame->newTempAccess(frame), lhs_access, rhs_access);
+    vec_push_ir(ret, BinSrcIR, CMP, frame->newTempAccess(frame), lhs_access, rhs_access);
     result = frame->newLabelAccess(frame);
     if (jmp_revert) {
-      vec_push_ir(ret, SingalOpIR, JGE, result);
+      vec_push_ir(ret, DstIR, JGE, result);
     } else {
-      vec_push_ir(ret, SingalOpIR, JLT, result);
+      vec_push_ir(ret, DstIR, JLT, result);
     }
   case Expression::Op::GT:
     vec_push_all2(ret, lhs_vec, rhs_vec);
-    vec_push_ir(ret, BinOpIR, CMP, frame->newTempAccess(frame), lhs_access, rhs_access);
+    vec_push_ir(ret, BinSrcIR, CMP, frame->newTempAccess(frame), lhs_access, rhs_access);
     result = frame->newLabelAccess(frame);
     if (jmp_revert) {
-      vec_push_ir(ret, SingalOpIR, JLE, result);
+      vec_push_ir(ret, DstIR, JLE, result);
     } else {
-      vec_push_ir(ret, SingalOpIR, JGT, result);
+      vec_push_ir(ret, DstIR, JGT, result);
     }
     break;
   case Expression::Op::EQ:
     vec_push_all2(ret, lhs_vec, rhs_vec);
-    vec_push_ir(ret, BinOpIR, CMP, frame->newTempAccess(frame), lhs_access, rhs_access);
+    vec_push_ir(ret, BinSrcIR, CMP, frame->newTempAccess(frame), lhs_access, rhs_access);
     result = frame->newLabelAccess(frame);
     if (jmp_revert) {
-      vec_push_ir(ret, SingalOpIR, JNE, result);
+      vec_push_ir(ret, DstIR, JNE, result);
     } else {
-      vec_push_ir(ret, SingalOpIR, JE, result);
+      vec_push_ir(ret, DstIR, JE, result);
     }
     break;
   case Expression::Op::NEQ:
     vec_push_all2(ret, lhs_vec, rhs_vec);
-    vec_push_ir(ret, BinOpIR, CMP, frame->newTempAccess(frame), lhs_access, rhs_access);
+    vec_push_ir(ret, BinSrcIR, CMP, frame->newTempAccess(frame), lhs_access, rhs_access);
     result = frame->newLabelAccess(frame);
     if (jmp_revert) {
-      vec_push_ir(ret, SingalOpIR, JE, result);
+      vec_push_ir(ret, DstIR, JE, result);
     } else {
-      vec_push_ir(ret, SingalOpIR, JNE, result);
+      vec_push_ir(ret, DstIR, JNE, result);
     }
   case Expression::Op::ADD:
     vec_push_all2(ret, lhs_vec, rhs_vec);
     {
       FrameAccess tmp = frame->newTempAccess(frame);
-      vec_push_ir(ret, BinOpIR, ADD, tmp, lhs_access, rhs_access);
-      vec_push_ir(ret, BinOpIR, TEST, frame->newTempAccess(frame), tmp, tmp);
+      vec_push_ir(ret, BinSrcIR, ADD, tmp, lhs_access, rhs_access);
+      vec_push_ir(ret, BinSrcIR, TEST, frame->newTempAccess(frame), tmp, tmp);
       result = frame->newLabelAccess(frame);
     }
     if (jmp_revert) {
-      vec_push_ir(ret, SingalOpIR, JE, result);
+      vec_push_ir(ret, DstIR, JE, result);
     } else {
-      vec_push_ir(ret, SingalOpIR, JNE, result);
+      vec_push_ir(ret, DstIR, JNE, result);
     }
     break;
   case Expression::Op::SUB:
     vec_push_all2(ret, lhs_vec, rhs_vec);
-    vec_push_ir(ret, BinOpIR, CMP, frame->newLabelAccess(frame), lhs_access, rhs_access);
+    vec_push_ir(ret, BinSrcIR, CMP, frame->newLabelAccess(frame), lhs_access, rhs_access);
     result = frame->newLabelAccess(frame);
     if (jmp_revert) {
-      vec_push_ir(ret, SingalOpIR, JE, result);
+      vec_push_ir(ret, DstIR, JE, result);
     } else {
-      vec_push_ir(ret, SingalOpIR, JNE, result);
+      vec_push_ir(ret, DstIR, JNE, result);
     }
     break;
   case Expression::Op::MUL:
     vec_push_all2(ret, lhs_vec, rhs_vec);
     {
       FrameAccess tmp = frame->newTempAccess(frame);
-      vec_push_ir(ret, BinOpIR, MUL, tmp, lhs_access, rhs_access);
-      vec_push_ir(ret, BinOpIR, TEST, frame->newTempAccess(frame), tmp, tmp);
+      vec_push_ir(ret, BinSrcIR, MUL, tmp, lhs_access, rhs_access);
+      vec_push_ir(ret, BinSrcIR, TEST, frame->newTempAccess(frame), tmp, tmp);
     }
     result = frame->newLabelAccess(frame);
     if (jmp_revert) {
-      vec_push_ir(ret, SingalOpIR, JE, result);
+      vec_push_ir(ret, DstIR, JE, result);
     } else {
-      vec_push_ir(ret, SingalOpIR, JNE, result);
+      vec_push_ir(ret, DstIR, JNE, result);
     }
     break;
   case Expression::Op::DIV:
     vec_push_all2(ret, lhs_vec, rhs_vec);
     {
       FrameAccess tmp = frame->newTempAccess(frame);
-      vec_push_ir(ret, BinOpIR, DIV, tmp, lhs_access, rhs_access);
-      vec_push_ir(ret, BinOpIR, TEST, frame->newTempAccess(frame), tmp, tmp);
+      vec_push_ir(ret, BinSrcIR, DIV, tmp, lhs_access, rhs_access);
+      vec_push_ir(ret, BinSrcIR, TEST, frame->newTempAccess(frame), tmp, tmp);
     }
     result = frame->newLabelAccess(frame);
     if (jmp_revert) {
-      vec_push_ir(ret, SingalOpIR, JE, result);
+      vec_push_ir(ret, DstIR, JE, result);
     } else {
-      vec_push_ir(ret, SingalOpIR, JNE, result);
+      vec_push_ir(ret, DstIR, JNE, result);
     }
     break;
   case Expression::Op::MOD:
     vec_push_all2(ret, lhs_vec, rhs_vec);
     {
       FrameAccess tmp = frame->newTempAccess(frame);
-      vec_push_ir(ret, BinOpIR, MOD, tmp, lhs_access, rhs_access);
-      vec_push_ir(ret, BinOpIR, TEST, frame->newTempAccess(frame), tmp, tmp);
+      vec_push_ir(ret, BinSrcIR, MOD, tmp, lhs_access, rhs_access);
+      vec_push_ir(ret, BinSrcIR, TEST, frame->newTempAccess(frame), tmp, tmp);
     }
     result = frame->newLabelAccess(frame);
     if (jmp_revert) {
-      vec_push_ir(ret, SingalOpIR, JE, result);
+      vec_push_ir(ret, DstIR, JE, result);
     } else {
-      vec_push_ir(ret, SingalOpIR, JNE, result);
+      vec_push_ir(ret, DstIR, JNE, result);
     }
     break;
   default:
@@ -277,49 +277,49 @@ arithmetic_translate(const BinaryExp *exp, SymbolTable::Ptr symtab) {
   IR::Ptr ir;
   switch (exp->op_) {
   case Expression::Op::ADD:
-    vec_push_ir(ret, BinOpIR, ADD, result, lhs_access, rhs_access);
+    vec_push_ir(ret, BinSrcIR, ADD, result, lhs_access, rhs_access);
     break;
   case Expression::Op::SUB:
-    vec_push_ir(ret, BinOpIR, SUB, result, lhs_access, rhs_access);
+    vec_push_ir(ret, BinSrcIR, SUB, result, lhs_access, rhs_access);
     break;
   case Expression::Op::MUL:
-    vec_push_ir(ret, BinOpIR, MUL, result, lhs_access, rhs_access);
+    vec_push_ir(ret, BinSrcIR, MUL, result, lhs_access, rhs_access);
     break;
   case Expression::Op::DIV:
-    vec_push_ir(ret, BinOpIR, DIV, result, lhs_access, rhs_access);
+    vec_push_ir(ret, BinSrcIR, DIV, result, lhs_access, rhs_access);
     break;
   case Expression::Op::MOD:
-    vec_push_ir(ret, BinOpIR, MOD, result, lhs_access, rhs_access);
+    vec_push_ir(ret, BinSrcIR, MOD, result, lhs_access, rhs_access);
     break;
   case Expression::Op::LT:
-    vec_push_ir(ret, BinOpIR, CMP, frame->newTempAccess(frame), lhs_access,
+    vec_push_ir(ret, BinSrcIR, CMP, frame->newTempAccess(frame), lhs_access,
                 rhs_access);
-    vec_push_ir(ret, SingalOpIR, SETLT, result);
+    vec_push_ir(ret, DstIR, SETLT, result);
     break;
   case Expression::Op::LE:
-    vec_push_ir(ret, BinOpIR, CMP, frame->newTempAccess(frame), lhs_access,
+    vec_push_ir(ret, BinSrcIR, CMP, frame->newTempAccess(frame), lhs_access,
                 rhs_access);
-    vec_push_ir(ret, SingalOpIR, SETLE, result);
+    vec_push_ir(ret, DstIR, SETLE, result);
     break;
   case Expression::Op::GT:
-    vec_push_ir(ret, BinOpIR, CMP, frame->newTempAccess(frame), lhs_access,
+    vec_push_ir(ret, BinSrcIR, CMP, frame->newTempAccess(frame), lhs_access,
                 rhs_access);
-    vec_push_ir(ret, SingalOpIR, SETGT, result);
+    vec_push_ir(ret, DstIR, SETGT, result);
     break;
   case Expression::Op::GE:
-    vec_push_ir(ret, BinOpIR, CMP, frame->newTempAccess(frame), lhs_access,
+    vec_push_ir(ret, BinSrcIR, CMP, frame->newTempAccess(frame), lhs_access,
                 rhs_access);
-    vec_push_ir(ret, SingalOpIR, SETGE, result);
+    vec_push_ir(ret, DstIR, SETGE, result);
     break;
   case Expression::Op::EQ:
-    vec_push_ir(ret, BinOpIR, CMP, frame->newTempAccess(frame), lhs_access,
+    vec_push_ir(ret, BinSrcIR, CMP, frame->newTempAccess(frame), lhs_access,
                 rhs_access);
-    vec_push_ir(ret, SingalOpIR, SETE, result);
+    vec_push_ir(ret, DstIR, SETE, result);
     break;
   case Expression::Op::NEQ:
-    vec_push_ir(ret, BinOpIR, CMP, frame->newTempAccess(frame), lhs_access,
+    vec_push_ir(ret, BinSrcIR, CMP, frame->newTempAccess(frame), lhs_access,
                 rhs_access);
-    vec_push_ir(ret, SingalOpIR, SETNE, result);
+    vec_push_ir(ret, DstIR, SETNE, result);
     break;
 
   
@@ -367,7 +367,7 @@ UnaryExp::translate(SymbolTable::Ptr symtab) const{
     wrap_tie(vec, access, exp_, symtab);
     // TODO: 优化多个减号, int a = -----3;
     vec_push_all1(ret, vec);
-    vec_push_ir(ret, BinOpIR, SUB, result, frame->newImmAccess(frame, 0), access);
+    vec_push_ir(ret, BinSrcIR, SUB, result, frame->newImmAccess(frame, 0), access);
   } break;
   case Op::NOT:
     // FIX
@@ -396,7 +396,7 @@ VarDeclStmt::translate(SymbolTable::Ptr symtab) const{
       } else {
         wrap_tie(rhs_vec, rhs_access, var->initval_, symtab);
         vec_push_all1(ret, rhs_vec);
-        vec_push_ir(ret, UnaryOpIR, MOV, access, rhs_access);
+        vec_push_ir(ret, UnarySrcIR, MOV, access, rhs_access);
       }
     } else if (var->initialized() && var->global()) {
       // TODO 全局变量 
@@ -437,7 +437,7 @@ IfStmt::translate(SymbolTable::Ptr symtab) const{
     wrap_tie_logic(condition_vec, no_label, condition_, symtab);
     wrap_tie(yes_vec, yes_access, yes_, yes_->symtab_);
     vec_push_all2(ret, condition_vec, yes_vec);
-    vec_push_ir(ret, SingalOpIR, LABEL, no_label);
+    vec_push_ir(ret, DstIR, LABEL, no_label);
     return std::make_tuple(ret, nullptr);
   }else {
     FrameAccess next_label = symtab->frame()->newLabelAccess(symtab->frame());
@@ -445,11 +445,11 @@ IfStmt::translate(SymbolTable::Ptr symtab) const{
     wrap_tie_logic(condition_vec, yes_label, condition_, symtab);
     wrap_tie(no_vec, access, no_, no_->symtab_);
     vec_push_all2(ret, condition_vec, no_vec);
-    vec_push_ir(ret, SingalOpIR, JMP, next_label);
-    vec_push_ir(ret, SingalOpIR, LABEL, yes_label);
+    vec_push_ir(ret, DstIR, JMP, next_label);
+    vec_push_ir(ret, DstIR, LABEL, yes_label);
     wrap_tie(yes_vec, yes_access, yes_, yes_->symtab_);
     vec_push_all1(ret, yes_vec);
-    vec_push_ir(ret, SingalOpIR, LABEL, next_label);
+    vec_push_ir(ret, DstIR, LABEL, next_label);
     return std::make_tuple(ret, nullptr);
 
   }
@@ -481,12 +481,12 @@ WhileStmt::translate(SymbolTable::Ptr symtab) const{
   wrap_tie_logic(condition_vec, body_access, condition_, symtab);
   wrap_tie(body_vec, tmp_access, body_, body_->symtab_);
 
-  vec_push_ir(ret, SingalOpIR, JMP, continue_access_);
-  vec_push_ir(ret, SingalOpIR, LABEL, body_access);
+  vec_push_ir(ret, DstIR, JMP, continue_access_);
+  vec_push_ir(ret, DstIR, LABEL, body_access);
   vec_push_all1(ret, body_vec);
-  vec_push_ir(ret, SingalOpIR, LABEL, continue_access_);
+  vec_push_ir(ret, DstIR, LABEL, continue_access_);
   vec_push_all1(ret, condition_vec);
-  vec_push_ir(ret, SingalOpIR, LABEL, break_access_);
+  vec_push_ir(ret, DstIR, LABEL, break_access_);
 
   now_while = temp;
   return std::make_tuple(ret, nullptr);
@@ -500,7 +500,7 @@ ReturnStmt::translate(SymbolTable::Ptr symtab) const{
   if (ret_exp_) {
     wrap_tie(vec, access, ret_exp_, symtab);
     vec_push_all1(ret, vec);
-    vec_push_ir(ret, UnaryOpIR, MOV, now_func->get_return_access(), access);
+    vec_push_ir(ret, UnarySrcIR, MOV, now_func->get_return_access(), access);
   }
   vec_push_ir(ret, NoOpIR, RET);
   return std::make_tuple(ret, nullptr);
@@ -510,7 +510,7 @@ std::tuple<vector<IR::Ptr>, FrameAccess>
 BreakStmt::translate(SymbolTable::Ptr symtab) const{
   assert(now_while);
   vector<IR::Ptr> ret;
-  vec_push_ir(ret, SingalOpIR, JMP, now_while->break_access_);
+  vec_push_ir(ret, DstIR, JMP, now_while->break_access_);
   return std::make_tuple(ret, nullptr);
 }
 
@@ -518,7 +518,7 @@ std::tuple<vector<IR::Ptr>, FrameAccess>
 ContinueStmt::translate(SymbolTable::Ptr symtab) const{
   assert(now_while);
   vector<IR::Ptr> ret;
-  vec_push_ir(ret, SingalOpIR, JMP, now_while->continue_access_);
+  vec_push_ir(ret, DstIR, JMP, now_while->continue_access_);
   return std::make_tuple(ret, nullptr);
 }
 
@@ -535,7 +535,7 @@ AssignmentStmt::translate(SymbolTable::Ptr symtab) const{
   } else {
     wrap_tie(vec, access, rval_, symtab);
     vec_push_all1(ret, vec);
-    vec_push_ir(ret, UnaryOpIR, MOV, entry.access_, access);
+    vec_push_ir(ret, UnarySrcIR, MOV, entry.access_, access);
   }
   return std::make_tuple(ret, nullptr);
 }
@@ -549,7 +549,7 @@ FunctionDecl::translate(SymbolTable::Ptr symtab) const{
   now_func = this;
 
   vector<IR::Ptr> ret;
-  vec_push_ir(ret, SingalOpIR, LABEL, frame_->newLabelAccess(frame_, name_));
+  vec_push_ir(ret, DstIR, LABEL, frame_->newLabelAccess(frame_, name_));
   wrap_tie(vec, access, body_, body_->symtab_);
   vec_push_all1(ret, vec);
 
