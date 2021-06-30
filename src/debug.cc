@@ -74,7 +74,7 @@ void VarExp::internal_print() const {
   }
 }
 
-void BinaryExp::internal_print() const{
+void BinaryExp::internal_print() const {
   switch (op_) {
   case Op::ADD:
     printer << yellow << "(";

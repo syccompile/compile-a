@@ -7,5 +7,6 @@
 
 class AsmTranslator_impl {
 public:
-  virtual std::vector<std::string> translate_asm(Frame::Ptr, std::vector<IR>) const = 0;
+  virtual std::vector<std::string> translate_asm(Frame::Ptr,
+                                                 std::vector<IR>) const = 0;
 };
