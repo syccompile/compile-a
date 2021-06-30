@@ -13,14 +13,15 @@ VarExp::~VarExp() {
   }
 }
 
-  // FIX: 将string 转换为int
-NumberExp::NumberExp(const string *str) 
-  : Expression(Op::NUM, true), string_(*str), value_(stoi(string_)) {
+// FIX: 将string 转换为int
+NumberExp::NumberExp(const string *str)
+    : Expression(Op::NUM, true), string_(*str), value_(stoi(string_)) {
   assert(str);
 }
 NumberExp::~NumberExp() {}
 
-FuncCallExp::FuncCallExp(const string *func_name, const vector<Expression *> *params)
+FuncCallExp::FuncCallExp(const string *func_name,
+                         const vector<Expression *> *params)
     : Expression(Op::CALL, false), name_(*func_name), params_(params) {
   assert(func_name);
 }
@@ -53,7 +54,8 @@ LogicExp::~LogicExp() {
   delete left_;
   delete right_;
 }
-UnaryExp::UnaryExp(const Op op, const Expression *exp) : Expression(op, false), exp_(exp) {
+UnaryExp::UnaryExp(const Op op, const Expression *exp)
+    : Expression(op, false), exp_(exp) {
   assert(exp);
   evaluable_ = exp->evaluable();
 }
@@ -67,7 +69,8 @@ Variable::Variable(const BType type, const string *name, bool immutable)
 
 Variable::Variable(const BType type, const string *name, bool immutable,
                    const Expression *initval)
-    : type_(type), name_(*name), immutable_(immutable), initialized_(true), initval_(initval) {
+    : type_(type), name_(*name), immutable_(immutable), initialized_(true),
+      initval_(initval) {
   assert(name);
   assert(initval);
 }
@@ -82,15 +85,16 @@ Array::InitValContainer::~InitValContainer() {
   }
 }
 
-Array::Array(const BType type, const string *name, bool immutable, const Expression::List *size)
+Array::Array(const BType type, const string *name, bool immutable,
+             const Expression::List *size)
     : Variable(type, name, immutable), dimens_(size),
       initval_container_(nullptr) {
   assert(name);
   assert(size);
 }
 
-Array::Array(const BType type, const string *name, bool immutable, const Expression::List *size,
-             InitVal *container)
+Array::Array(const BType type, const string *name, bool immutable,
+             const Expression::List *size, InitVal *container)
     : Variable(type, name, immutable), dimens_(size),
 
       initval_container_(dynamic_cast<InitValContainer *>(container)) {
@@ -116,7 +120,8 @@ BlockStmt::~BlockStmt() {
   }
 }
 
-IfStmt::IfStmt(const Expression *condition, const BlockStmt *yes, const BlockStmt *no)
+IfStmt::IfStmt(const Expression *condition, const BlockStmt *yes,
+               const BlockStmt *no)
     : condition_(condition), yes_(yes), no_(no) {
   assert(condition);
   assert(yes);
@@ -148,7 +153,8 @@ ExpStmt::~ExpStmt() { delete exp_; }
 ReturnStmt::ReturnStmt(const Expression *ret) : ret_exp_(ret) {}
 ReturnStmt::~ReturnStmt() { delete ret_exp_; }
 
-AssignmentStmt::AssignmentStmt(const string *name, const Expression::List *dimens,
+AssignmentStmt::AssignmentStmt(const string *name,
+                               const Expression::List *dimens,
                                const Expression *rval)
     : name_(*name), dimens_(dimens), rval_(rval) {
   assert(name);
@@ -217,7 +223,7 @@ int LogicExp::eval() const {
     return 0;
   }
 }
-int BinaryExp::eval() const{
+int BinaryExp::eval() const {
   switch (op_) {
   case Op::ADD:
     return left_->eval() + right_->eval();

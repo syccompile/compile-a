@@ -3,7 +3,7 @@
 #include "frame.h"
 #include "debug.h"
 
-class IR : public Debug_impl{
+class IR : public Debug_impl {
 public:
   using Ptr = std::shared_ptr<IR>;
   enum class Op {
@@ -35,14 +35,15 @@ public:
 
     // ...
   };
-  IR(Op op): op_(op) {}
+  IR(Op op) : op_(op) {}
   virtual ~IR() {}
   virtual void internal_print() const override;
+
 protected:
   Op op_;
 };
 
-class BinSrcIR : public IR{
+class BinSrcIR : public IR {
 public:
   BinSrcIR(Op op, FrameAccess dst, FrameAccess src1, FrameAccess src2)
       : src1_(src1), src2_(src2), dst_(dst), IR(op) {}
@@ -52,18 +53,19 @@ public:
 };
 class UnarySrcIR : public IR {
 public:
-  UnarySrcIR(Op op, FrameAccess dst, FrameAccess src) : src_(src), dst_(dst), IR(op){}
+  UnarySrcIR(Op op, FrameAccess dst, FrameAccess src)
+      : src_(src), dst_(dst), IR(op) {}
   FrameAccess src_;
   FrameAccess dst_;
 };
- 
+
 class DstIR : public IR {
-public :
+public:
   DstIR(Op op, FrameAccess dst) : dst_(dst), IR(op) {}
   FrameAccess dst_;
 };
 
 class NoOpIR : public IR {
-public :
+public:
   NoOpIR(Op op) : IR(op) {}
 };
