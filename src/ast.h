@@ -303,11 +303,10 @@ public:
 
   // 翻译过程中为自己创建的符号表项
   VarTabEntry::Ptr vartab_ent;
-  
+
   // 生成的符号表项目是否为函数参数
   int param_no;
   bool is_global() const { return param_no==-1 && context.vartab_cur->is_global(); }
-
 
 protected:
   // 变量类型
@@ -326,9 +325,6 @@ protected:
   Expression *initval_;
 
 private:
-  std::list<IR::Ptr> _translate_immutable();
-  std::list<IR::Ptr> _translate_variable();
-
   std::list<IR::Ptr> _translate_param();
   std::list<IR::Ptr> _translate_local();
   std::list<IR::Ptr> _translate_global();
@@ -408,9 +404,6 @@ private:
 
   std::vector<int> _get_shape();
   Expression::List _flatten_initval(const std::vector<int> &shape, int shape_ptr, InitValContainer *container);
-
-  std::list<IR::Ptr> _translate_immutable();
-  std::list<IR::Ptr> _translate_variable();
 
   std::list<IR::Ptr> _translate_param();
   std::list<IR::Ptr> _translate_local();
