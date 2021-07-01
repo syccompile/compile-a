@@ -669,82 +669,71 @@ NumberExp::translate() {
 }
 
 std::list<IR::Ptr>
-Variable::_translate_immutable() {
+Variable::_translate_param() {
+  this->vartab_ent = std::shared_ptr<VarTabEntry>(new VarTabEntry(
+    this->name_,
+    std::vector<int>(),
+    IR::Addr::make_param(this->param_no),
+    std::vector<int>(),
+    false
+  ));
+  return std::list<IR::Ptr>();
+}
+
+std::list<IR::Ptr>
+Variable::_translate_local() {
   std::list<IR::Ptr> ret;
 
-  // 常量要求初始化，且必须用编译期常量初始化
-  // TODO 错误处理
-  assert(this->initval_!=nullptr);
-  assert(this->initval_->is_evaluable());
+  IR::Addr::Ptr addr;
+  std::vector<int> init_val;
 
-  // 处理初始化值
-  std::vector<int> init_val = {this->initval_->eval()};
+  if (this->immutable_) {
+    assert(this->initval_!=nullptr);
+    assert(this->initval_->is_evaluable());
+    addr = IR::Addr::make_imm(this->initval_->eval());
+  }
+  else {
+    addr = IR::Addr::make_var(context.allocator.allocate_addr());
+    if (this->initval_) {
+      auto initval_addr = this->initval_->get_var_addr();
+      ret.splice(ret.end(), this->initval_->translate());
+      ADD_BIN(MOV, addr, initval_addr);
+    }
+  }
 
-  // 建立符号表项
   this->vartab_ent = std::shared_ptr<VarTabEntry>(new VarTabEntry(
-    this->name(),
-    std::vector<int>(),   // shape
-    nullptr,              // addr
-    init_val,  // initial value
-    true
+    this->name_,
+    std::vector<int>(),
+    addr,
+    init_val,
+    this->immutable_
   ));
 
   return ret;
 }
 
 std::list<IR::Ptr>
-Variable::_translate_variable() {
+Variable::_translate_global() {
   std::list<IR::Ptr> ret;
 
-  if (param_no!=-1) {
-    this->vartab_ent = std::shared_ptr<VarTabEntry>(new VarTabEntry(
-      this->name_,
-      std::vector<int>(),
-      IR::Addr::make_param(this->param_no),
-      std::vector<int>(),
-      false
-    ));
+  IR::Addr::Ptr addr;
+  std::vector<int> init_val;
+
+  addr = IR::Addr::make_named_label(this->name_);
+
+  // 处理初始值
+  if (this->initval_!=nullptr) {
+    assert(this->initval_->is_evaluable());
+    init_val.push_back(this->initval_->eval());
+  }
+  else {
+    init_val.push_back(0);
   }
 
-  else {
+  ADD_UNR(VARDEF, addr);
+  ADD_UNR(DATA, IR::Addr::make_imm(init_val[0]));
+  ADD_NOP(VAREND);
 
-    // 先分配地址
-    IR::Addr::Ptr var_addr;
-    std::vector<int> init_val;
-    
-    if (this->is_global()) {
-      var_addr = IR::Addr::make_named_label(this->name);
-    
-      // 处理初始值
-      if (this->initval_!=nullptr) {
-        assert(this->initval_->is_evaluable());
-        init_val.push_back(this->initval_->eval()); 
-      }
-
-      ADD_UNR(VARDEF, IR::Addr::make_named_label(this->name_));
-      ADD_UNR(DATA, IR::Addr::make_imm(init_val[0]));
-      ADD_NOP(VAREND);
-    }
-    else {
-      var_addr = IR::Addr::make_var(context.allocate)
-      if (this->initval_!=nullptr) {
-        auto init_val_addr = this->initval_->get_var_addr();
-        if (init_val_addr->kind==IR::Addr::Kind::IMM) init_val.push_back(init_val_addr->val);
-
-        ret.splice(ret.end(), this->initval_->translate());
-        ADD_BIN(MOV, IR::Addr::make_var(var_addr), init_val_addr);
-      }
-    }
-    
-    // 建立符号表项
-    this->vartab_ent = std::shared_ptr<VarTabEntry>(new VarTabEntry(
-      this->name(),
-      std::vector<int>(),            // shape
-      IR::Addr::make_var(var_addr),  // addr
-      init_val,           // init_val
-      false
-    ));
-  
   return ret;
 }
 
@@ -752,8 +741,9 @@ std::list<IR::Ptr>
 Variable::translate() {
   std::list<IR::Ptr> ret;
 
-  if (this->immutable()) ret.splice(ret.end(), this->_translate_immutable());
-  else                   ret.splice(ret.end(), this->_translate_variable());
+  if (this->param_no!=-1)     ret.splice(ret.end(), this->_translate_param());
+  else if (this->is_global()) ret.splice(ret.end(), this->_translate_global());
+  else                        ret.splice(ret.end(), this->_translate_local());
 
   return ret;
 }
@@ -849,174 +839,126 @@ Array::_flatten_initval(const std::vector<int> &shape, int shape_ptr, InitValCon
 }
 
 std::list<IR::Ptr>
-Array::_translate_variable() {
-  std::list<IR::Ptr> ret;
+Array::_translate_param() {
+  std::vector<int> shape = this->_get_shape();
+  this->vartab_ent = std::make_shared<VarTabEntry>(
+    this->name_,
+    shape,
+    IR::Addr::make_param(this->param_no),
+    std::vector<int>(),
+    false
+  );
+  return std::list<IR::Ptr>();
+}
 
-  // 获取数组形状
+std::list<IR::Ptr>
+Array::_translate_local() {
+  std::list<IR::Ptr> ret;
+  std::vector<int> init_val;
   std::vector<int> shape = this->_get_shape();
 
-  // 是函数参数
-  if (this->param_no != -1) {
-    this->vartab_ent = std::make_shared<VarTabEntry>(
-      this->name_,
-      shape,
-      IR::Addr::make_param(this->param_no),
-      std::vector<int>()
-    );
-    return;
-  }
-  // 是全局或局部数组
-  else {
-    // 若存在初始值，就将初始值先展开成一维
-    Expression::List flattened_container;
-    if (this->initval_container_!=nullptr)
-      flattened_container.splice(flattened_container.end(), this->_flatten_initval(shape, 0, this->initval_container_));
+  // 若存在初始值，就将初始值先展开成一维
+  Expression::List flattened_container;
+  if (this->initval_container_!=nullptr)
+    flattened_container.splice(flattened_container.end(), this->_flatten_initval(shape, 0, this->initval_container_));
     
-    IR::Addr::Ptr addr;
-    
-    // 全局数组
-    if (this->is_global()) {
-      addr = IR::Addr::make_named_label(this->name_);
-
-      // 检查初值序列是否为常量
-      for (Expression *exp: flattened_container) {
-        if (exp==nullptr) continue;
-        assert(exp->is_evaluable());
-      }
-      // 生成中间代码
-      ADD_UNR(VARDEF, this->name_);
-      int z_num = 0;
-      for (Expression *exp: flattened_container) {
-        int val = exp==nullptr ? 0 : exp->eval();
-        if (val==0) z_num++;
-        else {
-          if (z_num!=0) ADD_UNR(ZERO, IR::Addr::make_imm(z_num));
-          z_num = 0;
-          ADD_UNR(DATA, IR::Addr::make_imm(val));
-        }
-        if (z_num!=0) ADD_UNR(ZERO, IR::Addr::make_imm(z_num));
-      }
-      ADD_NOP(VAREND);
-    } 
-    // 局部数组
-    else {
-      addr = IR::Addr::make_var(context.allocator.allocate_addr());
-
-      // 栈上分配空间
-      ADD_BIN(ALLOC_IN_STACK, addr, flattened_container.size()*4);
-      
-      // 生成初值序列
-      int offset = 0;
-      if (this->initval_container_!=nullptr) for (Expression *exp: flattened_container) {
-        IR::Addr::Ptr exp_addr;
-        if (exp==nullptr) exp_addr = IR::Addr::make_imm(0);
-        else {
-          exp_addr = exp->get_var_addr();
-          ret.splice(ret.end(), exp->translate());
-        }
-        ADD_TRP(STORE, exp_addr, addr, IR::Addr::make_imm(offset));
-        offset++;
-      }
+  // 栈上分配空间
+  IR::Addr::Ptr addr = IR::Addr::make_var(context.allocator.allocate_addr());
+  ADD_BIN(ALLOC_IN_STACK, addr, IR::Addr::make_imm(flattened_container.size()*4));
+  
+  int offset = 0;
+  // 如果是常值，就需要指定初值
+  if (this->immutable_) {
+    assert(this->initval_container_!=nullptr);
+    for (Expression *exp: flattened_container) {
+      if (exp==nullptr) continue;
+      assert(exp->is_evaluable());
     }
 
-    // 建立符号表项
-    this->vartab_ent = std::make_shared<VarTabEntry>(
-      this->name_,
-      shape,
-      addr,
-      std::vector<int>(),
-      false
-    );
+    for (Expression *exp: flattened_container) {
+      int val = exp->eval();
+      init_val.push_back(val);
+      ADD_TRP(STORE, IR::Addr::make_imm(val), addr, IR::Addr::make_imm(offset));
+      offset++;
+    }
   }
+  else if (this->initval_container_!=nullptr) for (Expression *exp: flattened_container) {
+    IR::Addr::Ptr exp_addr;
+    if (exp==nullptr) exp_addr = IR::Addr::make_imm(0);
+    else {
+      exp_addr = exp->get_var_addr();
+      ret.splice(ret.end(), exp->translate());
+    }
+    ADD_TRP(STORE, exp_addr, addr, IR::Addr::make_imm(offset));
+    offset++;
+  }
+
+  // 建立符号表项
+  this->vartab_ent = std::shared_ptr<VarTabEntry>(new VarTabEntry(
+    this->name_,
+    shape,
+    addr,
+    init_val,
+    this->immutable_
+  ));
 
   return ret;
 }
 
 std::list<IR::Ptr>
-Array::_translate_immutable() {
+Array::_translate_global() {
   std::list<IR::Ptr> ret;
-
-  // 获取数组形状
   std::vector<int> shape = this->_get_shape();
-
-  // 将初始值先展开成一维
+  IR::Addr::Ptr addr = IR::Addr::make_named_label(this->name_);
+  
+  // 若存在初始值，就将初始值先展开成一维
   Expression::List flattened_container;
-  if (this->initval_container_!=nullptr) {
+  if (this->initval_container_!=nullptr)
     flattened_container.splice(flattened_container.end(), this->_flatten_initval(shape, 0, this->initval_container_));
-
+  
   // 检查初值序列是否为常量
   for (Expression *exp: flattened_container) {
     if (exp==nullptr) continue;
     assert(exp->is_evaluable());
   }
-
-
-  IR::Addr::Ptr addr;
-
-  // 全局数组
-  if (this->is_global()) {
-    addr = IR::Addr::make_named_label(this->name_);
-
-    // 检查初值序列是否为常量
-    for (Expression *exp: flattened_container) {
-      if (exp==nullptr) continue;
-      assert(exp->is_evaluable());
+  
+  // 生成中间代码
+  ADD_UNR(VARDEF, addr);
+  // 记录零的个数，减少代码量
+  int z_num = 0;
+  for (Expression *exp: flattened_container) {
+    int val = exp==nullptr ? 0 : exp->eval();
+  
+    if (val==0) {
+      z_num++;
     }
-    // 生成中间代码
-    ADD_UNR(VARDEF, this->name_);
-    int z_num = 0;
-    for (Expression *exp: flattened_container) {
-      int val = exp==nullptr ? 0 : exp->eval();
-      if (val==0) z_num++;
-      else {
-        if (z_num!=0) ADD_UNR(ZERO, IR::Addr::make_imm(z_num));
-        z_num = 0;
-        ADD_UNR(DATA, IR::Addr::make_imm(val));
-      }
+    else {
       if (z_num!=0) ADD_UNR(ZERO, IR::Addr::make_imm(z_num));
-    }
-    ADD_NOP(VAREND);
-  } 
-  // 局部数组
-  else {
-    addr = IR::Addr::make_var(context.allocator.allocate_addr());
-
-    // 栈上分配空间
-    ADD_BIN(ALLOC_IN_STACK, addr, flattened_container.size()*4);
-    
-    // 生成初值序列
-    int offset = 0;
-    if (this->initval_container_!=nullptr) for (Expression *exp: flattened_container) {
-      IR::Addr::Ptr exp_addr;
-      if (exp==nullptr) exp_addr = IR::Addr::make_imm(0);
-      else {
-        exp_addr = exp->get_var_addr();
-        ret.splice(ret.end(), exp->translate());
-      }
-      ADD_TRP(STORE, exp_addr, addr, IR::Addr::make_imm(offset));
-      offset++;
+      z_num = 0;
+      ADD_UNR(DATA, IR::Addr::make_imm(val));
     }
   }
+  if (z_num!=0) ADD_UNR(ZERO, IR::Addr::make_imm(z_num));
+  ADD_NOP(VAREND);
 
-  // 建立符号表项
-  this->vartab_ent = std::make_shared<VarTabEntry>(
+  this->vartab_ent = std::shared_ptr<VarTabEntry>(new VarTabEntry(
     this->name_,
     shape,
     addr,
-    init_val,
-    true
-  );
-  
+    std::vector<int>(),
+    this->immutable_
+  ));
+
   return ret;
-}
 }
 
 std::list<IR::Ptr>
 Array::translate() {
   std::list<IR::Ptr> ret;
 
-  if (this->immutable()) ret.splice(ret.end(), this->_translate_immutable());
-  else                   ret.splice(ret.end(), this->_translate_variable());
+  if (this->param_no!=-1)     ret.splice(ret.end(), this->_translate_param());
+  else if (this->is_global()) ret.splice(ret.end(), this->_translate_global());
+  else                        ret.splice(ret.end(), this->_translate_local());
 
   return ret;
 }
@@ -1211,9 +1153,9 @@ FunctionDecl::translate() {
 
   int cnt = 0;
   if (this->params_) for (Variable *i: *(this->params_)) {
+    i->param_no = cnt;
     i->translate();
     auto i_ent = i->vartab_ent;
-    i_ent->param_order = cnt++;
     this->body_->pre_defined.push_back(i_ent);
   }
 

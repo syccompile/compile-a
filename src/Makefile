@@ -1,4 +1,4 @@
-CXX = g++
+CXX = clang++
 CXXFLAGS = -std=c++11 -g
 BISON = bison
 FLEX = flex
@@ -10,7 +10,7 @@ TEST_TXT = example.txt
 OBJS = analyzer.o ast.o debug.o flex.o ast_to_ir.o main.o context/types.o context/vartab.o context/context.o
 
 BISON_SOURCE = analyzer.y
-BISON_FLAG  = -Wall
+BISON_FLAG  = 
 BISON_OUT_CPP = analyzer.cc
 BISON_OUTPUT = analyzer.cc analyzer.hh
 FLEX_SOURCE = flex.l

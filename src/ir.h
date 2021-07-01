@@ -45,6 +45,7 @@ public:
     DATA,
     ZERO,
     VAREND,
+    ALLOC_IN_STACK,
 
     LOAD,
     STORE,
