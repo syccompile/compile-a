@@ -23,7 +23,7 @@ int func3(int a) {
 
 int func1 (int a, int c[][10][10]){
   a = func2(a, 10);
-  int b = a;
+  int b = c[1][0][a];
   a = 2 + 3 * b / 4 * 5;
   a = 0xf + 1 + 01; 
   return 10;

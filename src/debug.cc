@@ -362,6 +362,7 @@ break;
     CASE(IMM, '#');
     CASE(BRANCH_LABEL, ".L");
     CASE(NAMED_LABEL, "");
+    CASE(RET, 'r');
   };
 
 #undef CASE

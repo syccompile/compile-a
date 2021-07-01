@@ -271,6 +271,11 @@ FuncCallExp::eval() {
   return 0;
 }
 
+IR::Addr::Ptr
+FuncCallExp::get_var_addr() {
+  return this->addr_ = IR::Addr::make_ret();
+}
+
 std::list<IR::Ptr>
 FuncCallExp::translate() {
   std::list<IR::Ptr> ret;

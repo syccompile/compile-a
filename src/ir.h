@@ -58,7 +58,7 @@ public:
   public:
     using Ptr = std::shared_ptr<Addr>;
 
-    enum Kind: int { VAR, PARAM, IMM, BRANCH_LABEL, NAMED_LABEL } kind;
+    enum Kind: int { VAR, PARAM, IMM, BRANCH_LABEL, NAMED_LABEL, RET } kind;
     int val;
     std::string name;
 
@@ -70,6 +70,7 @@ public:
     static Ptr make_param(int v) { return std::make_shared<Addr>(Kind::PARAM, v); }
     static Ptr make_imm(int v)   { return std::make_shared<Addr>(Kind::IMM, v); }
     static Ptr make_label(int v) { return std::make_shared<Addr>(Kind::BRANCH_LABEL, v); }
+    static Ptr make_ret()        { return std::make_shared<Addr>(Kind::RET, 0); }
     static Ptr make_named_label(std::string s) { return std::make_shared<Addr>(Kind::NAMED_LABEL, s); }
   };
 

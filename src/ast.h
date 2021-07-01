@@ -155,8 +155,8 @@ public:
   virtual std::list<IR::Ptr> translate() override;
 
   // 获取变量地址
-  // 如果没有分配，它会自动分配一个
-  virtual IR::Addr::Ptr get_var_addr() { return Expression::get_var_addr(); }
+  // 函数调用的变量地址总是返回值地址
+  virtual IR::Addr::Ptr get_var_addr() override;
 
 private:
   // 函数名
