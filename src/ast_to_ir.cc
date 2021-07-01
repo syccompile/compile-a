@@ -89,20 +89,6 @@ Expression::Op reverse_op(Expression::Op op) {
 
 }
 
-// 获取多维数组的偏移量（编译期可求值的）
-int
-get_offset(const std::vector<int> &shape, const std::vector<int> &dimens) {
-  int offset = dimens.back();
-  int acc    = shape.back();
-
-  for (int i=dimens.size()-2 ; i>0 ; i--) {
-    offset += (acc*dimens[i]);
-    acc    *= shape[i];
-  }
-
-  return offset;
-}
-
 // 获取多维数组的偏移量（编译期不可求值的）
 std::pair<IR::Addr::Ptr, std::list<IR::Ptr> >
 get_offset(const std::vector<int> &shape, Expression::List &dimens) {
@@ -110,21 +96,48 @@ get_offset(const std::vector<int> &shape, Expression::List &dimens) {
 
   // 先计算各个表达式的值
   std::vector<IR::Addr::Ptr> dims;
-  // 先解析各个下标表达式
+  // 先计算各个下标表达式
   for (Expression *exp: dimens) {
     IR::Addr::Ptr addr = exp->get_var_addr();
     ret.splice(ret.end(), exp->translate());
     dims.push_back(addr);
-  }
-  
-  // 再根据数组形状计算偏移量
-  IR::Addr::Ptr offset_addr = IR::Addr::make_var(context.allocator.allocate_addr());
-  ADD_BIN(MOV, offset_addr, dims.back());
+  }  
 
-  int acc = shape.back();
+  int acc = 1;
+  int i = dims.size() - 1;
+
+  // 常量优化：数组最右边的表达式均为常量
+  // 例如：a[b+c][1][2][3][4]
+  // 那么[1][2][3][4]的偏移量可以直接编译期计算
+  int constant_offset = 0;
+  for (; i>0 ; i++) {
+    // 如果取到非编译期常量的表达式，那么就跳出循环
+    if (dims[i]->kind != IR::Addr::Kind::IMM) break;
+    // 如果取到编译期常量
+    constant_offset = constant_offset + acc*(dims[i]->val);
+    acc *= shape[i];
+  } 
+  // 如果所有下标都计算完了，就直接返回常地址
+  if (i==0) return std::make_pair(IR::Addr::make_imm(constant_offset), ret);
+  // 常量优化结束
+  
+  // 再计算非编译期常数的偏移量
+  // 为变址分配存储空间
+  IR::Addr::Ptr offset_addr = IR::Addr::make_var(context.allocator.allocate_addr());
+
+  // 先将常量变址计算结果拷贝过来
+  ADD_BIN(MOV, offset_addr, IR::Addr::make_imm(constant_offset));
+  // 再根据余下的下标计算变址（运行时计算）
   for (int i=dims.size()-2 ; i>0 ; i++) {
-    ADD_TRP(MUL, dims[i], dims[i], IR::Addr::make_imm(acc));
-    ADD_TRP(ADD, offset_addr, offset_addr, dims[i]);
+    if (dims[i]->kind == IR::Addr::IMM) {
+      auto tmp = IR::Addr::make_var(context.allocator.allocate_addr());
+      ADD_TRP(MUL, tmp, dims[i], IR::Addr::make_imm(acc));
+      ADD_TRP(ADD, offset_addr, offset_addr, tmp);
+    }
+    else {
+      ADD_TRP(MUL, dims[i], dims[i], IR::Addr::make_imm(acc));
+      ADD_TRP(ADD, offset_addr, offset_addr, dims[i]);
+    }
     acc *= shape[i];
   }
 
@@ -149,10 +162,11 @@ VarExp::is_evaluable() const {
   assert(ent!=nullptr);
 
   // 首先检查（数组表达式的）下标是否编译期可求值
-  if (this->dimens_!=nullptr) for (Expression *each_index: *(this->dimens_)) {
-    if (each_index->is_evaluable()) continue;
-    return false;
-  }
+  if (ent->is_array()) {
+    assert(this->dimens_!=nullptr);
+    auto offset_pair = get_offset(ent->type.arr_shape, *(this->dimens_));
+    if (offset_pair.first->kind != IR::Addr::IMM) return false;
+  } 
 
   // 再检查变量本身是不是编译期常量
   return ent->is_constant;
@@ -165,13 +179,11 @@ VarExp::eval() {
   assert(ent!=nullptr);
 
   if (ent->is_array()) {
+    assert(this->dimens_!=nullptr);
     // 该变量是数组
     // 首先获取下标
-    std::vector<int> dims;
-    for (Expression *exp: *(this->dimens_)) dims.push_back(exp->eval());
-    int offset = get_offset(ent->type.arr_shape, dims);
-
-    return ent->init_val[offset];
+    auto offset_pair = get_offset(ent->type.arr_shape, *(this->dimens_));
+    return ent->init_val[offset_pair.first->val];
   }
 
   return ent->init_val[0];
@@ -203,37 +215,40 @@ VarExp::translate() {
   // 如果编译期不可求值
   std::list<IR::Ptr> ret;
 
-  // 转为逻辑表达式
+  // 上级语法单位要求转为逻辑表达式
+  // 翻译模式：生成临时表达式 (this==0)
   if (this->translate_to_logical()) {
-    // 生成临时表达式 (this==0)
+    // 生成 (this==0)临时表达式
     BinaryExp *tmp = new BinaryExp(Op::EQ, this, new NumberExp(0));
-    
-    // 要求这个临时表达式转为逻辑表达式，赋予本表达式的失败标号
+    // 要求这个临时表达式转为逻辑表达式，并赋予本表达式的失败标号
     tmp->cast_to_logical = true;
     tmp->cast_to_regular = false;
     tmp->set_fail_label(this->label_fail_);
 
+    // 翻译这个临时表达式，作为本表达式的翻译结果
     ret.splice(ret.end(), tmp->translate());
 
-    // 防止析构掉 this
-    tmp->left_ = nullptr;
+    // delete 掉这个临时表达式
+    tmp->left_ = nullptr;  // 为防止析构掉 this
     delete tmp;
   }
-  // 转为算术表达式
+  // 上级语法单位要求转为算术表达式
+  // 翻译模式：分数组和单一变量两类
   else {
+    // 查符号表
     auto ent = context.vartab_cur->get(this->ident_);
     assert(ent!=nullptr);
 
     // 如果是数组
     if (ent->is_array()) {
-      auto offset_rel = get_offset(ent->type.arr_shape, *(this->dimens_));
-      ret.splice(ret.end(), offset_rel.second);
-      ADD_TRP(LOAD, this->addr_, ent->addr, offset_rel.first);
+      // 计算数组下标
+      auto offset_pair = get_offset(ent->type.arr_shape, *(this->dimens_));
+      ret.splice(ret.end(), offset_pair.second);
+      // 读取数组内容
+      ADD_TRP(LOAD, this->addr_, ent->addr, offset_pair.first);
     }
     // 如果是单一变量
-    else {
-      this->addr_ = ent->addr;
-    }
+    // 那就啥也不干
   }
 
   return ret;
@@ -253,7 +268,8 @@ std::list<IR::Ptr>
 FuncCallExp::translate() {
   std::list<IR::Ptr> ret;
 
-  if (params_) {
+  // 如果存在参数
+  if (params_!=nullptr) {
     int i = 0;
     
     // 首先计算各个函数参数的值
@@ -267,8 +283,7 @@ FuncCallExp::translate() {
     for (Expression *exp : *params_) ADD_UNR(PARAM, exp->get_var_addr());
   }
 
-  // TODO warning when call an undeclared function
-  // 最后生成函数调用的代码
+  // 生成函数调用的代码
   ADD_UNR(CALL, IR::Addr::make_named_label(this->name_));
 
   return ret;
@@ -276,6 +291,18 @@ FuncCallExp::translate() {
 
 bool
 BinaryExp::is_evaluable() const {
+  switch(this->op_) {
+    case Expression::Op::AND:
+      if (this->left_->is_evaluable() && this->left_->eval()==0) return true;
+      if (this->right_->is_evaluable() && this->right_->eval()==0) return true;
+      break;
+    case Expression::Op::OR:
+      if (this->left_->is_evaluable() && this->left_->eval()==1) return true;
+      if (this->right_->is_evaluable() && this->right_->eval()==1) return true;
+      break;
+    default:
+      break;
+  }
   return this->left_->is_evaluable() && this->right_->is_evaluable();
 }
 
@@ -285,8 +312,16 @@ BinaryExp::eval() {
 #define CASE(EXPR_OP, ACTUAL_OP) case Expression::Op:: EXPR_OP : return this->left_->eval() ACTUAL_OP this->right_->eval()
 
   switch(this->op_) {
-    CASE(AND, &&);
-    CASE(OR,  ||);
+    case Expression::Op::AND:
+      if (this->left_->is_evaluable() && this->left_->eval()==0) return 0;
+      if (this->right_->is_evaluable() && this->right_->eval()==0) return 0;
+      return 1;
+      break;
+    case Expression::Op::OR:
+      if (this->left_->is_evaluable() && this->left_->eval()==1) return 1;
+      if (this->right_->is_evaluable() && this->right_->eval()==1) return 1;
+      return 0;
+      break;
     CASE(ADD, +);
     CASE(SUB, -);
     CASE(MUL, *);
@@ -299,6 +334,11 @@ BinaryExp::eval() {
 
 }
 
+/* 翻译模式：
+ * 无论上级表达式要求本（逻辑）表达式翻译为逻辑型表达式还是数值型表达式
+ * 都先按照逻辑型表达式的方式翻译
+ * 如果要求本表达式转为算术表达式，那么就在逻辑型表达式的基础上，在条件为真、为假处加上 MOV #0或 MOV #1 的代码
+ */
 std::list<IR::Ptr>
 BinaryExp::_translate_logical() {
   std::list<IR::Ptr> ret;
@@ -390,7 +430,7 @@ BinaryExp::_translate_logical() {
       break;
   }
 
-  // 如果表达式被要求转为算术表达式，则加入以下代码
+  // 如果上级表达式要求本表达式转为算术表达式，则加入以下代码
   if (!(this->translate_to_logical())) {
     // mov <this address> , imm(1)
     // jmp end
@@ -447,10 +487,10 @@ BinaryExp::_translate_rel() {
 std::list<IR::Ptr>
 BinaryExp::_translate_regular() {
   std::list<IR::Ptr> ret;
-
+    
+  // 上级表达式要求本表达式生成一个逻辑表达式
+  // 那么就直接生成一个临时性的关系表达式 (this==0) ，利用它生成中间代码
   if (this->translate_to_logical()) {
-    // 要求生成一个逻辑表达式
-    // 那么就直接生成一个临时性的关系表达式，利用它生成中间代码
     BinaryExp *tmp = new BinaryExp(Expression::Op::EQ, this, new NumberExp(0));
     tmp->cast_to_logical = true;
     tmp->cast_to_regular = false;
@@ -705,9 +745,9 @@ Array::_get_shape() {
   return ret;
 }
 
-std::vector<int>
-Array::_get_const_initval(const std::vector<int> &shape, int shape_ptr, InitValContainer *container) {
-  std::vector<int> ret;
+Expression::List
+Array::_flatten_initval(const std::vector<int> &shape, int shape_ptr, InitValContainer *container) {
+  Expression::List ret;
 
   // 如果只余下一个维度，就特殊处理
   if (shape_ptr+1==shape.size()) {
@@ -728,10 +768,7 @@ Array::_get_const_initval(const std::vector<int> &shape, int shape_ptr, InitValC
           InitValExp *exp = static_cast<InitValExp*>(now_container->initval_container_[i]);
           // 如果表达式数量超过需求量，就忽略后面的表达式
           if (ret.size()>=shape[shape_ptr]) goto loop_end;
-          // TODO 要求表达式是常量，报错
-          assert(exp->exp_->is_evaluable());
-          // 加入表达式
-          ret.push_back(exp->exp_->eval());
+          ret.push_back(exp->exp_);
         }
         else {
           InitValContainer *sub_container = static_cast<InitValContainer*>(now_container->initval_container_[i]);
@@ -745,7 +782,7 @@ Array::_get_const_initval(const std::vector<int> &shape, int shape_ptr, InitValC
       }
     }
     loop_end:
-    while (ret.size()<shape[shape_ptr]) ret.push_back(0);
+    while (ret.size()<shape[shape_ptr]) ret.push_back(nullptr);
     return ret;
   }
 
@@ -763,27 +800,23 @@ Array::_get_const_initval(const std::vector<int> &shape, int shape_ptr, InitValC
       // 如果表达式数量超过需求量，就忽略后面的表达式
       if (ret.size()>=required_size*shape[shape_ptr]) break;
 
-      // TODO 要求表达式是常量，报错
-      assert(exp->exp_->is_evaluable());
-      // 加入表达式
-      ret.push_back(exp->exp_->eval());
+      ret.push_back(exp->exp_);
     }
     else {
       // 如果val是列表容器，就递归生成
-
       InitValContainer *sub_container = static_cast<InitValContainer*>(val);
       // 首先对齐边界
-      while (ret.size()%required_size) ret.push_back(0);
+      while (ret.size()%required_size) ret.push_back(nullptr);
       // 如果表达式数量超过需求量，就忽略后面的表达式
       if (ret.size()>=required_size*shape[shape_ptr]) break;
 
       // 否则递归调用
-      auto tmp = this->_get_const_initval(shape, shape_ptr+1, sub_container);
+      ret.splice(ret.end(), this->_flatten_initval(shape, shape_ptr+1, sub_container));
     }
   }
 
   // 补满余下的
-  while (ret.size()<required_size*shape[shape_ptr]) ret.push_back(0);
+  while (ret.size()<required_size*shape[shape_ptr]) ret.push_back(nullptr);
 
   return ret;
 }
@@ -795,19 +828,79 @@ Array::_translate_variable() {
   // 获取数组形状
   std::vector<int> shape = this->_get_shape();
 
-  // 再生成初值序列
-  std::vector<int> init_val;
-  if (this->initval_container_) init_val = this->_get_const_initval(shape, 0, this->initval_container_);
+  // 是函数参数
+  if (this->param_no != -1) {
+    this->vartab_ent = std::make_shared<VarTabEntry>(
+      this->name_,
+      shape,
+      IR::Addr::make_param(this->param_no),
+      std::vector<int>()
+    );
+    return;
+  }
+  // 是全局或局部数组
+  else {
+    // 若存在初始值，就将初始值先展开成一维
+    Expression::List flattened_container;
+    if (this->initval_container_!=nullptr)
+      flattened_container.splice(flattened_container.end(), this->_flatten_initval(shape, 0, this->initval_container_));
+    
+    IR::Addr::Ptr addr;
+    
+    // 全局数组
+    if (this->is_global()) {
+      addr = IR::Addr::make_named_label(this->name_);
 
-  // 建立符号表项
-  this->vartab_ent = std::make_shared<VarTabEntry>(
-    this->name_,
-    shape,
-    IR::Addr::make_var(context.allocator.allocate_addr()),
-    init_val,
-    false
-  );
-  
+      // 检查初值序列是否为常量
+      for (Expression *exp: flattened_container) {
+        if (exp==nullptr) continue;
+        assert(exp->is_evaluable());
+      }
+      // 生成中间代码
+      ADD_UNR(VARDEF, this->name_);
+      int z_num = 0;
+      for (Expression *exp: flattened_container) {
+        int val = exp==nullptr ? 0 : exp->eval();
+        if (val==0) z_num++;
+        else {
+          if (z_num!=0) ADD_UNR(ZERO, IR::Addr::make_imm(z_num));
+          z_num = 0;
+          ADD_UNR(DATA, IR::Addr::make_imm(val));
+        }
+        if (z_num!=0) ADD_UNR(ZERO, IR::Addr::make_imm(z_num));
+      }
+    } 
+    // 局部数组
+    else {
+      addr = IR::Addr::make_var(context.allocator.allocate_addr());
+
+      // 栈上分配空间
+      ADD_BIN(ALLOC_IN_STACK, addr, flattened_container.size()*4);
+      
+      // 生成初值序列
+      int offset = 0;
+      if (this->initval_container_!=nullptr) for (Expression *exp: flattened_container) {
+        IR::Addr::Ptr exp_addr;
+        if (exp==nullptr) exp_addr = IR::Addr::make_imm(0);
+        else {
+          exp_addr = exp->get_var_addr();
+          ret.splice(ret.end(), exp->translate());
+        }
+        ADD_TRP(STORE, exp_addr, addr, IR::Addr::make_imm(offset));
+        offset++;
+      }
+    }
+
+    // 建立符号表项
+    this->vartab_ent = std::make_shared<VarTabEntry>(
+      this->name_,
+      shape,
+      addr,
+      std::vector<int>(),
+      false
+    );
+  }
+
   return ret;
 }
 
@@ -818,14 +911,69 @@ Array::_translate_immutable() {
   // 获取数组形状
   std::vector<int> shape = this->_get_shape();
 
-  // 再生成初值序列
-  std::vector<int> init_val = this->_get_const_initval(shape, 0, this->initval_container_);
+  // 将初始值先展开成一维
+  Expression::List flattened_container;
+  if (this->initval_container_!=nullptr) {
+    flattened_container.splice(flattened_container.end(), this->_flatten_initval(shape, 0, this->initval_container_));
+
+  // 检查初值序列是否为常量
+  for (Expression *exp: flattened_container) {
+    if (exp==nullptr) continue;
+    assert(exp->is_evaluable());
+  }
+
+
+  IR::Addr::Ptr addr;
+
+  // 全局数组
+  if (this->is_global()) {
+    addr = IR::Addr::make_named_label(this->name_);
+
+    // 检查初值序列是否为常量
+    for (Expression *exp: flattened_container) {
+      if (exp==nullptr) continue;
+      assert(exp->is_evaluable());
+    }
+    // 生成中间代码
+    ADD_UNR(VARDEF, this->name_);
+    int z_num = 0;
+    for (Expression *exp: flattened_container) {
+      int val = exp==nullptr ? 0 : exp->eval();
+      if (val==0) z_num++;
+      else {
+        if (z_num!=0) ADD_UNR(ZERO, IR::Addr::make_imm(z_num));
+        z_num = 0;
+        ADD_UNR(DATA, IR::Addr::make_imm(val));
+      }
+      if (z_num!=0) ADD_UNR(ZERO, IR::Addr::make_imm(z_num));
+    }
+  } 
+  // 局部数组
+  else {
+    addr = IR::Addr::make_var(context.allocator.allocate_addr());
+
+    // 栈上分配空间
+    ADD_BIN(ALLOC_IN_STACK, addr, flattened_container.size()*4);
+    
+    // 生成初值序列
+    int offset = 0;
+    if (this->initval_container_!=nullptr) for (Expression *exp: flattened_container) {
+      IR::Addr::Ptr exp_addr;
+      if (exp==nullptr) exp_addr = IR::Addr::make_imm(0);
+      else {
+        exp_addr = exp->get_var_addr();
+        ret.splice(ret.end(), exp->translate());
+      }
+      ADD_TRP(STORE, exp_addr, addr, IR::Addr::make_imm(offset));
+      offset++;
+    }
+  }
 
   // 建立符号表项
   this->vartab_ent = std::make_shared<VarTabEntry>(
     this->name_,
     shape,
-    nullptr,
+    addr,
     init_val,
     true
   );

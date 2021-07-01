@@ -47,7 +47,7 @@ UnaryExp::~UnaryExp() { delete exp_; }
 
 Variable::Variable(BType type, string *name, bool immutable)
     : type_(type), name_(*name), immutable_(immutable),
-      initialized_(false), initval_(nullptr) {
+      initialized_(false), initval_(nullptr), param_no(-1) {
   assert(name);
 }
 Variable::Variable(BType type, string *name, bool immutable,

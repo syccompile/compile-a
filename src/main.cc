@@ -15,7 +15,7 @@ int main() {
   yyparse();
 
   for (VarDeclStmt *stmt : vardecl) {
-    stmt->translate();
+    for (auto ir_ptr: stmt->translate()) ir_ptr->internal_print();
   }
   for (FunctionDecl *f : funcs) {
     for (auto ir_ptr: f->translate()) ir_ptr->internal_print();

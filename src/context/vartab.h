@@ -24,10 +24,8 @@ public:
   IR::Addr::Ptr addr;
   // 是否为常量
   bool is_constant;
-  // 如果该符号是参数，则为参数序号，否则为-1
-  int param_order;
 
-  VarTabEntry(std::string name, std::vector<int> shape, IR::Addr::Ptr addr, std::vector<int> init_val, bool is_const=false, int param_order=-1);
+  VarTabEntry(std::string name, std::vector<int> shape, IR::Addr::Ptr addr, std::vector<int> init_val, bool is_const=false);
   // 判断是否为数组，规则请参考成员shape的说明
   bool is_array() const { return type.arr_shape.size()!=0; }
 };

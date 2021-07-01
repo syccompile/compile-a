@@ -398,7 +398,7 @@ private:
   InitValContainer *initval_container_;
 
   std::vector<int> _get_shape();
-  std::vector<int> _get_const_initval(const std::vector<int> &shape, int shape_ptr, InitValContainer *container);
+  Expression::List _flatten_initval(const std::vector<int> &shape, int shape_ptr, InitValContainer *container);
 
   std::list<IR::Ptr> _translate_immutable();
   std::list<IR::Ptr> _translate_variable();

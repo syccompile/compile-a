@@ -41,6 +41,11 @@ public:
     CALL,
     RET,
 
+    VARDEF,
+    DATA,
+    ZERO,
+    VAREND,
+
     LOAD,
     STORE,
 
