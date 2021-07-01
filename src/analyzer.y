@@ -258,9 +258,9 @@ int parse_hex(char const *num) {
   int ret = 0;
   while ((*num)!='\0') {
     ret <<= 4u;
-    if (*num >= 'a') ret = ret + *num - 'a' + 10;
-    if (*num >= 'A') ret = ret + *num - 'A' + 10;
-    else                 ret = ret + *num - '0';
+    if (*num >= 'a')      ret = ret + *num - 'a' + 10;
+    else if (*num >= 'A') ret = ret + *num - 'A' + 10;
+    else                  ret = ret + *num - '0';
     num++;
   }
   return ret;

@@ -40,9 +40,11 @@ IR::Op get_ir_mov_op(Expression::Op expr_op) {
 
   switch(expr_op) {
     CASE(GT,  MOVGT);
-    CASE(LT,  JLT);
-    CASE(GE,  JGE);
-    CASE(LE,  JLE);
+    CASE(LT,  MOVLT);
+    CASE(GE,  MOVGE);
+    CASE(LE,  MOVLE);
+    CASE(EQ,  MOVEQ);
+    CASE(NEQ, MOVNE);
     default: return IR::Op::NOP;
   }
 
@@ -208,7 +210,7 @@ VarExp::translate() {
     
     // 要求这个临时表达式转为逻辑表达式，赋予本表达式的失败标号
     tmp->cast_to_logical = true;
-    tmp->cast_to_regular = true;
+    tmp->cast_to_regular = false;
     tmp->set_fail_label(this->label_fail_);
 
     ret.splice(ret.end(), tmp->translate());
@@ -462,7 +464,7 @@ BinaryExp::_translate_regular() {
   }
   else {
     // 要求生成一个算术表达式
-    // 如果左/右子表达式不可编译期求值，就给左右表达式分配变量地址，并生成计算左/右子表达式的代码
+    // 如果左/右子表达式不可编译期求值，就给左右表达式分配变量地址
     auto l_addr = this->left_->get_var_addr();
     auto r_addr = this->right_->get_var_addr();
 
