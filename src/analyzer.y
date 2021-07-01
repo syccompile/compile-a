@@ -12,6 +12,8 @@ extern char* yytext;
 void yyerror(const char* msg) { printf("line %d %s: yytext is %s\n", yylineno, msg, yytext); }
 extern std::vector<VarDeclStmt*> vardecl;
 extern std::vector<FunctionDecl*> funcs;
+
+int parse_number(char const *);
 %}
 
 %union {
@@ -69,9 +71,9 @@ extern std::vector<FunctionDecl*> funcs;
 %start CompUnit
 
 %%
-CompUnit: VarDecl { vardecl.push_back($1); $1->set_global(); }
+CompUnit: VarDecl { vardecl.push_back($1); }
         | FuncDef { funcs.push_back($1); }
-        | CompUnit VarDecl { vardecl.push_back($2); $2->set_global(); }
+        | CompUnit VarDecl { vardecl.push_back($2); }
         | CompUnit FuncDef { funcs.push_back($2); }
         ;
 
@@ -100,7 +102,7 @@ UnaryExp : PrimaryExp { $$ = $1; }
          ;
 // 343 / 0xff / 03327 / a / a[10][1] / (...)
 PrimaryExp : LPARENT Exp RPARENT { $$ = $2; }
-           | NUMBER { $$ = new NumberExp($1); delete $1; }
+           | NUMBER { $$ = new NumberExp(parse_number($1->c_str())); delete $1; }
            | IDENT  { $$ = new VarExp($1, nullptr); delete $1; }
            | IDENT DimenList  { $$ = new VarExp($1, $2); delete $1; }
            ;
@@ -156,8 +158,8 @@ DimenList: LBRACKET Exp RBRACKET { $$ = new Expression::List();
           | DimenList LBRACKET Exp RBRACKET { $1->push_back($3);
                                               $$ = $1;
                                              }
-          | LBRACKET RBRACKET { $$ = new Expression::List(); 
-                                $$->push_back(nullptr);
+          | LBRACKET RBRACKET { $$ = new Expression::List();
+                                $$->push_back(new NumberExp(0));
                               }
           ;
 // 4,5,{...},4,5,{...},5...
@@ -251,3 +253,44 @@ FuncDef : BType IDENT LPARENT FuncFParams RPARENT BlockStmt  { $$ = new Function
         | BType IDENT LPARENT RPARENT BlockStmt          { $$ = new FunctionDecl($1, $2, nullptr, $5); delete $2; }
         ;
 %%
+
+int parse_hex(char const *num) {
+  int ret = 0;
+  while ((*num)!='\0') {
+    ret <<= 4u;
+    if (*num >= 'a') ret = ret + *num - 'a' + 10;
+    if (*num >= 'A') ret = ret + *num - 'A' + 10;
+    else                 ret = ret + *num - '0';
+    num++;
+  }
+  return ret;
+}
+
+int parse_oct(char const *num) {
+  int ret = 0;
+  while ((*num)!='\0') {
+    ret <<= 3u;
+    ret = ret + *num - '0';
+    num++;
+  }
+  return ret;
+}
+
+int parse_dec(char const *num) {
+  int ret = 0;
+  while ((*num)!='\0') {
+    ret *= 10;
+    ret = ret + *num - '0';
+    num++;
+  }
+  return ret;
+}
+
+int parse_number(char const *num) {
+  if ((*num)=='0') {
+    ++num;
+    if ((*num)=='X' || (*num)=='x') return parse_hex(num+1);
+    else                            return parse_oct(num);
+  }
+  return parse_dec(num);
+}

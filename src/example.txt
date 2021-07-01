@@ -1,17 +1,21 @@
-int func2 (int c, int d){
+int func2 (int c[], int d){
   int a = 10;
-  while(a > 5 || c > 10 && d > 5){
+  const int b = 23;
+  
+  while (a > 5 || c[3] > 10 && d > 5){
     a = 11;
   }
-  if(a > 4 && c <= 5 || d > 9){
+
+  a = a+1;
+
+  if (a > 4 && c[1] <= 5 || d > 9){
     a = 11;
-   } 
-  return c * d + 4;
-}
-int func1 (int a, int b[][10][10]){
-  a = func2(a, 10);
-  int b = a;
-  a = 2 + 3 * b / 4 * 5;
-  a = 0xf + 1 + 01; 
-  return 10;
+  }
+
+  while (b+34) {
+    a = b + 45;
+    break;
+  }
+
+  return c[2] * d + 4;
 }

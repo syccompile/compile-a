@@ -15,54 +15,11 @@ VarExp::~VarExp() {
   }
 }
 
-bool 
-VarExp::is_evaluable() const {
-  // 取得符号表里的对应表项，查看标识符是否为编译期常量
-  auto entry = context.vartab_cur->get(this->ident_);
-  assert(entry!=nullptr);
-  if (!(entry->is_constant)) return false;
+NumberExp::NumberExp(int val)
+    : Expression(Op::NUM, true), value_(val) { }
+NumberExp::~NumberExp() { }
 
-  // 再查看数组下标是否均为编译期常量
-  if (this->dimens_) (Expression *exp: *(this->dimens_)) if (!(exp->is_evaluable())) return false;
-  return true;
-}
-
-int
-VarExp::eval() {
-  auto entry = context.vartab_cur->get(this->ident_);
-  assert(entry!=nullptr);
-
-  const std::vector<int> &shape = entry->type.arr_shape;
-  std::vector<int> dimension;
-
-  if (this->dimens_) {
-    // 数组
-    for (Expression *exp: this->dimens_) dimension.push_back(exp->eval());
-    assert(dimension.size()==entry.size());
-
-    int offset = dimension.back();
-    int acc = shape.back();
-
-    for (int i=dimension.size()-2 ; i>0 ; i--) {
-      offset += dimension[i] * acc;
-      acc *= shape[i];
-    }
-
-    return entry->init_val[offset];
-  } else {
-    // 单变量
-    return entry->init_val[0];
-  }
-}
-
-// FIX: 将string 转换为int
-NumberExp::NumberExp(string *str)
-    : Expression(Op::NUM, true), string_(*str), value_(stoi(string_)) {
-  assert(str);
-}
-NumberExp::~NumberExp() {}
-
-FuncCallExp::FuncCallExp(string *func_name, vector<Expression *> *params)
+FuncCallExp::FuncCallExp(string *func_name, Expression::List *params)
     : Expression(Op::CALL, false), name_(*func_name), params_(params) {
   assert(func_name);
 }
@@ -141,7 +98,7 @@ VarDeclStmt::~VarDeclStmt() {
   }
 }
 
-BlockStmt::BlockStmt() : symtab_(std::make_shared<SymbolTable>()) {}
+BlockStmt::BlockStmt() {}
 BlockStmt::~BlockStmt() {
   for (Stmt *stmt : stmts_) {
     delete stmt;
@@ -162,9 +119,7 @@ IfStmt::~IfStmt() {
 }
 
 WhileStmt::WhileStmt(Expression *condition, BlockStmt *body)
-    : condition_(condition), body_(body),
-      break_access_(GlobFrame->newLabelAccess(GlobFrame)),
-      continue_access_(GlobFrame->newLabelAccess(GlobFrame)) {
+    : condition_(condition), body_(body) {
   assert(condition);
   assert(body);
 }
@@ -192,9 +147,7 @@ AssignmentStmt::~AssignmentStmt() {
 
 FunctionDecl::FunctionDecl(BType ret_type, string *name, Variable::List *params,
                            BlockStmt *block)
-    : ret_type_(ret_type), name_(*name), params_(params), body_(block),
-      frame_(std::make_shared<Frame>(false)),
-      ret_access_(frame_->newRetAccess(frame_)) {
+    : ret_type_(ret_type), name_(*name), params_(params), body_(block) {
   assert(name);
   assert(block);
 }
@@ -207,59 +160,3 @@ void BlockStmt::push_back(Stmt *stmt) {
   stmts_.push_back(stmt);
   // TODO
 }
-
-int Expression::eval() { return 0; }
-
-int VarExp::eval() { return 0; }
-int FuncCallExp::eval() { return 0; }
-/* int LogicExp::eval() {
-  switch (op_) {
-  case Op::AND:
-    return left_->eval() && right_->eval();
-  case Op::OR:
-    return left_->eval() || right_->eval();
-  case Op::LT:
-    return left_->eval() < right_->eval() ? 1 : 0;
-  case Op::LE:
-    return left_->eval() <= right_->eval() ? 1 : 0;
-  case Op::GT:
-    return left_->eval() > right_->eval() ? 1 : 0;
-  case Op::GE:
-    return left_->eval() >= right_->eval() ? 1 : 0;
-  case Op::EQ:
-    return left_->eval() == right_->eval() ? 1 : 0;
-  case Op::NEQ:
-    return left_->eval() != right_->eval() ? 1 : 0;
-  default:
-    return 0;
-  }
-}*/
-int BinaryExp::eval() {
-  switch (op_) {
-  case Op::ADD:
-    return left_->eval() + right_->eval();
-  case Op::SUB:
-    return left_->eval() - right_->eval();
-  case Op::MUL:
-    return left_->eval() * right_->eval();
-  case Op::DIV:
-    return left_->eval() / right_->eval();
-  case Op::MOD:
-    return left_->eval() % right_->eval();
-  default:
-    return 0;
-  }
-}
-int UnaryExp::eval() {
-  switch (op_) {
-  case Op::NOT:
-    return !exp_->eval();
-  case Op::ADD:
-    return exp_->eval();
-  case Op::SUB:
-    return -exp_->eval();
-  default:
-    return 0;
-  }
-}
-int NumberExp::eval() { return value_; }

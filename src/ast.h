@@ -14,6 +14,7 @@ using std::vector;
 
 class AST_base: public Debug_impl {
 public:
+  virtual ~AST_base() { }
   // 翻译为中间代码
   virtual std::list<IR::Ptr> translate() = 0;
 };
@@ -49,14 +50,14 @@ public:
   };
 
   Expression(Op op, bool evaluable) : op_(op), addr_(nullptr), label_fail_(nullptr) { }
-  virtual ~Expression() {}
+  virtual ~Expression() { }
 
   Op op() { return op_; }
 
   // 可否编译期求值
-  virtual bool is_evaluable() const;
+  virtual bool is_evaluable() const { return false; };
   // 为常量时求值
-  virtual int eval();
+  virtual int eval() { return 0; };
 
   // logical-regular expression cast related
   // 是否为逻辑函数？
@@ -64,22 +65,28 @@ public:
   // 是否为关系型函数？
   bool op_rel() const               { return EQ<=this->op_ && this->op_<=GE; }
   // 是否要求翻译为逻辑型表达式？
-  bool translate_to_logical() const { (this->op_logical()||this->op_rel()) ? !cast_to_regular : cast_to_logical; }
+  bool translate_to_logical() const { return (this->op_logical()||this->op_rel()) ? !cast_to_regular : cast_to_logical; }
   bool cast_to_logical;
   bool cast_to_regular;
 
   // debug
-  virtual void internal_print() override;
+  virtual void internal_print() override { }
   // IR generate
-  virtual std::list<IR::Ptr> translate() override;
+  virtual std::list<IR::Ptr> translate() override { return std::list<IR::Ptr>(); }
   
   // 获取变量地址
   // 如果没有分配，它会自动分配一个
-  virtual IR::Addr::Ptr get_var_addr();
+  // 带常量优化
+  virtual IR::Addr::Ptr get_var_addr() {
+    if (this->addr_!=nullptr) return this->addr_;
+    if (this->is_evaluable()) return this->addr_ = IR::Addr::make_imm(this->eval());
+    return this->addr_ = IR::Addr::make_var(context.allocator.allocate_addr());
+  }
 
   // 获取值为假时跳转的标号
   // 如果没有分配，它会自动分配一个
   IR::Addr::Ptr get_fail_label();
+
   // 指定标号
   void set_fail_label(IR::Addr::Ptr label);
 
@@ -116,10 +123,7 @@ public:
 
   // 获取变量地址
   // 如果没有分配，它会自动分配一个
-  virtual IR::Addr::Ptr get_var_addr();
-  // 获取、设置失败后跳转的标号
-  virtual IR::Addr::Ptr get_fail_label();
-  virtual IR::Addr::Ptr set_fail_label(IR::Addr::Ptr label);
+  virtual IR::Addr::Ptr get_var_addr() override;
 
 private:
 
@@ -131,13 +135,12 @@ private:
   Expression::List *dimens_;
 };
 
-
 /*
  * 函数调用表达式，表示一个函数调用
  */
 class FuncCallExp : public Expression {
 public:
-  FuncCallExp(string *func_name, vector<Expression *> *params);
+  FuncCallExp(string *func_name, Expression::List *params);
   FuncCallExp(string *func_name);
   ~FuncCallExp();
 
@@ -153,10 +156,7 @@ public:
 
   // 获取变量地址
   // 如果没有分配，它会自动分配一个
-  virtual IR::Addr::Ptr get_var_addr();
-  // 获取、设置失败后跳转的标号
-  virtual IR::Addr::Ptr get_fail_label();
-  virtual IR::Addr::Ptr set_fail_label(IR::Addr::Ptr label);
+  virtual IR::Addr::Ptr get_var_addr() { return Expression::get_var_addr(); }
 
 private:
   // 函数名
@@ -191,10 +191,7 @@ public:
 
   // 获取变量地址
   // 如果没有分配，它会自动分配一个
-  virtual IR::Addr::Ptr get_var_addr();
-  // 获取、设置失败后跳转的标号
-  virtual IR::Addr::Ptr get_fail_label();
-  virtual IR::Addr::Ptr set_fail_label(IR::Addr::Ptr label);
+  virtual IR::Addr::Ptr get_var_addr() { return Expression::get_var_addr(); };
 
 protected:
   // 分两种不同的翻译形式
@@ -224,6 +221,10 @@ public:
   // IR generate
   virtual std::list<IR::Ptr> translate() override;
 
+  // 获取变量地址
+  // 如果没有分配，它会自动分配一个
+  virtual IR::Addr::Ptr get_var_addr() { return Expression::get_var_addr(); };
+
 private:
   std::list<IR::Ptr> _translate_regular();
   std::list<IR::Ptr> _translate_logical();
@@ -249,6 +250,10 @@ public:
   virtual void internal_print() override;
   // IR generate
   virtual std::list<IR::Ptr> translate() override;
+
+  // 获取变量地址
+  // 如果没有分配，它会自动分配一个
+  virtual IR::Addr::Ptr get_var_addr() override { return IR::Addr::make_imm(this->value_); };
 
 private:
   // 存储数字的字符串表示，例如"0xff", "2021", "08876"
@@ -346,6 +351,7 @@ public:
     ~InitValExp();
     virtual bool is_exp() override final { return true; }
     virtual void internal_print() override;
+    virtual std::list<IR::Ptr> translate() override { return std::list<IR::Ptr>(); };
 
     Expression *exp_;
   };
@@ -361,6 +367,7 @@ public:
     void push_back(InitVal *initval) { initval_container_.push_back(initval); }
     virtual bool is_exp() override final { return false; }
     virtual void internal_print() override;
+    virtual std::list<IR::Ptr> translate() override { return std::list<IR::Ptr>(); }
 
     vector<InitVal *> initval_container_;
   };
@@ -409,9 +416,9 @@ public:
   virtual void set_lineno(int lineno) { lineno_ = lineno; }
   
   // debug
-  virtual void internal_print() override;
+  virtual void internal_print() { }
   // IR generate
-  virtual std::list<IR::Ptr> translate() override;
+  virtual std::list<IR::Ptr> translate() override { return std::list<IR::Ptr>(); }
 
   int lineno_;
 };
@@ -450,8 +457,6 @@ public:
   virtual void internal_print() override;
   // IR generate
   virtual std::list<IR::Ptr> translate() override;
-  // return语句对应的函数
-  FunctionDecl *parent_;
 
 private:
   // return 语句的返回值, 指针可能为空
@@ -468,9 +473,6 @@ public:
   virtual void internal_print() override;
   // IR generate
   virtual std::list<IR::Ptr> translate() override;
-
-  // break语句对应的while语句
-  WhileStmt *parent_;
 };
 
 /**
@@ -482,9 +484,6 @@ public:
   virtual void internal_print() override;
   // IR generate
   virtual std::list<IR::Ptr> translate() override;
-
-  // continue语句对应的while语句
-  WhileStmt *parent_;
 };
 
 /**

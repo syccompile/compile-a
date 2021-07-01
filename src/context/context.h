@@ -1,11 +1,11 @@
 #pragma once
-#include <map>
 #include <memory>
 
 #include "vartab.h"
 #include "virtalloc.h"
 #include "functab.h"
-#include "../ast.h"
+
+class WhileStmt;
 
 class Context {
 public:
@@ -32,4 +32,4 @@ public:
   Context();
 };
 
-Context context;
+extern Context context;

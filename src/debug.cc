@@ -348,7 +348,7 @@ void IR::internal_print() {
 void IR::Addr::internal_print() {
 
 #define CASE(KIND, SYM) case IR::Addr::Kind:: KIND : std::cout << SYM;\
-this->kind==IR::Addr::Kind::NAMED_LABEL ? (std::cout << this->name) : (std::cout << this->val);\
+(this->kind==IR::Addr::Kind::NAMED_LABEL) ? (std::cout << this->name) : (std::cout << this->val);\
 break;
 
   switch(this->kind) {

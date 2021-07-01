@@ -1,5 +1,7 @@
 #include "context.h"
 
+Context context;
+
 Context::Context(): allocator() {
   vartab_cur = std::make_shared<VarTab>();
 } 

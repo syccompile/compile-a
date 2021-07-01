@@ -18,8 +18,8 @@ public:
   //      即：a 2-sized array of (a 3-sized array of (a 4-sized array of (<type>)))
   std::vector<int> arr_shape;
 
-  Type::Type() = default;
-  Type::Type(std::vector<int> &&shape);
+  Type() = default;
+  Type(std::vector<int> &&shape);
 
   bool is_array() const;
   bool is_param() const;

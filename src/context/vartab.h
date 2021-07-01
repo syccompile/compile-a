@@ -27,9 +27,9 @@ public:
   // 如果该符号是参数，则为参数序号，否则为-1
   int param_order;
 
-  VarTabEntry(std::string name, std::vector<int> &&shape, IR::Addr::Ptr addr, std::vector<int> &&init_val, bool is_const=false, int param_order=-1);
+  VarTabEntry(std::string name, std::vector<int> shape, IR::Addr::Ptr addr, std::vector<int> init_val, bool is_const=false, int param_order=-1);
   // 判断是否为数组，规则请参考成员shape的说明
-  bool is_array() const { return type.arr_shape.size()==0; }
+  bool is_array() const { return type.arr_shape.size()!=0; }
 };
 
 class VarTab {
@@ -45,7 +45,7 @@ public:
 
   // 根据名称获取符号
   // 当不存在符号时，返回std::shared_ptr(nullptr)
-  VarTabEntry::Ptr get(std::string name) const;
+  VarTabEntry::Ptr_const get(std::string name) const;
 
   std::shared_ptr<VarTab> fa;
 };

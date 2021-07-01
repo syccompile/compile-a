@@ -132,7 +132,7 @@ get_offset(const std::vector<int> &shape, Expression::List &dimens) {
 IR::Addr::Ptr
 Expression::get_fail_label() {
   if (this->label_fail_!=nullptr) return this->label_fail_;
-  return IR::Addr::make_label(context.allocator.allocate_label());
+  return this->label_fail_ = IR::Addr::make_label(context.allocator.allocate_label());
 }
 
 void
@@ -168,7 +168,11 @@ VarExp::eval() {
     std::vector<int> dims;
     for (Expression *exp: *(this->dimens_)) dims.push_back(exp->eval());
     int offset = get_offset(ent->type.arr_shape, dims);
+
+    return ent->init_val[offset];
   }
+
+  return ent->init_val[0];
 }
 
 IR::Addr::Ptr
@@ -241,12 +245,6 @@ FuncCallExp::is_evaluable() const {
 int
 FuncCallExp::eval() {
   return 0;
-}
-
-IR::Addr::Ptr
-FuncCallExp::get_var_addr() {
-  if (this->addr_!=nullptr) return this->addr_;
-  return (this->addr_=IR::Addr::make_var(context.allocator.allocate_addr()));
 }
 
 std::list<IR::Ptr>
@@ -377,7 +375,7 @@ BinaryExp::_translate_logical() {
         int lhs_success_label = context.allocator.allocate_label();
 
         this->left_->set_fail_label(IR::Addr::make_label(lhs_fail_label));
-        this->right_->set_fail_label(this->label_fail);
+        this->right_->set_fail_label(this->label_fail_);
 
         ret.splice(ret.end(), this->left_->translate());
         ADD_UNR(JMP,   IR::Addr::make_label(lhs_success_label));
@@ -431,7 +429,7 @@ BinaryExp::_translate_rel() {
   if (this->translate_to_logical()) {
     // 要求翻译为逻辑表达式
     // 因为是失败时跳转，所以需要反义操作符
-    ret.emplace_back(std::make_shared<IR>(get_ir_jmp_op(reverse_op(this->op())), this->label_fail_));
+    ret.emplace_back(IR::make_unary(get_ir_jmp_op(reverse_op(this->op())), this->label_fail_));
   }
   else {
     // 要求翻译为算术表达式
@@ -473,7 +471,7 @@ BinaryExp::_translate_regular() {
     ret.splice(ret.end(), this->right_->translate());
 
     // 综合计算左右表达式
-    ret.emplace_back(IR::make_binary(get_ir_regular_op(this->op()), l_addr, r_addr));
+    ret.emplace_back(IR::make_triple(get_ir_regular_op(this->op()), this->addr_, l_addr, r_addr));
   }
 
   return ret;
@@ -617,11 +615,6 @@ UnaryExp::translate() {
   return ret;
 }
 
-bool
-NumberExp::is_evaluable() const {
-  return true;
-}
-
 int
 NumberExp::eval() {
   return this->value_;
@@ -646,13 +639,13 @@ Variable::_translate_immutable() {
   std::vector<int> init_val = {this->initval_->eval()};
 
   // 建立符号表项
-  this->vartab_ent = std::make_shared<VarTabEntry>(
+  this->vartab_ent = std::shared_ptr<VarTabEntry>(new VarTabEntry(
     this->name(),
     std::vector<int>(),   // shape
     nullptr,              // addr
-    std::move(init_val),  // initial value
+    init_val,  // initial value
     true
-  );
+  ));
 
   return ret;
 }
@@ -675,13 +668,13 @@ Variable::_translate_variable() {
   }
   
   // 建立符号表项
-  this->vartab_ent = std::make_shared<VarTabEntry>(
+  this->vartab_ent = std::shared_ptr<VarTabEntry>(new VarTabEntry(
     this->name(),
     std::vector<int>(),            // shape
     IR::Addr::make_var(var_addr),  // addr
-    std::move(init_val),           // init_val
+    init_val,           // init_val
     false
-  );
+  ));
   
   return ret;
 }
@@ -794,6 +787,29 @@ Array::_get_const_initval(const std::vector<int> &shape, int shape_ptr, InitValC
 }
 
 std::list<IR::Ptr>
+Array::_translate_variable() {
+  std::list<IR::Ptr> ret;
+
+  // 获取数组形状
+  std::vector<int> shape = this->_get_shape();
+
+  // 再生成初值序列
+  std::vector<int> init_val;
+  if (this->initval_container_) init_val = this->_get_const_initval(shape, 0, this->initval_container_);
+
+  // 建立符号表项
+  this->vartab_ent = std::make_shared<VarTabEntry>(
+    this->name_,
+    shape,
+    IR::Addr::make_var(context.allocator.allocate_addr()),
+    init_val,
+    false
+  );
+  
+  return ret;
+}
+
+std::list<IR::Ptr>
 Array::_translate_immutable() {
   std::list<IR::Ptr> ret;
 
@@ -828,7 +844,10 @@ Array::translate() {
 std::list<IR::Ptr>
 VarDeclStmt::translate() {
   std::list<IR::Ptr> ret;
-  for (Variable *var : this->vars_) ret.splice(ret.end(), var->translate());
+  for (Variable *var : this->vars_) {
+    ret.splice(ret.end(), var->translate());
+    context.vartab_cur->put(var->vartab_ent);
+  }
   return ret;
 }
 
@@ -862,7 +881,8 @@ IfStmt::translate() {
   // 常量优化
   if (this->condition_->is_evaluable()) {
     if (this->condition_->eval()) return this->yes_->translate();
-    else                          return this->no_->translate();   
+    // else block may not exist
+    else if (this->no_)           return this->no_->translate();   
   }
 
   std::list<IR::Ptr> ret;
@@ -891,8 +911,8 @@ IfStmt::translate() {
   ADD_UNR(JMP, IR::Addr::make_label(label_end));
   // set label label_else
   ADD_UNR(LABEL, IR::Addr::make_label(label_else));
-  // false expressions
-  ret.splice(ret.end(), this->no_->translate());
+  // false expressions: else may not exist
+  if (this->no_!=nullptr) ret.splice(ret.end(), this->no_->translate());
   // set label label_end
   ADD_UNR(LABEL, IR::Addr::make_label(label_end));
 
