@@ -330,6 +330,11 @@ void IR::internal_print() {
     CASE(PARAM);
     CASE(CALL);
     CASE(RET);
+    CASE(VARDEF);
+    CASE(DATA);
+    CASE(ZERO);
+    CASE(VAREND);
+    CASE(ALLOC_IN_STACK);
     CASE(LOAD);
     CASE(STORE);
     CASE(NOP);

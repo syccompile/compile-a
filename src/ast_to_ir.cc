@@ -89,7 +89,7 @@ Expression::Op reverse_op(Expression::Op op) {
 
 }
 
-// 获取多维数组的偏移量（编译期不可求值的）
+// 获取多维数组的偏移量（编译期常量与否均可）
 std::pair<IR::Addr::Ptr, std::list<IR::Ptr> >
 get_offset(const std::vector<int> &shape, Expression::List &dimens) {
   std::list<IR::Ptr> ret;
@@ -110,7 +110,7 @@ get_offset(const std::vector<int> &shape, Expression::List &dimens) {
   // 例如：a[b+c][1][2][3][4]
   // 那么[1][2][3][4]的偏移量可以直接编译期计算
   int constant_offset = 0;
-  for (; i>0 ; i++) {
+  for (; i>=0 ; i--) {
     // 如果取到非编译期常量的表达式，那么就跳出循环
     if (dims[i]->kind != IR::Addr::Kind::IMM) break;
     // 如果取到编译期常量
@@ -128,7 +128,7 @@ get_offset(const std::vector<int> &shape, Expression::List &dimens) {
   // 先将常量变址计算结果拷贝过来
   ADD_BIN(MOV, offset_addr, IR::Addr::make_imm(constant_offset));
   // 再根据余下的下标计算变址（运行时计算）
-  for (int i=dims.size()-2 ; i>0 ; i++) {
+  for (; i>=0 ; i--) {
     if (dims[i]->kind == IR::Addr::IMM) {
       auto tmp = IR::Addr::make_var(context.allocator.allocate_addr());
       ADD_TRP(MUL, tmp, dims[i], IR::Addr::make_imm(acc));
@@ -142,6 +142,13 @@ get_offset(const std::vector<int> &shape, Expression::List &dimens) {
   }
 
   return std::make_pair(offset_addr, ret);
+}
+
+int
+multiply(const std::vector<int> &v) {
+  int ret = 1;
+  for (auto &i: v) ret *= i;
+  return ret;
 }
 
 IR::Addr::Ptr
@@ -690,7 +697,9 @@ Variable::_translate_local() {
   if (this->immutable_) {
     assert(this->initval_!=nullptr);
     assert(this->initval_->is_evaluable());
-    addr = IR::Addr::make_imm(this->initval_->eval());
+    int val = this->initval_->eval();
+    addr = IR::Addr::make_imm(val);
+    init_val.push_back(val);
   }
   else {
     addr = IR::Addr::make_var(context.allocator.allocate_addr());
@@ -722,6 +731,7 @@ Variable::_translate_global() {
   addr = IR::Addr::make_named_label(this->name_);
 
   // 处理初始值
+  // 如果有初始值，其必须为编译期常量
   if (this->initval_!=nullptr) {
     assert(this->initval_->is_evaluable());
     init_val.push_back(this->initval_->eval());
@@ -733,6 +743,14 @@ Variable::_translate_global() {
   ADD_UNR(VARDEF, addr);
   ADD_UNR(DATA, IR::Addr::make_imm(init_val[0]));
   ADD_NOP(VAREND);
+
+  this->vartab_ent = std::shared_ptr<VarTabEntry>(new VarTabEntry(
+    this->name_,
+    std::vector<int>(),
+    addr,
+    init_val,
+    this->immutable_
+  ));
 
   return ret;
 }
@@ -752,7 +770,7 @@ std::vector<int>
 Array::_get_shape() {
   std::vector<int> ret;
 
-  // 检查表达式是否都是常数，并计算
+  // 检查表达式是否都是编译期常量，并计算
   // TODO 报错
   for (Expression *i: *(this->dimens_)) {
     assert(i->is_evaluable());
@@ -765,6 +783,8 @@ Array::_get_shape() {
 Expression::List
 Array::_flatten_initval(const std::vector<int> &shape, int shape_ptr, InitValContainer *container) {
   Expression::List ret;
+
+  if (container==nullptr) return ret;
 
   // 如果只余下一个维度，就特殊处理
   if (shape_ptr+1==shape.size()) {
@@ -856,20 +876,20 @@ Array::_translate_local() {
   std::list<IR::Ptr> ret;
   std::vector<int> init_val;
   std::vector<int> shape = this->_get_shape();
+  int total_size = multiply(shape);
 
   // 若存在初始值，就将初始值先展开成一维
-  Expression::List flattened_container;
-  if (this->initval_container_!=nullptr)
-    flattened_container.splice(flattened_container.end(), this->_flatten_initval(shape, 0, this->initval_container_));
+  Expression::List flattened_container = this->_flatten_initval(shape, 0, this->initval_container_);
     
   // 栈上分配空间
   IR::Addr::Ptr addr = IR::Addr::make_var(context.allocator.allocate_addr());
-  ADD_BIN(ALLOC_IN_STACK, addr, IR::Addr::make_imm(flattened_container.size()*4));
+  ADD_BIN(ALLOC_IN_STACK, addr, IR::Addr::make_imm(total_size));
   
   int offset = 0;
   // 如果是常值，就需要指定初值
   if (this->immutable_) {
-    assert(this->initval_container_!=nullptr);
+    assert(flattened_container.size()!=0);
+    // 要求所有初值都是编译期常量
     for (Expression *exp: flattened_container) {
       if (exp==nullptr) continue;
       assert(exp->is_evaluable());
@@ -882,7 +902,7 @@ Array::_translate_local() {
       offset++;
     }
   }
-  else if (this->initval_container_!=nullptr) for (Expression *exp: flattened_container) {
+  else for (Expression *exp: flattened_container) {
     IR::Addr::Ptr exp_addr;
     if (exp==nullptr) exp_addr = IR::Addr::make_imm(0);
     else {
@@ -912,11 +932,10 @@ Array::_translate_global() {
   IR::Addr::Ptr addr = IR::Addr::make_named_label(this->name_);
   
   // 若存在初始值，就将初始值先展开成一维
-  Expression::List flattened_container;
-  if (this->initval_container_!=nullptr)
-    flattened_container.splice(flattened_container.end(), this->_flatten_initval(shape, 0, this->initval_container_));
+  Expression::List flattened_container = this->_flatten_initval(shape, 0, this->initval_container_);
   
   // 检查初值序列是否为常量
+  // 如果指定了初值，初值就必须均为编译期常量
   for (Expression *exp: flattened_container) {
     if (exp==nullptr) continue;
     assert(exp->is_evaluable());
@@ -924,21 +943,30 @@ Array::_translate_global() {
   
   // 生成中间代码
   ADD_UNR(VARDEF, addr);
-  // 记录零的个数，减少代码量
-  int z_num = 0;
-  for (Expression *exp: flattened_container) {
-    int val = exp==nullptr ? 0 : exp->eval();
   
-    if (val==0) {
-      z_num++;
-    }
-    else {
-      if (z_num!=0) ADD_UNR(ZERO, IR::Addr::make_imm(z_num));
-      z_num = 0;
-      ADD_UNR(DATA, IR::Addr::make_imm(val));
-    }
+  // 未指定初值
+  if (flattened_container.size()==0) {
+    int total_size = multiply(shape);
+    ADD_UNR(ZERO, IR::Addr::make_imm(total_size));
   }
-  if (z_num!=0) ADD_UNR(ZERO, IR::Addr::make_imm(z_num));
+  // 已经指定初值
+  else {
+    // 记录零的个数，减少代码量
+    int z_num = 0;
+    for (Expression *exp: flattened_container) {
+      int val = exp==nullptr ? 0 : exp->eval();
+    
+      if (val==0) {
+        z_num++;
+      }
+      else {
+        if (z_num!=0) ADD_UNR(ZERO, IR::Addr::make_imm(z_num));
+        z_num = 0;
+        ADD_UNR(DATA, IR::Addr::make_imm(val));
+      }
+    }
+    if (z_num!=0) ADD_UNR(ZERO, IR::Addr::make_imm(z_num));
+  }
   ADD_NOP(VAREND);
 
   this->vartab_ent = std::shared_ptr<VarTabEntry>(new VarTabEntry(
