@@ -129,15 +129,9 @@ get_offset(const std::vector<int> &shape, Expression::List &dimens) {
   ADD_BIN(MOV, offset_addr, IR::Addr::make_imm(constant_offset));
   // 再根据余下的下标计算变址（运行时计算）
   for (; i>=0 ; i--) {
-    if (dims[i]->kind == IR::Addr::IMM) {
-      auto tmp = IR::Addr::make_var(context.allocator.allocate_addr());
-      ADD_TRP(MUL, tmp, dims[i], IR::Addr::make_imm(acc));
-      ADD_TRP(ADD, offset_addr, offset_addr, tmp);
-    }
-    else {
-      ADD_TRP(MUL, dims[i], dims[i], IR::Addr::make_imm(acc));
-      ADD_TRP(ADD, offset_addr, offset_addr, dims[i]);
-    }
+    auto tmp = IR::Addr::make_var(context.allocator.allocate_addr());
+    ADD_TRP(MUL, tmp, dims[i], IR::Addr::make_imm(acc));
+    ADD_TRP(ADD, offset_addr, offset_addr, tmp);
     acc *= shape[i];
   }
 
@@ -149,6 +143,28 @@ multiply(const std::vector<int> &v) {
   int ret = 1;
   for (auto &i: v) ret *= i;
   return ret;
+}
+
+bool
+Expression::op_logical() const {
+  return this->op_<=NOT;
+}
+
+bool
+Expression::op_rel() const {
+  return EQ<=this->op_ &&this->op_<=GE;
+}
+
+bool
+Expression::translate_to_logical() const {
+  return (this->op_logical()||this->op_rel()) ? !cast_to_regular : cast_to_logical;
+}
+
+IR::Addr::Ptr
+Expression::get_var_addr() {
+  if (this->addr_!=nullptr) return this->addr_;
+  if (this->is_evaluable()) return this->addr_ = IR::Addr::make_imm(this->eval());
+  return this->addr_ = IR::Addr::make_var(context.allocator.allocate_addr());
 }
 
 IR::Addr::Ptr
@@ -346,6 +362,11 @@ BinaryExp::eval() {
 
 }
 
+IR::Addr::Ptr
+BinaryExp::get_var_addr() {
+  return Expression::get_var_addr();
+}
+
 /* 翻译模式：
  * 无论上级表达式要求本（逻辑）表达式翻译为逻辑型表达式还是数值型表达式
  * 都先按照逻辑型表达式的方式翻译
@@ -364,7 +385,7 @@ BinaryExp::_translate_logical() {
   IR::Addr::Ptr lbl_fail = this->get_fail_label();
 
   // 根据表达式类型，选择不同翻译模式
-  switch(this->op()) {
+  switch(this->op_) {
     case Expression::Op::AND:
       // 逻辑“与”
 
@@ -483,14 +504,14 @@ BinaryExp::_translate_rel() {
   if (this->translate_to_logical()) {
     // 要求翻译为逻辑表达式
     // 因为是失败时跳转，所以需要反义操作符
-    ret.emplace_back(IR::make_unary(get_ir_jmp_op(reverse_op(this->op())), this->label_fail_));
+    ret.emplace_back(IR::make_unary(get_ir_jmp_op(reverse_op(this->op_)), this->label_fail_));
   }
   else {
     // 要求翻译为算术表达式
     // 为假，就移0进去（加了个reverse）
-    ret.emplace_back(IR::make_binary(get_ir_mov_op(reverse_op(this->op())), this->addr_, IR::Addr::make_imm(0)));
+    ret.emplace_back(IR::make_binary(get_ir_mov_op(reverse_op(this->op_)), this->addr_, IR::Addr::make_imm(0)));
     // 为真，就移1进去
-    ret.emplace_back(IR::make_binary(get_ir_mov_op(this->op()), this->addr_, IR::Addr::make_imm(1)));
+    ret.emplace_back(IR::make_binary(get_ir_mov_op(this->op_), this->addr_, IR::Addr::make_imm(1)));
   }
 
   return ret;
@@ -525,7 +546,7 @@ BinaryExp::_translate_regular() {
     ret.splice(ret.end(), this->right_->translate());
 
     // 综合计算左右表达式
-    ret.emplace_back(IR::make_triple(get_ir_regular_op(this->op()), this->addr_, l_addr, r_addr));
+    ret.emplace_back(IR::make_triple(get_ir_regular_op(this->op_), this->addr_, l_addr, r_addr));
   }
 
   return ret;
@@ -569,6 +590,11 @@ UnaryExp::eval() {
     default:
       return 0;  // TODO 报错
   }
+}
+
+IR::Addr::Ptr
+UnaryExp::get_var_addr() {
+  return Expression::get_var_addr();
 }
 
 std::list<IR::Ptr>
@@ -669,9 +695,19 @@ UnaryExp::translate() {
   return ret;
 }
 
+bool
+NumberExp::is_evaluable() const {
+  return true;
+}
+
 int
 NumberExp::eval() {
   return this->value_;
+}
+
+IR::Addr::Ptr
+NumberExp::get_var_addr() {
+  return IR::Addr::make_imm(this->value_);
 }
 
 std::list<IR::Ptr>
@@ -791,43 +827,24 @@ Array::_flatten_initval(const std::vector<int> &shape, int shape_ptr, InitValCon
 
   if (container==nullptr) return ret;
 
-  // 如果只余下一个维度，就特殊处理
-  if (shape_ptr+1==shape.size()) {
-    // 循环DFS
-    // TODO 可以报个警告，说初始化表达式深度过大
-    std::stack<std::tuple<InitValContainer*, int> > iter_stack;
-    iter_stack.push(std::make_tuple(container, 0));
-    while (!(iter_stack.empty())) {
-      InitValContainer *now_container;
-      int now_start_pos;
-      
-      // 解包tuple
-      std::tie(now_container, now_start_pos) = iter_stack.top();
-      iter_stack.pop();
-
-      for (int i=now_start_pos ; i<now_container->initval_container_.size() ; i++) {
-        if (now_container->initval_container_[i]->is_exp()) {
-          InitValExp *exp = static_cast<InitValExp*>(now_container->initval_container_[i]);
-          // 如果表达式数量超过需求量，就忽略后面的表达式
-          if (ret.size()>=shape[shape_ptr]) goto loop_end;
-          ret.push_back(exp->exp_);
-        }
-        else {
-          InitValContainer *sub_container = static_cast<InitValContainer*>(now_container->initval_container_[i]);
-          // 如果表达式数量超过需求量，就忽略后面的表达式
-          if (ret.size()>=shape[shape_ptr]) goto loop_end;
-          
-          iter_stack.push(std::make_tuple(now_container, i+1));
-          iter_stack.push(std::make_tuple(sub_container, 0));
-          break;
-        }
+  // 如果已经处理完最低维数组，后面还有数据，就特殊处理（递归边界）
+  if (shape_ptr>=shape.size()) {
+    for (InitVal *val: container->initval_container_) {
+      // 直接在ret中无限制地生成
+      if (val->is_exp()) {
+        InitValExp *exp = static_cast<InitValExp*>(val);
+        // 否则，继续循环
+        ret.push_back(exp->exp_);
+      }
+      else {
+        InitValContainer *sub_container = static_cast<InitValContainer*>(val);
+        // 否则调用
+        ret.splice(ret.end(), this->_flatten_initval(shape, shape_ptr, sub_container));
       }
     }
-    loop_end:
-    while (ret.size()<shape[shape_ptr]) ret.push_back(nullptr);
     return ret;
   }
-
+  
   //     int a[x][y][z]
   // shape_ptr ^
   // 这个函数调用负责生成 a[0][y][z], a[1][y][z], ... , a[x-1][y][z]的初值
@@ -835,25 +852,28 @@ Array::_flatten_initval(const std::vector<int> &shape, int shape_ptr, InitValCon
   for (int i=shape_ptr+1 ; i<shape.size() ; i++) required_size *= shape[i];
   
   for (InitVal *val: container->initval_container_) {
+    // 如果val是表达式，就直接按照数组展平的方式填充
     if (val->is_exp()) {
-      // 如果val是表达式，就直接按照数组展平的方式填充
-
       InitValExp *exp = static_cast<InitValExp*>(val);
       // 如果表达式数量超过需求量，就忽略后面的表达式
       if (ret.size()>=required_size*shape[shape_ptr]) break;
-
+      // 否则，继续循环
       ret.push_back(exp->exp_);
     }
+    // 如果val是列表容器，就递归地生成
     else {
-      // 如果val是列表容器，就递归生成
       InitValContainer *sub_container = static_cast<InitValContainer*>(val);
       // 首先对齐边界
       while (ret.size()%required_size) ret.push_back(nullptr);
       // 如果表达式数量超过需求量，就忽略后面的表达式
       if (ret.size()>=required_size*shape[shape_ptr]) break;
-
       // 否则递归调用
-      ret.splice(ret.end(), this->_flatten_initval(shape, shape_ptr+1, sub_container));
+      Expression::List tmp = this->_flatten_initval(shape, shape_ptr+1, sub_container);
+      if (tmp.size()<=required_size) {
+        ret.splice(ret.end(), tmp);
+        while (ret.size()%required_size) ret.push_back(nullptr);
+      }
+      else for (int i=0 ; i<required_size ; i++) ret.splice(ret.end(), tmp, tmp.begin());
     }
   }
 
@@ -1186,7 +1206,7 @@ FunctionDecl::translate() {
 
   int cnt = 0;
   if (this->params_) for (Variable *i: *(this->params_)) {
-    i->param_no = cnt;
+    i->param_no = cnt++;
     i->translate();
     auto i_ent = i->vartab_ent;
     this->body_->pre_defined.push_back(i_ent);

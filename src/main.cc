@@ -1,5 +1,6 @@
 #include "ast.h"
 #include "analyzer.hh"
+#include "optimize.h"
 
 #include <vector>
 
@@ -14,10 +15,13 @@ int main() {
   yylineno = 1;
   yyparse();
 
+  std::list<IR::Ptr> ir_list;
   for (VarDeclStmt *stmt : vardecl) {
-    for (auto ir_ptr: stmt->translate()) ir_ptr->internal_print();
+    ir_list.splice(ir_list.end(), stmt->translate());
   }
   for (FunctionDecl *f : funcs) {
-    for (auto ir_ptr: f->translate()) ir_ptr->internal_print();
+    ir_list.splice(ir_list.end(), f->translate());
   }
+
+  for (const auto &i: ir_list) i->internal_print();
 }

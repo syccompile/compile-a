@@ -89,7 +89,6 @@ public:
   static std::shared_ptr<IR>
   make_no_operand(Op op) { return make_unary(op, nullptr); }
 
-private:
   Op op_;
 
   Addr::Ptr a0;

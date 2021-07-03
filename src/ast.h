@@ -49,39 +49,33 @@ public:
     NIL   //  NULL
   };
 
-  Expression(Op op, bool evaluable) : op_(op), addr_(nullptr), label_fail_(nullptr) { }
-  virtual ~Expression() { }
-
-  Op op() { return op_; }
+  Expression(Op op, bool evaluable);
+  virtual ~Expression();
 
   // 可否编译期求值
-  virtual bool is_evaluable() const { return false; };
+  virtual bool is_evaluable() const = 0;
   // 为常量时求值
-  virtual int eval() { return 0; };
+  virtual int eval() = 0;
 
   // logical-regular expression cast related
   // 是否为逻辑函数？
-  bool op_logical() const           { return this->op_<=NOT; }
+  bool op_logical() const;
   // 是否为关系型函数？
-  bool op_rel() const               { return EQ<=this->op_ && this->op_<=GE; }
+  bool op_rel() const;
   // 是否要求翻译为逻辑型表达式？
-  bool translate_to_logical() const { return (this->op_logical()||this->op_rel()) ? !cast_to_regular : cast_to_logical; }
+  bool translate_to_logical() const;
   bool cast_to_logical;
   bool cast_to_regular;
 
   // debug
-  virtual void internal_print() override { }
+  virtual void internal_print() = 0;
   // IR generate
-  virtual std::list<IR::Ptr> translate() override { return std::list<IR::Ptr>(); }
+  virtual std::list<IR::Ptr> translate() = 0;
   
   // 获取变量地址
   // 如果没有分配，它会自动分配一个
   // 带常量优化
-  virtual IR::Addr::Ptr get_var_addr() {
-    if (this->addr_!=nullptr) return this->addr_;
-    if (this->is_evaluable()) return this->addr_ = IR::Addr::make_imm(this->eval());
-    return this->addr_ = IR::Addr::make_var(context.allocator.allocate_addr());
-  }
+  virtual IR::Addr::Ptr get_var_addr();
 
   // 获取值为假时跳转的标号
   // 如果没有分配，它会自动分配一个
@@ -126,7 +120,6 @@ public:
   virtual IR::Addr::Ptr get_var_addr() override;
 
 private:
-
   // 变量名称
   string ident_;
 
@@ -155,7 +148,7 @@ public:
   virtual std::list<IR::Ptr> translate() override;
 
   // 获取变量地址
-  // 函数调用的变量地址总是返回值地址
+  // 函数调用的变量地址总是返回值地址 r0
   virtual IR::Addr::Ptr get_var_addr() override;
 
 private:
@@ -191,7 +184,7 @@ public:
 
   // 获取变量地址
   // 如果没有分配，它会自动分配一个
-  virtual IR::Addr::Ptr get_var_addr() { return Expression::get_var_addr(); };
+  virtual IR::Addr::Ptr get_var_addr();
 
 protected:
   // 分两种不同的翻译形式
@@ -223,7 +216,7 @@ public:
 
   // 获取变量地址
   // 如果没有分配，它会自动分配一个
-  virtual IR::Addr::Ptr get_var_addr() { return Expression::get_var_addr(); };
+  virtual IR::Addr::Ptr get_var_addr();
 
 private:
   std::list<IR::Ptr> _translate_regular();
@@ -242,7 +235,7 @@ public:
   ~NumberExp();
 
   // 可否编译期求值
-  virtual bool is_evaluable() const { return true; }
+  virtual bool is_evaluable() const override;
   // evaluate when it's const
   virtual int eval() override;
 
@@ -252,8 +245,7 @@ public:
   virtual std::list<IR::Ptr> translate() override;
 
   // 获取变量地址
-  // 如果没有分配，它会自动分配一个
-  virtual IR::Addr::Ptr get_var_addr() override { return IR::Addr::make_imm(this->value_); };
+  virtual IR::Addr::Ptr get_var_addr() override;
 
 private:
   // 存储数字的字符串表示，例如"0xff", "2021", "08876"
@@ -280,17 +272,10 @@ public:
   virtual ~Variable();
 
   // 设置变量的类型
-  void set_type(BType type) { type_ = type; }
+  void set_type(BType type);
 
   // 设置变量的可变性
-  void set_immutable(bool flag) { immutable_ = flag; }
-
-  // 设置变量是否初始化
-  void set_initialzied(bool flag) { initialized_ = flag; }
-
-  string name() { return name_; }
-  bool immutable() { return immutable_; }
-  bool initialized() { return initialized_; }
+  void set_immutable(bool flag);
 
   // 判断变量是否是数组
   // 数组类应该重写该方法
@@ -403,6 +388,13 @@ private:
   InitValContainer *initval_container_;
 
   std::vector<int> _get_shape();
+
+  // 将初始值容器一维展开
+  // 
+  // 如果容器指针container不是nullptr，则该函数会产生一个与数组总大小等大的一维初始化表达式列表
+  // 反之，则产生一个空列表
+  // 
+  // 初始化表达式列表的表项可能为空，空表项表示此处的表达式是隐式给出的“0”
   Expression::List _flatten_initval(const std::vector<int> &shape, int shape_ptr, InitValContainer *container);
 
   std::list<IR::Ptr> _translate_param();

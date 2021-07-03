@@ -4,6 +4,10 @@
 #include <cassert>
 #include <string>
 
+
+Expression::Expression(Op op, bool evaluable) : op_(op), addr_(nullptr), label_fail_(nullptr) { }
+Expression::~Expression() { }
+
 VarExp::VarExp(string *ident, Expression::List *dimens)
     : Expression(Op::VAR, false), ident_(*ident), dimens_(dimens) {}
 VarExp::~VarExp() {
@@ -59,6 +63,8 @@ Variable::Variable(BType type, string *name, bool immutable,
   initval_ = initval;
 }
 Variable::~Variable() { delete initval_; }
+void Variable::set_type(BType type) { type_ = type; }
+void Variable::set_immutable(bool flag) { immutable_ = flag; }
 
 Array::InitValExp::InitValExp(Expression *exp) : exp_(exp) { assert(exp); }
 Array::InitValExp::~InitValExp() { delete exp_; }
