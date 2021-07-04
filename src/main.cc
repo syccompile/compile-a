@@ -1,6 +1,6 @@
 #include "ast.h"
 #include "analyzer.hh"
-#include "optimize.h"
+#include "ir_opt.h"
 
 #include <vector>
 
@@ -23,5 +23,6 @@ int main() {
     ir_list.splice(ir_list.end(), f->translate());
   }
 
+  remove_redunctant_label(ir_list);
   for (const auto &i: ir_list) i->internal_print();
 }
