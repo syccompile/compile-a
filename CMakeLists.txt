@@ -1,4 +1,27 @@
 cmake_minimum_required(VERSION 3.4.1)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_FLAGS "-g")
+project(compile VERSION 0.1.0)
 
-project(compile VERSION 0.0.1)
+find_package(BISON)
+find_package(FLEX)
+BISON_TARGET(Parser src/analyzer.y ${CMAKE_CURRENT_BINARY_DIR}/analyzer.cc)
+FLEX_TARGET(Scanner src/flex.l ${CMAKE_CURRENT_BINARY_DIR}/flex.cc)
+ADD_FLEX_BISON_DEPENDENCY(Scanner Parser)
+include_directories(${CMAKE_CURRENT_BINARY_DIR})
+include_directories(src)
 
+set(TEST_TXT ${PROJECT_SOURCE_DIR}/src/example.txt)
+set(EXECUTABLE ${PROJECT_NAME})
+file(GLOB srcs "src/*.cc" "src/context/*.cc" "src/ir_opt/*.cc")
+
+add_executable(${EXECUTABLE}
+        ${srcs}
+        ${BISON_Parser_OUTPUTS}
+        ${FLEX_Scanner_OUTPUTS}
+        )
+
+enable_testing()
+add_test(NAME test
+        COMMAND zsh -c "${CMAKE_CURRENT_BINARY_DIR}/${EXECUTABLE} < ${TEST_TXT}"
+        )
