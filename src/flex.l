@@ -31,6 +31,7 @@
 "0x"[0-9A-Fa-f]+  { yylval.string = new std::string(yytext); return NUMBER; }
 "=="              { return EQ; }
 "!="              { return NEQ; }
+"!"               { return NOT; }
 "<="              { return LE; }
 ">="              { return GE; }
 "<"               { return LT; }
