@@ -101,7 +101,7 @@ UnaryExp : PrimaryExp { $$ = $1; }
          | IDENT LPARENT RPARENT { $$ = new FuncCallExp($1, nullptr); delete $1; }
          ;
 // 343 / 0xff / 03327 / a / a[10][1] / (...)
-PrimaryExp : LPARENT Exp RPARENT { $$ = $2; }
+PrimaryExp : LPARENT LOrExp RPARENT { $$ = $2; }
            | NUMBER { $$ = new NumberExp(parse_number($1->c_str())); delete $1; }
            | IDENT  { $$ = new VarExp($1, nullptr); delete $1; }
            | IDENT DimenList  { $$ = new VarExp($1, $2); delete $1; }
