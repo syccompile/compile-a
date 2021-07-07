@@ -1,5 +1,5 @@
-*/.idea
-*/.vscode
+.idea
+.vscode
 make-build-debug/analyzer.cc
 make-build-debug/analyzer.hh
 make-build-debug/flex.cc
