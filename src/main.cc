@@ -6,6 +6,8 @@
 #include <fstream>
 #include <iostream>
 #include <iterator>
+#include <unistd.h>
+#include <filesystem>
 
 extern int yylineno;
 
@@ -14,12 +16,47 @@ std::vector<VarDeclStmt *> vardecl;
 /** 函数声明  **/
 std::vector<FunctionDecl *> funcs;
 
+/* 优化级别 */
+int optimize_level = 0;
+
 int main(int argc, char *argv[]) {
-  if (argc < 4) {
-    std::cerr << "usage: compiler <sysy_file> <ir_file> <asm_file>" << std::endl;
+  int ch;
+  string asm_filename, ir_filename;
+  while ((ch = getopt(argc, argv, "So:O::r:")) != -1) {
+    switch (ch) {
+      case 'S':
+        // do nothing
+        break;
+      case 'o':
+        asm_filename = optarg;
+        break;
+      case 'r':
+        ir_filename = optarg;
+        break;
+      case 'O':
+        if (optarg) {
+          optimize_level = atoi(optarg);
+        }
+        break;
+      default:
+        std::cerr << "usage: compiler <sysy_file> [-S] [-o <asm_file>] [-O <optimize_level>] [-r <ir_file>]" << std::endl;
+        exit(0);
+    }
+  }
+  if (optind == argc) {
+    std::cerr << "usage: compiler <sysy_file> [-S] [-o <asm_file>] [-O<optimize_level>] [-r <ir_file>]" << std::endl;
     exit(0);
   }
-  freopen(argv[1], "r", stdin);
+  std::filesystem::path sysy_file(argv[optind]);
+
+  if (asm_filename.empty()) {
+    asm_filename = sysy_file.stem().string() + ".s";
+  }
+  if (ir_filename.empty()) {
+    ir_filename = sysy_file.stem().string() + ".ir";
+  }
+
+  freopen(sysy_file.c_str(), "r", stdin);
   yylineno = 1;
   yyparse();
 
@@ -33,7 +70,7 @@ int main(int argc, char *argv[]) {
 
   remove_redunctant_label(ir_list);
 
-  std::ofstream IRFile(argv[2]);
+  std::ofstream IRFile(ir_filename);
   auto old_cout_buf = std::cout.rdbuf(IRFile.rdbuf());
   for (const auto &i: ir_list) i->internal_print();
   std::cout.rdbuf(old_cout_buf);
@@ -51,7 +88,7 @@ int main(int argc, char *argv[]) {
 
   // do some optimization for ASM
 
-  std::ofstream ASMFile(argv[3]);
+  std::ofstream ASMFile(asm_filename);
   for (const auto& code: asm_vector) {
     ASMFile << code << std::endl;
   }

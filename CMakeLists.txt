@@ -20,12 +20,17 @@ add_executable(${COMPILER}
         ${FLEX_Scanner_OUTPUTS}
         )
 
-add_executable(test test/test.cpp)
-target_link_libraries(test pthread)
-add_dependencies(test ${COMPILER})
+add_executable(personal_test test/personal_test.cpp)
+target_link_libraries(personal_test pthread)
+add_dependencies(personal_test ${COMPILER})
 
-#set(TEST_TXT test/input/example.txt)
-#enable_testing()
-#add_test(NAME test
-#        COMMAND zsh -c "${CMAKE_CURRENT_BINARY_DIR}/${COMPILER} < ${TEST_TXT}"
-#        )
+add_executable(functional_test test/functional_test.cpp)
+target_link_libraries(functional_test pthread)
+add_dependencies(functional_test ${COMPILER})
+
+add_executable(performance_test test/performance_test.cpp)
+target_link_libraries(performance_test pthread)
+add_dependencies(performance_test ${COMPILER})
+
+add_executable(file_test test/file_test.cpp)
+add_executable(sim test/sim.cpp)

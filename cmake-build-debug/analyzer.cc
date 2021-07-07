@@ -1418,7 +1418,7 @@ yybackup:
   if (yychar <= YYEOF)
     {
       yychar = yytoken = YYEOF;
-      YYDPRINTF ((stderr, "Now at end of input.\n"));
+      YYDPRINTF ((stderr, "Now at end of personal_test.\n"));
     }
   else
     {
@@ -2130,7 +2130,7 @@ yyerrlab:
 
       if (yychar <= YYEOF)
         {
-          /* Return failure if at end of input.  */
+          /* Return failure if at end of personal_test.  */
           if (yychar == YYEOF)
             YYABORT;
         }

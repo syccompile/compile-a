@@ -2,11 +2,19 @@
 
 ## 简单使用
 
-把SysY源文件放在test/input目录下，运行
+首先修改test.sh的权限：
 
 ```shell
-chmod 755 cmake.sh
-./cmake.sh
+chmod 755 test.sh
 ```
 
-输出放在test/output目录下。
+测试文件放在test目录下，运行以下命令进行测试：
+
+```shell
+./test.sh # default: personal_test
+./test.sh personal_test
+./test.sh functional_test
+./test.sh performance_test
+```
+
+输出放在对应的output目录下。
