@@ -90,9 +90,9 @@ Expression::Op reverse_op(Expression::Op op) {
 }
 
 // 获取多维数组的偏移量（编译期常量与否均可）
-std::pair<IR::Addr::Ptr, std::list<IR::Ptr> >
+std::pair<IR::Addr::Ptr, IR::List >
 get_offset(const std::vector<int> &shape, Expression::List &dimens) {
-  std::list<IR::Ptr> ret;
+  IR::List ret;
 
   // 先计算各个表达式的值
   std::vector<IR::Addr::Ptr> dims;
@@ -230,13 +230,13 @@ VarExp::get_var_addr() {
   return this->addr_;
 }
 
-std::list<IR::Ptr>
+IR::List
 VarExp::translate() {
   // 如果编译期可求值，就不翻译
-  if (this->is_evaluable()) return std::list<IR::Ptr>();
+  if (this->is_evaluable()) return IR::List();
 
   // 如果编译期不可求值
-  std::list<IR::Ptr> ret;
+  IR::List ret;
 
   // 上级语法单位要求转为逻辑表达式
   // 翻译模式：生成临时表达式 (this==0)
@@ -292,9 +292,9 @@ FuncCallExp::get_var_addr() {
   return this->addr_ = IR::Addr::make_ret();
 }
 
-std::list<IR::Ptr>
+IR::List
 FuncCallExp::translate() {
-  std::list<IR::Ptr> ret;
+  IR::List ret;
 
   // 如果存在参数
   if (params_!=nullptr) {
@@ -308,7 +308,7 @@ FuncCallExp::translate() {
     }
 
     // 然后生成传参中间代码
-    for (Expression *exp : *params_) ADD_UNR(PARAM, exp->get_var_addr());
+    for (Expression *exp : *params_) ADD_BIN(PARAM, nullptr, exp->get_var_addr());
   }
 
   // 生成函数调用的代码
@@ -372,9 +372,9 @@ BinaryExp::get_var_addr() {
  * 都先按照逻辑型表达式的方式翻译
  * 如果要求本表达式转为算术表达式，那么就在逻辑型表达式的基础上，在条件为真、为假处加上 MOV #0或 MOV #1 的代码
  */
-std::list<IR::Ptr>
+IR::List
 BinaryExp::_translate_logical() {
-  std::list<IR::Ptr> ret;
+  IR::List ret;
 
   // 要求子表达式都转为逻辑表达式
   this->left_->cast_to_logical = this->right_->cast_to_logical = true;
@@ -482,9 +482,9 @@ BinaryExp::_translate_logical() {
   return ret;
 }
 
-std::list<IR::Ptr>
+IR::List
 BinaryExp::_translate_rel() {
-  std::list<IR::Ptr> ret;
+  IR::List ret;
 
   // 要求左右子表达式都转为算术表达式
   this->left_->cast_to_logical = this->right_->cast_to_logical = false;
@@ -499,7 +499,7 @@ BinaryExp::_translate_rel() {
   ret.splice(ret.end(), this->right_->translate());
 
   // 比较子表达式
-  ADD_BIN(CMP, l_addr, r_addr);
+  ADD_TRP(CMP, nullptr, l_addr, r_addr);
 
   if (this->translate_to_logical()) {
     // 要求翻译为逻辑表达式
@@ -517,9 +517,9 @@ BinaryExp::_translate_rel() {
   return ret;
 }
 
-std::list<IR::Ptr>
+IR::List
 BinaryExp::_translate_regular() {
-  std::list<IR::Ptr> ret;
+  IR::List ret;
     
   // 上级表达式要求本表达式生成一个逻辑表达式
   // 那么就直接生成一个临时性的关系表达式 (this==0) ，利用它生成中间代码
@@ -552,12 +552,12 @@ BinaryExp::_translate_regular() {
   return ret;
 }
 
-std::list<IR::Ptr>
+IR::List
 BinaryExp::translate() {
   // 当编译期可求表达式的值时，就拒绝翻译
-  if (this->is_evaluable()) return std::list<IR::Ptr>();
+  if (this->is_evaluable()) return IR::List();
 
-  std::list<IR::Ptr> ret;
+  IR::List ret;
 
   if (this->op_logical()) {
     // &&, ||
@@ -597,9 +597,9 @@ UnaryExp::get_var_addr() {
   return Expression::get_var_addr();
 }
 
-std::list<IR::Ptr>
+IR::List
 UnaryExp::_translate_logical() {
-  std::list<IR::Ptr> ret;
+  IR::List ret;
 
   if (this->translate_to_logical()) {
     //   if (subexp) <do nothing>; else goto this_success_label;
@@ -635,7 +635,7 @@ UnaryExp::_translate_logical() {
     // cmp subexp->addr, 0
     // moveq this->addr, 1
     // movne this->addr, 0
-    ADD_BIN(CMP, this->exp_->get_var_addr(), IR::Addr::make_imm(0));
+    ADD_TRP(CMP, nullptr, this->exp_->get_var_addr(), IR::Addr::make_imm(0));
     ADD_BIN(MOVEQ, this->addr_, IR::Addr::make_imm(1));
     ADD_BIN(MOVNE, this->addr_, IR::Addr::make_imm(0));
   }
@@ -643,9 +643,9 @@ UnaryExp::_translate_logical() {
   return ret;
 }
 
-std::list<IR::Ptr>
+IR::List
 UnaryExp::_translate_regular() {
-  std::list<IR::Ptr> ret;
+  IR::List ret;
 
   if (this->translate_to_logical()) {
     // 要求生成逻辑表达式
@@ -677,12 +677,12 @@ UnaryExp::_translate_regular() {
   return ret;
 }
 
-std::list<IR::Ptr>
+IR::List
 UnaryExp::translate() {
   // 当编译期可求表达式的值时，就拒绝翻译
-  if (this->is_evaluable()) return std::list<IR::Ptr>();
+  if (this->is_evaluable()) return IR::List();
 
-  std::list<IR::Ptr> ret;
+  IR::List ret;
 
   if (this->op_logical()) {
     // !
@@ -710,13 +710,13 @@ NumberExp::get_var_addr() {
   return IR::Addr::make_imm(this->value_);
 }
 
-std::list<IR::Ptr>
+IR::List
 NumberExp::translate() {
   // 常量，无需翻译
-  return std::list<IR::Ptr>();
+  return IR::List();
 }
 
-std::list<IR::Ptr>
+IR::List
 Variable::_translate_param() {
   this->vartab_ent = std::shared_ptr<VarTabEntry>(new VarTabEntry(
     this->name_,
@@ -725,12 +725,12 @@ Variable::_translate_param() {
     std::vector<int>(),
     false
   ));
-  return std::list<IR::Ptr>();
+  return IR::List();
 }
 
-std::list<IR::Ptr>
+IR::List
 Variable::_translate_local() {
-  std::list<IR::Ptr> ret;
+  IR::List ret;
 
   IR::Addr::Ptr addr;
   std::vector<int> init_val;
@@ -762,9 +762,9 @@ Variable::_translate_local() {
   return ret;
 }
 
-std::list<IR::Ptr>
+IR::List
 Variable::_translate_global() {
-  std::list<IR::Ptr> ret;
+  IR::List ret;
 
   IR::Addr::Ptr addr;
   std::vector<int> init_val;
@@ -796,9 +796,9 @@ Variable::_translate_global() {
   return ret;
 }
 
-std::list<IR::Ptr>
+IR::List
 Variable::translate() {
-  std::list<IR::Ptr> ret;
+  IR::List ret;
 
   if (this->param_no!=-1)     ret.splice(ret.end(), this->_translate_param());
   else if (this->is_global()) ret.splice(ret.end(), this->_translate_global());
@@ -883,7 +883,7 @@ Array::_flatten_initval(const std::vector<int> &shape, int shape_ptr, InitValCon
   return ret;
 }
 
-std::list<IR::Ptr>
+IR::List
 Array::_translate_param() {
   std::vector<int> shape = this->_get_shape();
   this->vartab_ent = std::make_shared<VarTabEntry>(
@@ -893,12 +893,12 @@ Array::_translate_param() {
     std::vector<int>(),
     false
   );
-  return std::list<IR::Ptr>();
+  return IR::List();
 }
 
-std::list<IR::Ptr>
+IR::List
 Array::_translate_local() {
-  std::list<IR::Ptr> ret;
+  IR::List ret;
   std::vector<int> init_val;
   std::vector<int> shape = this->_get_shape();
   int total_size = multiply(shape);
@@ -923,7 +923,7 @@ Array::_translate_local() {
     for (Expression *exp: flattened_container) {
       int val = exp->eval();
       init_val.push_back(val);
-      ADD_TRP(STORE, IR::Addr::make_imm(val), addr, IR::Addr::make_imm(offset));
+      ADD_TRP(STORE, addr, IR::Addr::make_imm(offset), IR::Addr::make_imm(val));
       offset++;
     }
   }
@@ -934,7 +934,7 @@ Array::_translate_local() {
       exp_addr = exp->get_var_addr();
       ret.splice(ret.end(), exp->translate());
     }
-    ADD_TRP(STORE, exp_addr, addr, IR::Addr::make_imm(offset));
+    ADD_TRP(STORE, addr, IR::Addr::make_imm(offset), exp_addr);
     offset++;
   }
 
@@ -950,9 +950,9 @@ Array::_translate_local() {
   return ret;
 }
 
-std::list<IR::Ptr>
+IR::List
 Array::_translate_global() {
-  std::list<IR::Ptr> ret;
+  IR::List ret;
   std::vector<int> shape = this->_get_shape();
   IR::Addr::Ptr addr = IR::Addr::make_named_label(this->name_);
   
@@ -1005,9 +1005,9 @@ Array::_translate_global() {
   return ret;
 }
 
-std::list<IR::Ptr>
+IR::List
 Array::translate() {
-  std::list<IR::Ptr> ret;
+  IR::List ret;
 
   if (this->param_no!=-1)     ret.splice(ret.end(), this->_translate_param());
   else if (this->is_global()) ret.splice(ret.end(), this->_translate_global());
@@ -1016,9 +1016,9 @@ Array::translate() {
   return ret;
 }
 
-std::list<IR::Ptr>
+IR::List
 VarDeclStmt::translate() {
-  std::list<IR::Ptr> ret;
+  IR::List ret;
   for (Variable *var : this->vars_) {
     ret.splice(ret.end(), var->translate());
     context.vartab_cur->put(var->vartab_ent);
@@ -1026,15 +1026,15 @@ VarDeclStmt::translate() {
   return ret;
 }
 
-std::list<IR::Ptr>
+IR::List
 ExpStmt::translate() {
   // 没有 ++等影响变量值的操作，不翻译
-  return std::list<IR::Ptr>();
+  return IR::List();
 }
 
-std::list<IR::Ptr>
+IR::List
 BlockStmt::translate() {
-  std::list<IR::Ptr> ret;
+  IR::List ret;
   // 建立块作用域
   context.new_scope();
 
@@ -1048,7 +1048,7 @@ BlockStmt::translate() {
   return ret;
 }
 
-std::list<IR::Ptr>
+IR::List
 IfStmt::translate() {
   // TODO 报错
   assert(this->condition_);
@@ -1060,7 +1060,7 @@ IfStmt::translate() {
     else if (this->no_)           return this->no_->translate();   
   }
 
-  std::list<IR::Ptr> ret;
+  IR::List ret;
   
   // 翻译模式
   //   if (stmt) <do nothing>; else goto label_else;
@@ -1094,9 +1094,9 @@ IfStmt::translate() {
   return ret;
 }
 
-std::list<IR::Ptr>
+IR::List
 WhileStmt::translate() {
-  std::list<IR::Ptr> ret;
+  IR::List ret;
 
   context.while_chain.push_back(this);
 
@@ -1134,9 +1134,9 @@ WhileStmt::translate() {
   return ret;
 }
 
-std::list<IR::Ptr>
+IR::List
 ReturnStmt::translate() {
-  std::list<IR::Ptr> ret;
+  IR::List ret;
 
   IR::Addr::Ptr retexp_addr = nullptr;
   if (this->ret_exp_) retexp_addr = this->ret_exp_->get_var_addr();
@@ -1148,9 +1148,9 @@ ReturnStmt::translate() {
   return ret;
 }
 
-std::list<IR::Ptr>
+IR::List
 BreakStmt::translate() {
-  std::list<IR::Ptr> ret;
+  IR::List ret;
   assert(!(context.while_chain.empty()));
   
   ADD_UNR(JMP, context.while_chain.back()->label_end);
@@ -1158,9 +1158,9 @@ BreakStmt::translate() {
   return ret;
 }
 
-std::list<IR::Ptr>
+IR::List
 ContinueStmt::translate() {
-  std::list<IR::Ptr> ret;
+  IR::List ret;
   assert(!(context.while_chain.empty()));
   
   ADD_UNR(JMP, context.while_chain.back()->label_cond);
@@ -1168,9 +1168,9 @@ ContinueStmt::translate() {
   return ret;
 }
 
-std::list<IR::Ptr>
+IR::List
 AssignmentStmt::translate() {
-  std::list<IR::Ptr> ret;
+  IR::List ret;
   auto ent = context.vartab_cur->get(this->name_);
 
   // TODO 未定义符号、符号是常数
@@ -1190,7 +1190,7 @@ AssignmentStmt::translate() {
     auto offset_pair = get_offset(shape, *(this->dimens_));
     ret.splice(ret.end(), offset_pair.second);
 
-    ADD_TRP(STORE, rval_addr, ent->addr, offset_pair.first);
+    ADD_TRP(STORE, ent->addr, offset_pair.first, rval_addr);
   }
   else {
     // 不是数组
@@ -1200,9 +1200,9 @@ AssignmentStmt::translate() {
   return ret;
 }
 
-std::list<IR::Ptr>
+IR::List
 FunctionDecl::translate() {
-  std::list<IR::Ptr> ret;
+  IR::List ret;
 
   int cnt = 0;
   if (this->params_) for (Variable *i: *(this->params_)) {
@@ -1212,7 +1212,7 @@ FunctionDecl::translate() {
     this->body_->pre_defined.push_back(i_ent);
   }
 
-  ADD_UNR(FUNCDEF, IR::Addr::make_named_label(this->name_));
+  ADD_BIN(FUNCDEF, IR::Addr::make_named_label(this->name_), IR::Addr::make_imm(cnt));
   ret.splice(ret.end(), this->body_->translate());
   ADD_NOP(FUNCEND);
 

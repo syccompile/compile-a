@@ -1,21 +1,35 @@
 #pragma once
 
 #include "debug.h"
+#include "ir_addr.h"
 
 #include <memory>
 #include <vector>
+#include <list>
 
 class IR: public Debug_impl {
 public:
   using Ptr = std::shared_ptr<IR>;
-  enum class Op {
-    LABEL,
+  using List = std::list<Ptr>;
 
-    ADD,
+  enum Op: int {
+    ADD = 0,
     SUB,
     MUL,
     DIV,
     MOD,
+
+    MOV = 5,
+    MOVLE,
+    MOVLT,
+    MOVGE,
+    MOVGT,
+    MOVEQ,
+    MOVNE,
+
+    CMP = 12,
+
+    LABEL,
 
     JMP,
     JLE,
@@ -24,16 +38,6 @@ public:
     JGT,
     JE,
     JNE,
-
-    MOV,
-    MOVLE,
-    MOVLT,
-    MOVGE,
-    MOVGT,
-    MOVEQ,
-    MOVNE,
-
-    CMP,
 
     FUNCDEF,
     FUNCEND,
@@ -54,25 +58,7 @@ public:
     // ...
   };
 
-  struct Addr: public Debug_impl {
-  public:
-    using Ptr = std::shared_ptr<Addr>;
-
-    enum Kind: int { VAR, PARAM, IMM, BRANCH_LABEL, NAMED_LABEL, RET } kind;
-    int val;
-    std::string name;
-
-    Addr(Kind kind, int val): kind(kind), name(), val(val) { }
-    Addr(Kind kind, std::string name): kind(kind), name(name), val(-1) { }
-    virtual void internal_print() override;
-    
-    static Ptr make_var(int v)   { return std::make_shared<Addr>(Kind::VAR, v); }
-    static Ptr make_param(int v) { return std::make_shared<Addr>(Kind::PARAM, v); }
-    static Ptr make_imm(int v)   { return std::make_shared<Addr>(Kind::IMM, v); }
-    static Ptr make_label(int v) { return std::make_shared<Addr>(Kind::BRANCH_LABEL, v); }
-    static Ptr make_ret()        { return std::make_shared<Addr>(Kind::RET, 0); }
-    static Ptr make_named_label(std::string s) { return std::make_shared<Addr>(Kind::NAMED_LABEL, s); }
-  };
+  using Addr = IR_Addr;
 
   IR(Op op, Addr::Ptr a0, Addr::Ptr a1, Addr::Ptr a2): op_(op), a0(a0), a1(a1), a2(a2) { }
   ~IR() { }
