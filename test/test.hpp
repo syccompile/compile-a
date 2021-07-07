@@ -58,39 +58,39 @@ void test(const fs::path &testFile, const fs::path &outputDir) {
     std::cout << green << "\tcompile " << testFilename << " successfully" << normal << std::endl;
   }
 
-  if (fs::exists(expectedResultFile)) { // link and run
-    /* link */
-    exit_code = std::system(link_command.c_str());
-    if (exit_code != 0) {
-      std::cout << red << "\tfail to link " << testFilename << normal << std::endl << std::endl;
-      failed_cases.push_back(testFile.filename());
-      return;
-    } else {
-      std::cout << green << "\tlink successfully" << testFilename << normal << std::endl;
-    }
-
-    /* run */
-    if (fs::exists(inputFile)) { // has input files
-      run_command += (" < " + inputFile.string());
-    }
-    exit_code = std::system(run_command.c_str());
-    std::ofstream ofs(outputResultFile, std::ios::app);
-    ofs << std::endl << exit_code << std::endl;
-    ofs.close();
-
-    /* check */
-    if (check_same(outputResultFile, expectedResultFile)) {
-      std::cout << green << "\tpassed" << normal << std::endl;
-      passed_cases.push_back(testFilename);
-    } else {
-      std::cout << red << "\tresult differs from expected, failed" << normal << std::endl;
-      failed_cases.push_back(testFilename);
-    }
-
-  } else {  // just compile
-    ignored_cases.push_back(testFilename);
-    std::cout << yellow << "\tcouldn't find " <<  expectedResultFile.filename().string() << ", ignored" << normal << std::endl;
-  }
+//  if (fs::exists(expectedResultFile)) { // link and run
+//    /* link */
+//    exit_code = std::system(link_command.c_str());
+//    if (exit_code != 0) {
+//      std::cout << red << "\tfail to link " << testFilename << normal << std::endl << std::endl;
+//      failed_cases.push_back(testFile.filename());
+//      return;
+//    } else {
+//      std::cout << green << "\tlink successfully" << testFilename << normal << std::endl;
+//    }
+//
+//    /* run */
+//    if (fs::exists(inputFile)) { // has input files
+//      run_command += (" < " + inputFile.string());
+//    }
+//    exit_code = std::system(run_command.c_str());
+//    std::ofstream ofs(outputResultFile, std::ios::app);
+//    ofs << std::endl << exit_code << std::endl;
+//    ofs.close();
+//
+//    /* check */
+//    if (check_same(outputResultFile, expectedResultFile)) {
+//      std::cout << green << "\tpassed" << normal << std::endl;
+//      passed_cases.push_back(testFilename);
+//    } else {
+//      std::cout << red << "\tresult differs from expected, failed" << normal << std::endl;
+//      failed_cases.push_back(testFilename);
+//    }
+//
+//  } else {  // just compile
+//    ignored_cases.push_back(testFilename);
+//    std::cout << yellow << "\tcouldn't find " <<  expectedResultFile.filename().string() << ", ignored" << normal << std::endl;
+//  }
   std::cout << std::endl;
 }
 
@@ -100,10 +100,10 @@ void printResult() {
   } else {
     std::cout << red << "Failed cases: " << normal << std::endl;
     std::copy(failed_cases.begin(), failed_cases.end(), std::ostream_iterator<std::string>(std::cout, "\n"));
-    std::cout << std::endl << green << "Passed cases: " << normal << std::endl;
-    std::copy(passed_cases.begin(), passed_cases.end(), std::ostream_iterator<std::string>(std::cout, "\n"));
-    std::cout << std::endl << yellow << "Ignored cases: " << normal << std::endl;
-    std::copy(ignored_cases.begin(), ignored_cases.end(), std::ostream_iterator<std::string>(std::cout, "\n"));
+//    std::cout << std::endl << green << "Passed cases: " << normal << std::endl;
+//    std::copy(passed_cases.begin(), passed_cases.end(), std::ostream_iterator<std::string>(std::cout, "\n"));
+//    std::cout << std::endl << yellow << "Ignored cases: " << normal << std::endl;
+//    std::copy(ignored_cases.begin(), ignored_cases.end(), std::ostream_iterator<std::string>(std::cout, "\n"));
     std::cout << std::endl;
   }
 }
