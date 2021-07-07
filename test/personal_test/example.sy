@@ -1,0 +1,30 @@
+int a[10][10]={{1,2,3,4},{1,2,3}}, b=10, c, d[12][21][21], e[23][56] = {};
+const int s = 2;
+
+int func2 (int d){
+  int a = 10;
+  const int c = 45 + 23 * 3;
+  while(d || !(a+5) || c*(d+10) && c%10) {
+    a = 11;
+    if(a+a*c>10){
+      break;
+    }
+  }
+}
+
+int func3(int a) {
+  const int c = (5 * 2 / (1 + 1)) * (s);
+  int d[c] = {a+5, a+4, 6};
+  if(a > 4-c && c <= 5 || d[3] > 9) {
+    a = 11;
+  }
+  return c * d[0] + 4;
+}
+
+int func1 (int a, int c[][10][10]){
+  a = func2(a, 10);
+  int b = c[1][0][a];
+  a = 2 + 3 * b / 4 * 5;
+  a = 0xf + 1 + 01; 
+  return 10;
+}
