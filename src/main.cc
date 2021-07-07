@@ -68,6 +68,7 @@ int main(int argc, char *argv[]) {
     ir_list.splice(ir_list.end(), f->translate());
   }
 
+  // do some optimization for IR
   remove_redunctant_label(ir_list);
 
   std::ofstream IRFile(ir_filename);
@@ -75,8 +76,6 @@ int main(int argc, char *argv[]) {
   for (const auto &i: ir_list) i->internal_print();
   std::cout.rdbuf(old_cout_buf);
   IRFile.close();
-
-  // do some optimization for IR
 
   std::vector<std::string> asm_vector;
   for (const auto& ir: ir_list) {
