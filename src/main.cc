@@ -78,19 +78,19 @@ int main(int argc, char *argv[]) {
 
   // do some optimization for IR
 
-  std::vector<std::string> asm_vector;
-  for (const auto& ir: ir_list) {
-    auto code = ir->translate_arm();
-    asm_vector.insert(asm_vector.end(),
-                      std::move_iterator(code.begin()),
-                      std::move_iterator(code.end()));
-  }
+  // std::vector<std::string> asm_vector;
+  // for (const auto& ir: ir_list) {
+  //   auto code = ir->translate_arm();
+  //   asm_vector.insert(asm_vector.end(),
+  //                     std::move_iterator(code.begin()),
+  //                     std::move_iterator(code.end()));
+  // }
 
   // do some optimization for ASM
 
-  std::ofstream ASMFile(asm_filename);
-  for (const auto& code: asm_vector) {
-    ASMFile << code << std::endl;
-  }
-  ASMFile.close();
+  // std::ofstream ASMFile(asm_filename);
+  // for (const auto& code: asm_vector) {
+  //   ASMFile << code << std::endl;
+  // }
+  // ASMFile.close();
 }
