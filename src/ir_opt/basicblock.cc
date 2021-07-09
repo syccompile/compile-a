@@ -8,6 +8,19 @@ const std::string yellow = "\033[0;33m";
 const std::string blue = "\033[0;34m";
 const std::string white = "\033[0;37m";
 
+bool operator==(const IR::Addr &lhs, const IR::Addr &rhs) {
+  return lhs.kind == rhs.kind && lhs.val == rhs.val;
+}
+
+bool operator<(const IR::Addr &lhs, const IR::Addr &rhs) {
+  return lhs.kind < rhs.kind || lhs.val < rhs.val;
+}
+
+std::ostream& operator<<(std::ostream& os, IR::Addr a) {
+  a.internal_print();
+  return os;
+}
+
 /* 打印一个map<int, vector<int>> */
 void PRINT_MAP(const std::map<int, std::list<int>> &m) {
   for (const auto &val : m) {
@@ -125,6 +138,46 @@ void BasicBlock::calc_egen_ekill(const std::list<Exp> &all_exp_list) {
   ekill_.sort();
 }
 
+
+void BasicBlock::calc_use_def() {
+  use_.clear();
+  def_.clear();
+  auto add_to_def = [&](const IR::Addr::Ptr &a) {
+    if (a->kind == IR::Addr::Kind::VAR || a->kind == IR::Addr::Kind::PARAM) {
+      auto result = std::find(def_.begin(), def_.end(), *a);
+      if (result == def_.end()) {
+        def_.push_back(*a);
+      }
+      use_.remove(*a);
+    }
+  };
+  auto add_to_use = [&](const IR::Addr::Ptr &a) {
+    if (a->kind == IR::Addr::Kind::VAR || a->kind == IR::Addr::Kind::PARAM) {
+      auto result = std::find(use_.begin(), use_.end(), *a);
+      if (result == use_.end()) {
+        use_.push_back(*a);
+      }
+      def_.remove(*a);
+    }
+  };
+  for (auto iter = ir_list_.rbegin(); iter != ir_list_.rend(); ++iter) {
+    auto cur_ir = *iter;
+    if (is_algo_op(cur_ir->op_)) {
+      add_to_def(cur_ir->a0);
+      add_to_use(cur_ir->a1);
+      add_to_use(cur_ir->a2);
+    } else if (is_mov_op(cur_ir->op_)) {
+      add_to_def(cur_ir->a0);
+      add_to_use(cur_ir->a1);
+    } else if (cur_ir->op_ == IR::Op::CMP) {
+      add_to_use(cur_ir->a1);
+      add_to_use(cur_ir->a2);
+    }
+  }
+  use_.sort();
+  def_.sort();
+}
+
 FunctionBlock::FunctionBlock(std::list<IR::Ptr> &ir_list) {
   func_name_ = ir_list.front()->a0->name;
   arg_num_ = ir_list.front()->a1->val;
@@ -210,6 +263,7 @@ void FunctionBlock::debug() {
 //  _calc_gen_kill();
   reach_define_analysis();
   available_expression_analysis();
+  live_variable_analysis();
   for (const auto &basic_block : basic_block_list_) {
     std::cout << blue << "block " << basic_block->block_num_ << ":" << normal << std::endl;
     basic_block->debug();
@@ -233,6 +287,14 @@ void FunctionBlock::debug() {
     PRINT_ELEMENTS(basic_block->available_expression_IN_);
     std::cout << blue << "available_expression_OUT_: " << normal << std::endl;
     PRINT_ELEMENTS(basic_block->available_expression_OUT_);
+    std::cout << blue << "use: " << normal << std::endl;
+    PRINT_ELEMENTS(basic_block->use_);
+    std::cout << blue << "def: " << normal << std::endl;
+    PRINT_ELEMENTS(basic_block->def_);
+    std::cout << blue << "live_variable_IN_: " << normal << std::endl;
+    PRINT_ELEMENTS(basic_block->live_variable_IN_);
+    std::cout << blue << "live_variable_OUT_: " << normal << std::endl;
+    PRINT_ELEMENTS(basic_block->live_variable_OUT_);
     std::cout << std::endl;
   }
 //  std::cout << "gen_map: " << std::endl;
@@ -443,7 +505,42 @@ void FunctionBlock::_fill_all_exp_list() {
   all_exp_list_.sort();
 }
 void FunctionBlock::live_variable_analysis() {
-
+  _calc_use_def();
+  _calc_live_variable_IN_OUT();
+}
+void FunctionBlock::_calc_use_def() {
+  for (auto &basic_block : basic_block_list_) {
+    basic_block->calc_use_def();
+  }
+}
+void FunctionBlock::_calc_live_variable_IN_OUT() {
+  bool change = true;
+  while (change) {
+    change = false;
+    for (auto &basic_block : basic_block_list_) {
+      std::list<IR::Addr> tmp_IN, tmp, tmp_OUT, tmp_difference_list;
+      for (const auto &succ_block: basic_block->successor_list_) {
+        std::set_union(tmp_OUT.begin(), tmp_OUT.end(),
+                       succ_block.lock()->live_variable_IN_.begin(),
+                       succ_block.lock()->live_variable_IN_.end(),
+                       std::back_inserter(tmp));
+        tmp_OUT.swap(tmp);
+        tmp.clear();
+      }
+      basic_block->live_variable_OUT_.swap(tmp_OUT);
+      std::set_difference(basic_block->live_variable_OUT_.begin(),
+                          basic_block->live_variable_OUT_.end(),
+                          basic_block->def_.begin(), basic_block->def_.end(),
+                          std::back_inserter(tmp_difference_list));
+      std::set_union(basic_block->use_.begin(), basic_block->use_.end(),
+                     tmp_difference_list.begin(), tmp_difference_list.end(),
+                     std::back_inserter(tmp_IN));
+      if (basic_block->live_variable_IN_ != tmp_IN) {
+        change = true;
+        basic_block->live_variable_IN_.swap(tmp_IN);
+      }
+    }
+  }
 }
 
 FunctionBlocks::FunctionBlocks(std::list<IR::Ptr> &ir_list) {

@@ -88,6 +88,12 @@ class BasicBlock {
   std::list<Exp> available_expression_OUT_;
   void calc_egen_ekill(const std::list<Exp> &all_exp_list);
 
+  std::list<IR::Addr> use_;
+  std::list<IR::Addr> def_;
+  std::list<IR::Addr> live_variable_IN_;
+  std::list<IR::Addr> live_variable_OUT_;
+  void calc_use_def();
+
   explicit BasicBlock(const std::list<IR::Ptr> &ir_list)
       : ir_list_(ir_list) {}
   std::list<std::string> translate_to_arm();  // 不确定是否需要
@@ -102,10 +108,7 @@ class FunctionBlock {
   std::map<int, std::list<int>> gen_map_; // 从lineno到gen的映射
   std::map<int, std::list<int>> kill_map_;  // 从lineno到kill的映射
   std::list<Exp> all_exp_list_;
-//  std::map<int, std::list<Exp::Ptr>> egen_map_;
-//  std::map<int, std::list<Exp::Ptr>> ekill_map_;
-//  std::map<int, std::list<int>> define_map_;
-//  std::map<int, std::list<int>> use_map_;
+
   void _build_lineno_ir_map();  // 建立lineno到ir的映射表，并更新basic_block的block_num和first_lineno,last_lineno等信息
 
   void _build_gen_kill_map();
@@ -118,6 +121,9 @@ class FunctionBlock {
   void _fill_all_exp_list();
   void _calc_egen_ekill();
   void _calc_available_expression_IN_OUT();
+
+  void _calc_use_def();
+  void _calc_live_variable_IN_OUT();
  public:
   std::list<BasicBlock::Ptr> basic_block_list_;
   std::string func_name_;
