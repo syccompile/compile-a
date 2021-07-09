@@ -132,7 +132,7 @@ void BasicBlock::calc_egen_ekill(const std::list<Exp> &all_exp_list) {
       delete_egen_exp(ir->a0);
       delete_egen_exp(ir->a0);
       add_ekill_exp(ir->a0);
-    }
+    } // 不处理LOAD指令
   }
   egen_.sort();   // 后续的集合运算要求有序
   ekill_.sort();
@@ -170,6 +170,14 @@ void BasicBlock::calc_use_def() {
       add_to_def(cur_ir->a0);
       add_to_use(cur_ir->a1);
     } else if (cur_ir->op_ == IR::Op::CMP) {
+      add_to_use(cur_ir->a1);
+      add_to_use(cur_ir->a2);
+    } else if (cur_ir->op_ == IR::Op::LOAD) {
+      add_to_def(cur_ir->a0);
+      add_to_use(cur_ir->a1);
+      add_to_use(cur_ir->a2);
+    } else if (cur_ir->op_ == IR::Op::STORE) {
+      add_to_use(cur_ir->a0);
       add_to_use(cur_ir->a1);
       add_to_use(cur_ir->a2);
     }
@@ -326,8 +334,7 @@ void FunctionBlock::_build_gen_kill_map() {
 }
 
 void FunctionBlock::_add_to_gen_kill_help_map(const IR::Ptr &ir, int lineno) {
-  if ((ir->op_ >= IR::Op::ADD && ir->op_ <= IR::Op::MOD) ||   /* 算术指令：Op rd, rs1, rs1 */
-      (ir->op_ >= IR::Op::MOV && ir->op_ <= IR::Op::MOVNE)) { /* 数据移动指令：Op rd, rs, NULL */
+  if (is_algo_op(ir->op_) || is_mov_op(ir->op_) || (ir->op_ == IR::Op::LOAD)) {
     if (ir->a0->kind == IR::Addr::Kind::PARAM) {  // 函数参数
       gen_kill_help_map_.insert(decltype(gen_kill_help_map_)::value_type(ir->a0->val, lineno));
     } else {  // 普通变量
@@ -336,14 +343,12 @@ void FunctionBlock::_add_to_gen_kill_help_map(const IR::Ptr &ir, int lineno) {
   } // ignore else
 }
 void FunctionBlock::_add_to_gen_map(const IR::Ptr &ir, int lineno) {
-  if ((ir->op_ >= IR::Op::ADD && ir->op_ <= IR::Op::MOD) ||   /* 算术指令：Op rd, rs1, rs1 */
-      (ir->op_ >= IR::Op::MOV && ir->op_ <= IR::Op::MOVNE)) { /* 数据移动指令：Op rd, rs, NULL */
+  if (is_algo_op(ir->op_) || is_mov_op(ir->op_) || (ir->op_ == IR::Op::LOAD)) {
     gen_map_[lineno].push_back(lineno);
   } // ignore else
 }
 void FunctionBlock::_add_to_kill_map(const IR::Ptr &ir, int lineno) {
-  if ((ir->op_ >= IR::Op::ADD && ir->op_ <= IR::Op::MOD) ||   /* 算术指令：Op rd, rs1, rs1 */
-      (ir->op_ >= IR::Op::MOV && ir->op_ <= IR::Op::MOVNE)) { /* 数据移动指令：Op rd, rs, NULL */
+  if (is_algo_op(ir->op_) || is_mov_op(ir->op_) || (ir->op_ == IR::Op::LOAD)) {
     int val = ir->a0->val;
     decltype(gen_kill_help_map_)::iterator val_beg, val_end;
     if (ir->a0->kind == IR::Addr::Kind::PARAM) {  // 函数参数
