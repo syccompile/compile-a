@@ -10,21 +10,65 @@
 #include <iostream>
 #include <algorithm>
 
+// 用于可用表达式分析的“表达式”类
+class Exp {
+ public:
+  using Ptr = std::shared_ptr<Exp>;
+  IR::Op op_;
+  IR::Addr::Ptr a0_;
+  IR::Addr::Ptr a1_;
+  Exp(IR::Op op, const IR::Addr::Ptr &a0, const IR::Addr::Ptr &a1) : op_(op), a0_(a0), a1_(a1) {}
+  explicit Exp(const IR::Ptr &ir) : op_(ir->op_), a0_(ir->a1), a1_(ir->a2) {}
+  bool operator==(const Exp &rhs) const {
+    return op_ == rhs.op_ &&
+        a0_->kind == rhs.a0_->kind && a0_->val == rhs.a0_->val &&
+        a1_->kind == rhs.a1_->kind && a1_->val == rhs.a1_->val;
+  }
+  bool related_to(const IR::Addr::Ptr &a) const {
+    return (a0_->kind == a->kind && a0_->val == a->val) ||
+        (a1_->kind == a->kind && a1_->val == a->val);
+  }
+  bool operator<(const Exp &exp) const {
+    return op_ < exp.op_;
+  }
+  friend std::ostream& operator<<(std::ostream& os, const Exp &exp) {
+    exp.a0_->internal_print();
+    switch (exp.op_) {
+      case IR::Op::ADD: os << "+"; break;
+      case IR::Op::SUB: os << "-"; break;
+      case IR::Op::MUL: os << "*"; break;
+      case IR::Op::DIV: os << "/"; break;
+      case IR::Op::MOD: os << "%"; break;
+      default: os << "\tunknown op\t";
+    }
+    exp.a1_->internal_print();
+    return os;
+  }
+};
+
 class BasicBlock {
+ private:
  public:
   using Ptr = std::shared_ptr<BasicBlock>;
   using Ptr_weak = std::weak_ptr<BasicBlock>;
+  int first_lineno_;
+  int last_lineno_;
+  int block_num_;
   std::list<IR::Ptr> ir_list_;
   std::list<Ptr_weak> predecessor_list_;  // 前驱基本块
   std::list<Ptr_weak> successor_list_;    // 后继基本块
+
   std::list<int> gen_;
   std::list<int> kill_;
   std::list<int> reach_define_IN_;
   std::list<int> reach_define_OUT_;
 
-  int first_lineno_;
-  int last_lineno_;
-  int block_num_;
+  std::list<Exp> egen_;
+  std::list<Exp> ekill_;
+  std::list<Exp> available_expression_IN_;
+  std::list<Exp> available_expression_OUT_;
+  void calc_egen_ekill(const std::list<Exp> &all_exp_list);
+
   explicit BasicBlock(const std::list<IR::Ptr> &ir_list)
       : ir_list_(ir_list) {}
   std::list<std::string> translate_to_arm();  // 不确定是否需要
@@ -38,16 +82,23 @@ class FunctionBlock {
   std::map<int, IR::Ptr> lineno_ir_map_; // 从lineno到IR指令的映射
   std::map<int, std::list<int>> gen_map_; // 从lineno到gen的映射
   std::map<int, std::list<int>> kill_map_;  // 从lineno到kill的映射
+  std::list<Exp> all_exp_list_;
+//  std::map<int, std::list<Exp::Ptr>> egen_map_;
+//  std::map<int, std::list<Exp::Ptr>> ekill_map_;
 //  std::map<int, std::list<int>> define_map_;
 //  std::map<int, std::list<int>> use_map_;
-  void _build_gen_kill_map();
-  void _build_define_map();
   void _build_lineno_ir_map();  // 建立lineno到ir的映射表，并更新basic_block的block_num和first_lineno,last_lineno等信息
+
+  void _build_gen_kill_map();
   void _add_to_gen_kill_help_map(const IR::Ptr &ir, int lineno);
   void _add_to_gen_map(const IR::Ptr &ir, int lineno);
   void _add_to_kill_map(const IR::Ptr &ir, int lineno);
   void _calc_gen_kill();
   void _calc_reach_define_IN_OUT();
+
+  void _fill_all_exp_list();
+  void _calc_egen_ekill();
+  void _calc_available_expression_IN_OUT();
  public:
   std::list<BasicBlock::Ptr> basic_block_list_;
   std::string func_name_;

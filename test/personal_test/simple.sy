@@ -3,10 +3,8 @@ int func2 (){
   a = b - 1;
   b = c;
   a = 3;
-  if (a == b) {
-    d = 5;
-    a = 8 + c * 4 + d;
-    b = a - b;
+  while (a == b) {
+    c = a - b;
   }
   a = d + c;
   b = a + b;

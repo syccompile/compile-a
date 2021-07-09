@@ -61,6 +61,45 @@ void BasicBlock::debug() {
     ir->internal_print();
   }
 }
+void BasicBlock::calc_egen_ekill(const std::list<Exp> &all_exp_list) {
+  egen_.clear();
+  ekill_.clear();
+
+  auto delete_egen_exp = [&](IR::Addr::Ptr a) { // 删除和a相关的表达式
+    for (auto iter = egen_.begin(); iter != egen_.end(); ++iter) {
+      auto cur_exp = *iter;
+      if ((cur_exp.a0_->kind == a->kind && cur_exp.a0_->val == a->val) ||
+          (cur_exp.a1_->kind == a->kind && cur_exp.a1_->val == a->val)) {
+        iter = egen_.erase(iter);
+      } // ignore else
+    }
+  };
+  auto delete_ekill_exp = [&](const Exp &exp) {
+    for (auto iter = ekill_.begin(); iter != ekill_.end(); ++iter) {
+      if (*iter == exp) {
+        iter = ekill_.erase(iter);
+      }
+    }
+  };
+  auto add_ekill_exp = [&](const IR::Addr::Ptr &a) {
+    for (const auto &exp: all_exp_list) {
+      if (exp.related_to(a)) {
+        ekill_.push_back(exp);
+      }
+    }
+  };
+  for (const auto &ir: ir_list_) {
+    if (ir->op_ >= IR::Op::ADD && ir->op_ <= IR::Op::MOD) { // 算术表达式
+      auto new_exp = Exp(ir);
+      egen_.push_back(new_exp);
+      delete_egen_exp(ir->a0);
+      delete_ekill_exp(new_exp);
+      add_ekill_exp(ir->a0);
+    }
+  }
+  egen_.sort();   // 后续的集合运算要求有序
+  ekill_.sort();
+}
 
 FunctionBlock::FunctionBlock(std::list<IR::Ptr> &ir_list) {
   func_name_ = ir_list.front()->a0->name;
@@ -146,6 +185,7 @@ void FunctionBlock::debug() {
   std::cout << "------------------------" << std::endl;
 //  _calc_gen_kill();
   reach_define_analysis();
+  available_expression_analysis();
   for (const auto &basic_block : basic_block_list_) {
     std::cout << blue << "block " << basic_block->block_num_ << ":" << normal << std::endl;
     basic_block->debug();
@@ -161,6 +201,10 @@ void FunctionBlock::debug() {
     PRINT_ELEMENTS(basic_block->reach_define_IN_);
     std::cout << blue << "reach_define_OUT: " << normal << std::endl;
     PRINT_ELEMENTS(basic_block->reach_define_OUT_);
+    std::cout << blue << "available_expression_IN_: " << normal << std::endl;
+    PRINT_ELEMENTS(basic_block->available_expression_IN_);
+    std::cout << blue << "available_expression_OUT_: " << normal << std::endl;
+    PRINT_ELEMENTS(basic_block->available_expression_OUT_);
     std::cout << std::endl;
   }
   std::cout << "gen_map: " << std::endl;
@@ -170,10 +214,10 @@ void FunctionBlock::debug() {
   std::cout << "------------------------\n" << std::endl;
 }
 
-void FunctionBlock::_build_define_map() {
-
-}
 void FunctionBlock::_build_gen_kill_map() {
+  gen_kill_help_map_.clear();
+  gen_map_.clear();
+  kill_map_.clear();
   int lineno = -1;
   for (const auto &basic_block : basic_block_list_) {
     for (const auto &ir : basic_block->ir_list_) {
@@ -231,6 +275,8 @@ void FunctionBlock::_calc_gen_kill() {
   _build_lineno_ir_map();
   _build_gen_kill_map();
   for (const auto &basic_block : basic_block_list_) {
+    basic_block->gen_.clear();
+    basic_block->kill_.clear();
     std::list<int> gen_list, kill_list, tmp_gen_list, tmp_kill_list, tmp_difference_list;
     for (int cur_lineno = basic_block->last_lineno_; cur_lineno >= basic_block->first_lineno_; --cur_lineno) {
       std::set_difference(gen_map_[cur_lineno].begin(), gen_map_[cur_lineno].end(),
@@ -260,13 +306,15 @@ void FunctionBlock::_calc_reach_define_IN_OUT() {
       std::list<int> tmp_IN, tmp, tmp_OUT, tmp_difference_list;
       for (const auto &pred_block: basic_block->predecessor_list_) {
         std::set_union(tmp_IN.begin(), tmp_IN.end(),
-                       pred_block.lock()->reach_define_OUT_.begin(), pred_block.lock()->reach_define_OUT_.end(),
+                       pred_block.lock()->reach_define_OUT_.begin(),
+                       pred_block.lock()->reach_define_OUT_.end(),
                        std::back_inserter(tmp));
         tmp_IN.swap(tmp);
         tmp.clear();
       }
       basic_block->reach_define_IN_.swap(tmp_IN);
-      std::set_difference(basic_block->reach_define_IN_.begin(), basic_block->reach_define_IN_.end(),
+      std::set_difference(basic_block->reach_define_IN_.begin(),
+                          basic_block->reach_define_IN_.end(),
                           basic_block->kill_.begin(), basic_block->kill_.end(),
                           std::back_inserter(tmp_difference_list));
       std::set_union(basic_block->gen_.begin(), basic_block->gen_.end(),
@@ -284,6 +332,7 @@ void FunctionBlock::reach_define_analysis() {
   _calc_reach_define_IN_OUT();
 }
 void FunctionBlock::_build_lineno_ir_map() {
+  lineno_ir_map_.clear();
   int block_num = -1;
   int lineno = -1;
   for (const auto &basic_block : basic_block_list_) {
@@ -295,6 +344,62 @@ void FunctionBlock::_build_lineno_ir_map() {
       lineno_ir_map_[lineno] = ir; // 保存每一行对应的ir，加速后续的搜索
     }
     basic_block->last_lineno_ = lineno;
+  }
+}
+void FunctionBlock::available_expression_analysis() {
+  _calc_egen_ekill();
+  _calc_available_expression_IN_OUT();
+}
+void FunctionBlock::_calc_egen_ekill() {
+  _fill_all_exp_list();
+  for (auto &basic_block : basic_block_list_) {
+    basic_block->calc_egen_ekill(all_exp_list_);
+  }
+}
+void FunctionBlock::_calc_available_expression_IN_OUT() {
+  for (auto &basic_block : basic_block_list_) {
+    basic_block->available_expression_OUT_ = all_exp_list_;
+  }
+  bool change = true;
+  while (change) {
+    change = false;
+    for (auto &basic_block : basic_block_list_) {
+      std::list<Exp> tmp_IN, tmp, tmp_OUT, tmp_difference_list;
+      for (const auto &pred_block: basic_block->predecessor_list_) {
+        std::set_intersection(tmp_IN.begin(), tmp_IN.end(),
+                              pred_block.lock()->available_expression_OUT_.begin(),
+                              pred_block.lock()->available_expression_OUT_.end(),
+                              std::back_inserter(tmp));
+        tmp_IN.swap(tmp);
+        tmp.clear();
+      }
+      basic_block->available_expression_IN_.swap(tmp_IN);
+      std::set_difference(basic_block->available_expression_IN_.begin(),
+                          basic_block->available_expression_IN_.end(),
+                          basic_block->ekill_.begin(), basic_block->ekill_.end(),
+                          std::back_inserter(tmp_difference_list));
+      std::set_union(basic_block->egen_.begin(), basic_block->egen_.end(),
+                     tmp_difference_list.begin(), tmp_difference_list.end(),
+                     std::back_inserter(tmp_OUT));
+      if (basic_block->available_expression_OUT_ != tmp_OUT) {
+        change = true;
+        basic_block->available_expression_OUT_.swap(tmp_OUT);
+      }
+    }
+  }
+}
+void FunctionBlock::_fill_all_exp_list() {
+  all_exp_list_.clear();
+  for (const auto &basic_block: basic_block_list_) {
+    for (const auto &ir: basic_block->ir_list_) {
+      if (ir->op_ >= IR::Op::ADD && ir->op_ <= IR::Op::MOD) {
+        auto exp = Exp(ir);
+        auto result = std::find(all_exp_list_.begin(), all_exp_list_.end(), exp);
+        if (result == all_exp_list_.end()) {
+          all_exp_list_.push_back(exp);
+        }
+      }
+    }
   }
 }
 
@@ -323,7 +428,17 @@ std::list<std::string> FunctionBlocks::translate_to_arm() {
   return ret;
 }
 void FunctionBlocks::debug() {
-  for (const auto &function_block : function_block_list_) {
+  for (auto &function_block : function_block_list_) {
     function_block->debug();
+  }
+}
+void FunctionBlocks::reach_define_analysis() {
+  for (auto &function_block: function_block_list_) {
+    function_block->reach_define_analysis();
+  }
+}
+void FunctionBlocks::available_expression_analysis() {
+  for (auto &function_block: function_block_list_) {
+    function_block->available_expression_analysis();
   }
 }
