@@ -61,6 +61,14 @@ make_function_block(std::list<IR::Ptr> &ir_list) {
   return std::make_shared<FunctionBlock>(ir_list);
 }
 
+inline Exp make_algo_exp(const IR::Ptr &ir) {
+  return Exp(ir->op_, ir->a1, ir->a2);
+}
+
+inline Exp make_mov_exp(const IR::Ptr &ir) {
+  return Exp(ir->op_, ir->a0, ir->a1);
+}
+
 std::list<std::string> BasicBlock::translate_to_arm() {
   return std::list<std::string>();
 }
@@ -76,8 +84,7 @@ void BasicBlock::calc_egen_ekill(const std::list<Exp> &all_exp_list) {
   auto delete_egen_exp = [&](IR::Addr::Ptr a) { // 删除和a相关的表达式
     for (auto iter = egen_.begin(); iter != egen_.end(); ++iter) {
       auto cur_exp = *iter;
-      if ((cur_exp.a0_->kind == a->kind && cur_exp.a0_->val == a->val) ||
-          (cur_exp.a1_->kind == a->kind && cur_exp.a1_->val == a->val)) {
+      if (cur_exp.related_to(a)) {
         iter = egen_.erase(iter);
       } // ignore else
     }
@@ -98,12 +105,18 @@ void BasicBlock::calc_egen_ekill(const std::list<Exp> &all_exp_list) {
   };
   for (const auto &ir: ir_list_) {
     if (is_algo_op(ir->op_)) { // 算术表达式
-      auto new_exp = Exp(ir);
+      auto new_exp = make_algo_exp(ir);
       egen_.push_back(new_exp);
       delete_egen_exp(ir->a0);
       delete_ekill_exp(new_exp);
       add_ekill_exp(ir->a0);
     } else if (is_mov_op(ir->op_)) {  // 赋值语句
+      if (ir->op_ == IR::Op::MOV) { // 只有无条件赋值语句才将表达式加入
+        auto new_exp = make_mov_exp(ir);
+        egen_.push_back(new_exp);
+      }
+      // 每一种赋值语句都需要把表达式删除
+      delete_egen_exp(ir->a0);
       delete_egen_exp(ir->a0);
       add_ekill_exp(ir->a0);
     }
@@ -409,18 +422,28 @@ void FunctionBlock::_calc_available_expression_IN_OUT() {
 }
 void FunctionBlock::_fill_all_exp_list() {
   all_exp_list_.clear();
+  auto exist_exp = [&](const Exp &exp) {
+    auto result = std::find(all_exp_list_.begin(), all_exp_list_.end(), exp);
+    if (result == all_exp_list_.end()) {
+      return false;
+    }
+    return true;
+  };
   for (const auto &basic_block: basic_block_list_) {
     for (const auto &ir: basic_block->ir_list_) {
-      if (ir->op_ >= IR::Op::ADD && ir->op_ <= IR::Op::MOD) {
-        auto exp = Exp(ir);
-        auto result = std::find(all_exp_list_.begin(), all_exp_list_.end(), exp);
-        if (result == all_exp_list_.end()) {
-          all_exp_list_.push_back(exp);
-        }
+      if (is_algo_op(ir->op_)) {
+        auto exp = make_algo_exp(ir);
+        if (!exist_exp(exp))  all_exp_list_.push_back(exp);
+      } else if (ir->op_ == IR::Op::MOV){
+        auto exp = make_mov_exp(ir);
+        if (!exist_exp(exp)) all_exp_list_.push_back(exp);
       }
     }
   }
   all_exp_list_.sort();
+}
+void FunctionBlock::live_variable_analysis() {
+
 }
 
 FunctionBlocks::FunctionBlocks(std::list<IR::Ptr> &ir_list) {
@@ -460,5 +483,10 @@ void FunctionBlocks::reach_define_analysis() {
 void FunctionBlocks::available_expression_analysis() {
   for (auto &function_block: function_block_list_) {
     function_block->available_expression_analysis();
+  }
+}
+void FunctionBlocks::live_variable_analysis() {
+  for (auto &function_block: function_block_list_) {
+    function_block->live_variable_analysis();
   }
 }
