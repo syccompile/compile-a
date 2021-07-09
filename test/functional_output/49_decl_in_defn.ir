@@ -1,4 +1,0 @@
-FUNCDEF	main	#0	
-MOV	%0	#12	
-RET	#0		
-FUNCEND			

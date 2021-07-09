@@ -1,11 +1,11 @@
 int func2 (){
   int a, b, c, d, m;
-  a = b - 1;
-  b = c;
-  a = 3;
-  while (a == b) {
-    c = a - b;
+  a = b - 9;
+  d = a - b;
+  m = c + 5;
+  if (a == 1) {
+    m = a - b;
+    c = 3;
   }
-  a = d + c;
-  b = a + b;
+  a = a - b;
 }

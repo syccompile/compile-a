@@ -1,6 +1,0 @@
-VARDEF	n		
-DATA	#0		
-VAREND			
-VARDEF	a		
-ZERO	#10		
-VAREND			

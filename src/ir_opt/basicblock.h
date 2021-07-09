@@ -29,7 +29,11 @@ class Exp {
         (a1_->kind == a->kind && a1_->val == a->val);
   }
   bool operator<(const Exp &exp) const {
-    return op_ < exp.op_;
+    if (op_ != exp.op_) return op_ < exp.op_;
+    if (a0_->kind != exp.a0_->kind) return a0_->kind < exp.a0_->kind;
+    if (a0_->val != exp.a0_->val) return a0_->val < exp.a0_->val;
+    if (a1_->kind != exp.a1_->kind) return a1_->kind < exp.a1_->kind;
+    return a0_->val < exp.a0_->val;
   }
   friend std::ostream& operator<<(std::ostream& os, const Exp &exp) {
     exp.a0_->internal_print();

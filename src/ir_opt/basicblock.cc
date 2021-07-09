@@ -38,6 +38,14 @@ void PRINT_PRED_SUCC_BLOCKS(const std::list<BasicBlock::Ptr_weak> &l) {
   std::cout << std::endl;
 }
 
+bool is_mov_op(IR::Op op) {
+  return op >= IR::Op::MOV && op <= IR::Op::MOVNE;
+}
+
+bool is_algo_op(IR::Op op) {
+  return op >= IR::Op::ADD && op <= IR::Op::MOD;
+}
+
 /* 通过ir_list新建一个BasicBlock, 返回指向它的shared_ptr */
 std::shared_ptr<BasicBlock> make_basic_block(const std::list<IR::Ptr> &ir_list) {
   return std::make_shared<BasicBlock>(ir_list);
@@ -89,11 +97,14 @@ void BasicBlock::calc_egen_ekill(const std::list<Exp> &all_exp_list) {
     }
   };
   for (const auto &ir: ir_list_) {
-    if (ir->op_ >= IR::Op::ADD && ir->op_ <= IR::Op::MOD) { // 算术表达式
+    if (is_algo_op(ir->op_)) { // 算术表达式
       auto new_exp = Exp(ir);
       egen_.push_back(new_exp);
       delete_egen_exp(ir->a0);
       delete_ekill_exp(new_exp);
+      add_ekill_exp(ir->a0);
+    } else if (is_mov_op(ir->op_)) {  // 赋值语句
+      delete_egen_exp(ir->a0);
       add_ekill_exp(ir->a0);
     }
   }
@@ -201,16 +212,20 @@ void FunctionBlock::debug() {
     PRINT_ELEMENTS(basic_block->reach_define_IN_);
     std::cout << blue << "reach_define_OUT: " << normal << std::endl;
     PRINT_ELEMENTS(basic_block->reach_define_OUT_);
+    std::cout << blue << "egen: " << normal << std::endl;
+    PRINT_ELEMENTS(basic_block->egen_);
+    std::cout << blue << "ekill: " << normal << std::endl;
+    PRINT_ELEMENTS(basic_block->ekill_);
     std::cout << blue << "available_expression_IN_: " << normal << std::endl;
     PRINT_ELEMENTS(basic_block->available_expression_IN_);
     std::cout << blue << "available_expression_OUT_: " << normal << std::endl;
     PRINT_ELEMENTS(basic_block->available_expression_OUT_);
     std::cout << std::endl;
   }
-  std::cout << "gen_map: " << std::endl;
-  PRINT_MAP(gen_map_);
-  std::cout << "kill_map: " << std::endl;
-  PRINT_MAP(kill_map_);
+//  std::cout << "gen_map: " << std::endl;
+//  PRINT_MAP(gen_map_);
+//  std::cout << "kill_map: " << std::endl;
+//  PRINT_MAP(kill_map_);
   std::cout << "------------------------\n" << std::endl;
 }
 
@@ -364,7 +379,7 @@ void FunctionBlock::_calc_available_expression_IN_OUT() {
   while (change) {
     change = false;
     for (auto &basic_block : basic_block_list_) {
-      std::list<Exp> tmp_IN, tmp, tmp_OUT, tmp_difference_list;
+      std::list<Exp> tmp_IN = all_exp_list_, tmp, tmp_OUT, tmp_difference_list;
       for (const auto &pred_block: basic_block->predecessor_list_) {
         std::set_intersection(tmp_IN.begin(), tmp_IN.end(),
                               pred_block.lock()->available_expression_OUT_.begin(),
@@ -373,7 +388,11 @@ void FunctionBlock::_calc_available_expression_IN_OUT() {
         tmp_IN.swap(tmp);
         tmp.clear();
       }
-      basic_block->available_expression_IN_.swap(tmp_IN);
+      if (basic_block->predecessor_list_.empty()) {
+        basic_block->available_expression_IN_.clear();
+      } else {
+        basic_block->available_expression_IN_.swap(tmp_IN);
+      }
       std::set_difference(basic_block->available_expression_IN_.begin(),
                           basic_block->available_expression_IN_.end(),
                           basic_block->ekill_.begin(), basic_block->ekill_.end(),
@@ -401,6 +420,7 @@ void FunctionBlock::_fill_all_exp_list() {
       }
     }
   }
+  all_exp_list_.sort();
 }
 
 FunctionBlocks::FunctionBlocks(std::list<IR::Ptr> &ir_list) {

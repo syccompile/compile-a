@@ -1,6 +1,0 @@
-VARDEF	a		
-ZERO	#10		
-VAREND			
-FUNCDEF	main	#0	
-RET	#0		
-FUNCEND			
