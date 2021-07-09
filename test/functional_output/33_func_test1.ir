@@ -1,0 +1,30 @@
+VARDEF	a		
+DATA	#0		
+VAREND			
+FUNCDEF	myFunc	#3	
+MOV	p0	#2	
+MOV	%0	#0	
+CMP		%0	#0
+JE	.L0		
+RET	#0		
+JMP	.L0		
+LABEL	.L0		
+CMP		p1	#0
+JLE	.L1		
+SUB	%1	p1	#1
+MOV	p1	%1	
+JMP	.L0		
+LABEL	.L1		
+ADD	%2	p0	p1
+RET	%2		
+FUNCEND			
+FUNCDEF	main	#0	
+MOV	a	#3	
+PARAM		#1	
+PARAM		#2	
+PARAM		#1	
+CALL	myFunc		
+MOV	%3	r0	
+ADD	%4	a	%3
+RET	%4		
+FUNCEND			

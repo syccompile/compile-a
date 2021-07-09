@@ -1,0 +1,38 @@
+VARDEF	n		
+DATA	#0		
+VAREND			
+FUNCDEF	gcd	#2	
+MOV	%0	p0	
+MOV	%1	p1	
+CMP		p0	p1
+JGE	.L0		
+MOV	%2	p0	
+MOV	p0	p1	
+MOV	p1	%2	
+JMP	.L0		
+LABEL	.L0		
+MOD	%4	p0	p1
+MOV	%3	%4	
+LABEL	.L1		
+CMP		%3	#0
+JE	.L2		
+MOV	p0	p1	
+MOV	p1	%3	
+MOD	%5	p0	p1
+MOV	%3	%5	
+JMP	.L1		
+LABEL	.L2		
+MUL	%7	%0	%1
+DIV	%6	%7	p1
+RET	%6		
+FUNCEND			
+FUNCDEF	main	#0	
+CALL	getint		
+MOV	%8	r0	
+CALL	getint		
+MOV	%9	r0	
+PARAM		%8	
+PARAM		%9	
+CALL	gcd		
+RET	r0		
+FUNCEND			

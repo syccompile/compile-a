@@ -1,0 +1,26 @@
+FUNCDEF	fsqrt	#1	
+MOV	%0	#0	
+DIV	%2	p0	#2
+MOV	%1	%2	
+LABEL	.L0		
+SUB	%3	%0	%1
+CMP		%3	#0
+JE	.L1		
+MOV	%0	%1	
+DIV	%5	p0	%0
+ADD	%4	%0	%5
+MOV	%1	%4	
+DIV	%6	%1	#2
+MOV	%1	%6	
+JMP	.L0		
+LABEL	.L1		
+RET	%1		
+FUNCEND			
+FUNCDEF	main	#0	
+MOV	%7	#400	
+PARAM		%7	
+CALL	fsqrt		
+MOV	%8	r0	
+MOV	%8	#10	
+RET	#0		
+FUNCEND			

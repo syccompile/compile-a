@@ -1,6 +1,7 @@
 #include "ast.h"
 #include "analyzer.hh"
 #include "ir_opt.h"
+#include "ir_opt/basicblock.h"
 
 #include <vector>
 #include <fstream>
@@ -71,11 +72,14 @@ int main(int argc, char *argv[]) {
   // do some optimization for IR
   remove_redunctant_label(ir_list);
 
-  std::ofstream IRFile(ir_filename);
-  auto old_cout_buf = std::cout.rdbuf(IRFile.rdbuf());
-  for (const auto &i: ir_list) i->internal_print();
-  std::cout.rdbuf(old_cout_buf);
-  IRFile.close();
+  FunctionBlocks fb(ir_list);
+  fb.debug();
+
+//  std::ofstream IRFile(ir_filename);
+//  auto old_cout_buf = std::cout.rdbuf(IRFile.rdbuf());
+//  for (const auto &i: ir_list) i->internal_print();
+//  std::cout.rdbuf(old_cout_buf);
+//  IRFile.close();
 
 //  std::vector<std::string> asm_vector;
 //  for (const auto& ir: ir_list) {

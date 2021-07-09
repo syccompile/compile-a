@@ -1,0 +1,16 @@
+FUNCDEF	ifElse	#0	
+MOV	%0	#5	
+CMP		%0	#5
+JNE	.L0		
+MOV	%0	#25	
+JMP	.L1		
+LABEL	.L0		
+MUL	%1	%0	#2
+MOV	%0	%1	
+LABEL	.L1		
+RET	%0		
+FUNCEND			
+FUNCDEF	main	#0	
+CALL	ifElse		
+RET	r0		
+FUNCEND			

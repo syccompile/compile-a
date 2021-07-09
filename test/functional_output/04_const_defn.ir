@@ -1,0 +1,6 @@
+VARDEF	x		
+DATA	#4		
+VAREND			
+FUNCDEF	main	#0	
+RET	#4		
+FUNCEND			

@@ -1,0 +1,19 @@
+FUNCDEF	fact	#1	
+CMP		p0	#0
+JNE	.L0		
+RET	#1		
+JMP	.L0		
+LABEL	.L0		
+SUB	%1	p0	#1
+MOV	%0	%1	
+PARAM		%0	
+CALL	fact		
+MUL	%2	p0	r0
+RET	%2		
+FUNCEND			
+FUNCDEF	main	#0	
+MOV	%3	#4	
+PARAM		%3	
+CALL	fact		
+RET	r0		
+FUNCEND			

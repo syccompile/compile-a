@@ -1,4 +1,13 @@
-int main() {
-  int a = 1;
-  return a;
+int func2 (){
+  int a, b, c, d, m;
+  a = b - 1;
+  b = c;
+  a = 3;
+  if (a == b) {
+    d = 5;
+    a = 8 + c * 4 + d;
+    b = a - b;
+  }
+  a = d + c;
+  b = a + b;
 }

@@ -1,0 +1,33 @@
+FUNCDEF	palindrome	#1	
+ALLOC_IN_STACK	%0	#4	
+MOV	%1	#0	
+LABEL	.L0		
+CMP		%1	#4
+JGE	.L1		
+MOD	%3	p0	#10
+STORE	%0	#0	%3
+DIV	%4	p0	#10
+MOV	p0	%4	
+ADD	%5	%1	#1
+MOV	%1	%5	
+JMP	.L0		
+LABEL	.L1		
+MOV	%20	#0	
+LOAD	%16	%0	%20
+MOV	%22	#3	
+LOAD	%18	%0	%22
+CMP		%16	%18
+JNE	.L2		
+MOV	%29	#1	
+LOAD	%25	%0	%29
+MOV	%31	#2	
+LOAD	%27	%0	%31
+CMP		%25	%27
+JNE	.L2		
+MOV	%2	#1	
+JMP	.L3		
+LABEL	.L2		
+MOV	%2	#0	
+LABEL	.L3		
+RET	%2		
+FUNCEND			

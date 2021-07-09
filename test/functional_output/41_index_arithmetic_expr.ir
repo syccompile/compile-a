@@ -1,0 +1,18 @@
+FUNCDEF	main	#0	
+ALLOC_IN_STACK	%2	#3	
+MOV	%0	#56	
+MOV	%1	#12	
+MOV	%3	#0	
+STORE	%2	%3	#1
+MOV	%4	#1	
+STORE	%2	%4	#2
+MOV	%5	#2	
+STORE	%2	%5	#3
+MOD	%10	%0	%1
+ADD	%9	%10	%1
+DIV	%8	%9	#5
+SUB	%7	%8	#2
+LOAD	%11	%2	#0
+MOV	%6	%11	
+RET	#0		
+FUNCEND			

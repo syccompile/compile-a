@@ -1,0 +1,8 @@
+FUNCDEF	defn	#0	
+RET	#4		
+FUNCEND			
+FUNCDEF	main	#0	
+CALL	defn		
+MOV	%0	r0	
+RET	%0		
+FUNCEND			

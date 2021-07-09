@@ -1,0 +1,31 @@
+FUNCDEF	main	#0	
+ALLOC_IN_STACK	%0	#500	
+MOV	%3	#0	
+MOV	%2	#0	
+MOV	%1	#0	
+LABEL	.L0		
+CMP		%1	#10
+JE	.L4		
+CALL	getch		
+MOV	%1	r0	
+CMP		%1	#40
+JLE	.L1		
+CMP		%1	#91
+JGE	.L1		
+JMP	.L2		
+LABEL	.L1		
+CMP		%1	#96
+JLE	.L3		
+CMP		%1	#123
+JGE	.L3		
+LABEL	.L2		
+ADD	%4	%3	#1
+MOV	%3	%4	
+JMP	.L3		
+LABEL	.L3		
+ADD	%5	%2	#1
+MOV	%2	%5	
+JMP	.L0		
+LABEL	.L4		
+RET	#0		
+FUNCEND			

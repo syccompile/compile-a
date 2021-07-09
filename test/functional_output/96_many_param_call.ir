@@ -1,0 +1,159 @@
+FUNCDEF	testParam8	#8	
+ADD	%6	p0	p1
+SUB	%5	%6	p2
+SUB	%4	%5	p3
+SUB	%3	%4	p4
+ADD	%2	%3	p5
+ADD	%1	%2	p6
+ADD	%0	%1	p7
+RET	%0		
+FUNCEND			
+FUNCDEF	testParam16	#16	
+ADD	%21	p0	p1
+ADD	%20	%21	p2
+ADD	%19	%20	p3
+ADD	%18	%19	p4
+ADD	%17	%18	p5
+ADD	%16	%17	p6
+ADD	%15	%16	p7
+SUB	%14	%15	p8
+ADD	%13	%14	p9
+ADD	%12	%13	p10
+ADD	%11	%12	p11
+ADD	%10	%11	p12
+ADD	%9	%10	p13
+ADD	%8	%9	p14
+ADD	%7	%8	p15
+RET	%7		
+FUNCEND			
+FUNCDEF	testParam32	#32	
+ADD	%52	p0	p1
+ADD	%51	%52	p2
+ADD	%50	%51	p3
+ADD	%49	%50	p4
+ADD	%48	%49	p5
+ADD	%47	%48	p6
+ADD	%46	%47	p7
+ADD	%45	%46	p8
+ADD	%44	%45	p9
+ADD	%43	%44	p10
+ADD	%42	%43	p11
+SUB	%41	%42	p12
+SUB	%40	%41	p13
+SUB	%39	%40	p14
+SUB	%38	%39	p15
+SUB	%37	%38	p16
+SUB	%36	%37	p17
+SUB	%35	%36	p18
+SUB	%34	%35	p19
+SUB	%33	%34	p20
+SUB	%32	%33	p21
+ADD	%31	%32	p22
+ADD	%30	%31	p23
+ADD	%29	%30	p24
+ADD	%28	%29	p25
+ADD	%27	%28	p26
+ADD	%26	%27	p27
+ADD	%25	%26	p28
+ADD	%24	%25	p29
+ADD	%23	%24	p30
+ADD	%22	%23	p31
+RET	%22		
+FUNCEND			
+FUNCDEF	main	#0	
+MOV	%53	#0	
+MOV	%54	#1	
+MOV	%55	#2	
+MOV	%56	#3	
+MOV	%57	#4	
+MOV	%58	#5	
+MOV	%59	#6	
+MOV	%60	#7	
+MOV	%61	#8	
+MOV	%62	#9	
+MOV	%63	#0	
+MOV	%64	#1	
+MOV	%65	#2	
+MOV	%66	#3	
+MOV	%67	#4	
+MOV	%68	#5	
+MOV	%69	#6	
+MOV	%70	#7	
+MOV	%71	#8	
+MOV	%72	#9	
+MOV	%73	#0	
+MOV	%74	#1	
+MOV	%75	#2	
+MOV	%76	#3	
+MOV	%77	#4	
+MOV	%78	#5	
+MOV	%79	#6	
+MOV	%80	#7	
+MOV	%81	#8	
+MOV	%82	#9	
+MOV	%83	#0	
+MOV	%84	#1	
+PARAM		%53	
+PARAM		%54	
+PARAM		%55	
+PARAM		%56	
+PARAM		%57	
+PARAM		%58	
+PARAM		%59	
+PARAM		%60	
+CALL	testParam8		
+MOV	%53	r0	
+PARAM		%53	
+PARAM		%54	
+PARAM		%55	
+PARAM		%56	
+PARAM		%57	
+PARAM		%58	
+PARAM		%59	
+PARAM		%60	
+PARAM		%61	
+PARAM		%62	
+PARAM		%63	
+PARAM		%64	
+PARAM		%65	
+PARAM		%66	
+PARAM		%67	
+PARAM		%68	
+CALL	testParam16		
+MOV	%53	r0	
+PARAM		%53	
+PARAM		%54	
+PARAM		%55	
+PARAM		%56	
+PARAM		%57	
+PARAM		%58	
+PARAM		%59	
+PARAM		%60	
+PARAM		%61	
+PARAM		%62	
+PARAM		%63	
+PARAM		%64	
+PARAM		%65	
+PARAM		%66	
+PARAM		%67	
+PARAM		%68	
+PARAM		%69	
+PARAM		%70	
+PARAM		%71	
+PARAM		%72	
+PARAM		%73	
+PARAM		%74	
+PARAM		%75	
+PARAM		%76	
+PARAM		%77	
+PARAM		%78	
+PARAM		%79	
+PARAM		%80	
+PARAM		%81	
+PARAM		%82	
+PARAM		%83	
+PARAM		%84	
+CALL	testParam32		
+MOV	%53	r0	
+RET	#0		
+FUNCEND			

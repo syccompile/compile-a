@@ -1,0 +1,14 @@
+FUNCDEF	main	#0	
+MOV	%1	#0	
+MOV	%0	#0	
+LABEL	.L0		
+CMP		%0	#21
+JGE	.L1		
+MUL	%2	%1	%0
+MOV	%1	%2	
+ADD	%3	%0	#1
+MOV	%0	%3	
+JMP	.L0		
+LABEL	.L1		
+RET	#0		
+FUNCEND			

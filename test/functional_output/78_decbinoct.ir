@@ -1,0 +1,28 @@
+FUNCDEF	dec2bin	#1	
+MOV	%0	#0	
+MOV	%1	#1	
+MOV	%3	p0	
+LABEL	.L0		
+CMP		%3	#0
+JE	.L1		
+MOD	%4	%3	#2
+MOV	%2	%4	
+MUL	%6	%1	%2
+ADD	%5	%6	%0
+MOV	%0	%5	
+MUL	%7	%1	#10
+MOV	%1	%7	
+DIV	%8	%3	#2
+MOV	%3	%8	
+JMP	.L0		
+LABEL	.L1		
+RET	%0		
+FUNCEND			
+FUNCDEF	main	#0	
+MOV	%9	#400	
+PARAM		%9	
+CALL	dec2bin		
+MOV	%10	r0	
+MOV	%10	#10	
+RET	#0		
+FUNCEND			

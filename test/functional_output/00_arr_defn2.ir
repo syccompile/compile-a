@@ -1,0 +1,6 @@
+VARDEF	a		
+ZERO	#100		
+VAREND			
+FUNCDEF	main	#0	
+RET	#0		
+FUNCEND			

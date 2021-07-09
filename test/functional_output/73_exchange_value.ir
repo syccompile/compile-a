@@ -1,0 +1,15 @@
+VARDEF	n		
+DATA	#0		
+VAREND			
+FUNCDEF	main	#0	
+CALL	getint		
+MOV	%0	r0	
+CALL	getint		
+MOV	%1	r0	
+MOV	%2	%0	
+MOV	%0	%1	
+MOV	%1	%2	
+MOV	%2	#10	
+MOV	%2	#10	
+RET	#0		
+FUNCEND			

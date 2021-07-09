@@ -1,0 +1,5 @@
+FUNCDEF	main	#0	
+CALL	getint		
+MOV	%0	r0	
+RET	%0		
+FUNCEND			

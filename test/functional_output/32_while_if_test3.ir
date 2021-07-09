@@ -1,0 +1,34 @@
+FUNCDEF	deepWhileBr	#2	
+ADD	%1	p0	p1
+MOV	%0	%1	
+LABEL	.L0		
+CMP		%0	#75
+JGE	.L4		
+MOV	%2	#42	
+CMP		%0	#100
+JGE	.L3		
+ADD	%3	%0	%2
+MOV	%0	%3	
+CMP		%0	#99
+JLE	.L2		
+MUL	%5	%2	#2
+MOV	%4	%5	
+MUL	%6	%4	#2
+MOV	%0	%6	
+JMP	.L1		
+LABEL	.L1		
+JMP	.L2		
+LABEL	.L2		
+JMP	.L3		
+LABEL	.L3		
+JMP	.L0		
+LABEL	.L4		
+RET	%0		
+FUNCEND			
+FUNCDEF	main	#0	
+MOV	%7	#2	
+PARAM		%7	
+PARAM		%7	
+CALL	deepWhileBr		
+RET	r0		
+FUNCEND			

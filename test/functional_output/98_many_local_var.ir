@@ -1,0 +1,75 @@
+VARDEF	n		
+DATA	#0		
+VAREND			
+FUNCDEF	main	#0	
+CALL	getint		
+MOV	%30	r0	
+LABEL	.L0		
+CMP		%30	#5
+JNE	.L1		
+ADD	%31	%30	#1
+MOV	%30	%31	
+JMP	.L0		
+LABEL	.L1		
+MOV	%0	#0	
+ADD	%32	%0	#1
+MOV	%1	%32	
+ADD	%33	%1	#1
+MOV	%2	%33	
+ADD	%34	%2	#1
+MOV	%3	%34	
+ADD	%35	%3	#1
+MOV	%4	%35	
+ADD	%36	%4	#1
+MOV	%5	%36	
+ADD	%37	%5	#1
+MOV	%6	%37	
+ADD	%38	%6	#1
+MOV	%7	%38	
+ADD	%39	%7	#1
+MOV	%8	%39	
+ADD	%40	%8	#1
+MOV	%9	%40	
+ADD	%41	%9	#1
+MOV	%10	%41	
+ADD	%42	%10	#1
+MOV	%11	%42	
+ADD	%43	%11	#1
+MOV	%12	%43	
+ADD	%44	%12	#1
+MOV	%13	%44	
+ADD	%45	%13	#1
+MOV	%14	%45	
+ADD	%46	%14	#1
+MOV	%15	%46	
+ADD	%47	%15	#1
+MOV	%16	%47	
+ADD	%48	%16	#1
+MOV	%17	%48	
+ADD	%49	%17	#1
+MOV	%18	%49	
+ADD	%50	%18	#1
+MOV	%19	%50	
+ADD	%51	%19	#1
+MOV	%20	%51	
+ADD	%52	%20	#1
+MOV	%21	%52	
+ADD	%53	%21	#1
+MOV	%22	%53	
+ADD	%54	%22	#1
+MOV	%23	%54	
+ADD	%55	%23	#1
+MOV	%24	%55	
+ADD	%56	%24	#1
+MOV	%25	%56	
+ADD	%57	%25	#1
+MOV	%26	%57	
+ADD	%58	%26	#1
+MOV	%27	%58	
+ADD	%59	%27	#1
+MOV	%28	%59	
+ADD	%60	%28	#1
+MOV	%29	%60	
+MOV	%62	#10	
+RET	%25		
+FUNCEND			

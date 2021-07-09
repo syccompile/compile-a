@@ -1,0 +1,6 @@
+VARDEF	a		
+DATA	#0		
+VAREND			
+VARDEF	r		
+DATA	#0		
+VAREND			
