@@ -66,7 +66,6 @@ FunctionBlock::FunctionBlock(std::list<IR::Ptr> &ir_list) {
   func_name_ = ir_list.front()->a0->name;
   arg_num_ = ir_list.front()->a1->val;
   ir_list.pop_front();  // pop FUNCDEF
-  ir_list.pop_back();   // pop FUNCEND
 
   auto tmp_basic_block = make_empty_basic_block();  // 第一条指令是首指令
   while (!(ir_list.empty())) {
@@ -106,30 +105,37 @@ FunctionBlock::FunctionBlock(std::list<IR::Ptr> &ir_list) {
         return basic_block;
       }
     }
-    throw "could not find label";
+    throw std::string("could not find label ") + std::to_string(label_num);
   };
 
   for (auto iter = basic_block_list_.begin(); iter != basic_block_list_.end(); ++iter) {
     auto basic_block = *iter;
     auto last_ir = basic_block->ir_list_.back();
-    if (last_ir->op_ == IR::Op::JMP) {  // 无条件跳转
-      auto target_block = find_label(last_ir->a0->val);
-      basic_block->successor_list_.push_back(target_block);
-      target_block->predecessor_list_.push_back(basic_block);
-    } else if (last_ir->op_ == IR::Op::RET) { // 无条件跳转
-      auto target_block = find_label(last_ir->a0->val);
-      basic_block->successor_list_.push_back(target_block);
-      target_block->predecessor_list_.push_back(basic_block);
-    } else if (last_ir->op_ >= IR::Op::JLE && last_ir->op_ <= IR::Op::JNE) {  // 条件跳转
-      auto next_block = *std::next(iter);
-      auto target_block = find_label(last_ir->a0->val);
-      if (next_block->block_num_ != target_block->block_num_) {
-        basic_block->successor_list_.push_back(next_block);
-        next_block->predecessor_list_.push_back(basic_block);
-      } // 两个目标相同则只建立前驱-后继关系一次，不确保该情况会出现
-      basic_block->successor_list_.push_back(target_block);
-      target_block->predecessor_list_.push_back(basic_block);
-    } // ignore else
+    try {
+      if (last_ir->op_ == IR::Op::JMP) {  // 无条件跳转
+        auto target_block = find_label(last_ir->a0->val);
+        basic_block->successor_list_.push_back(target_block);
+        target_block->predecessor_list_.push_back(basic_block);
+      } else if (last_ir->op_ == IR::Op::RET) { // 无条件跳转
+        if (std::next(iter) != basic_block_list_.end()) {
+          auto next_block = *std::next(iter);
+          basic_block->successor_list_.push_back(next_block);
+          next_block->predecessor_list_.push_back(basic_block);
+        }
+      } else if (last_ir->op_ >= IR::Op::JLE && last_ir->op_ <= IR::Op::JNE) {  // 条件跳转
+        auto next_block = *std::next(iter);
+        auto target_block = find_label(last_ir->a0->val);
+        if (next_block->block_num_ != target_block->block_num_) {
+          basic_block->successor_list_.push_back(next_block);
+          next_block->predecessor_list_.push_back(basic_block);
+        } // 两个目标相同则只建立前驱-后继关系一次，不确保该情况会出现
+        basic_block->successor_list_.push_back(target_block);
+        target_block->predecessor_list_.push_back(basic_block);
+      } // ignore else
+    } catch (const std::string &e) {
+      std::cout << e << std::endl;
+      exit(EXIT_FAILURE);
+    }
   }
 }
 std::list<std::string> FunctionBlock::translate_to_arm() {
