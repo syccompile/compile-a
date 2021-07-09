@@ -12,7 +12,7 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR})
 include_directories(src)
 
 set(COMPILER ${PROJECT_NAME})
-file(GLOB srcs "src/*.cc" "src/context/*.cc" "src/ir_opt/*.cc")
+file(GLOB srcs "src/*.cc" "src/context/*.cc" "src/ir_opt/*.cc", "src/ir_to_asm/*.cc")
 
 add_executable(${COMPILER}
         ${srcs}

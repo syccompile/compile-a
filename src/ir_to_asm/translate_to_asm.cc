@@ -5,6 +5,35 @@
 // TODO 根据IR操作码获取ARM操作码
 std::string
 get_asm_opcode(IR::Op op) {
+
+#define CASE(IR_OP, ASM_OP) case IR::Op:: IR_OP : return std::string(ASM_OP)
+
+  switch(op) {
+    CASE(ADD, "add");
+    CASE(SUB, "sub");
+    CASE(MUL, "mul");
+    CASE(DIV, "div");
+
+    CASE(MOV, "mov");
+    CASE(MOVLE, "movle");
+    CASE(MOVLT, "movlt");
+    CASE(MOVGE, "movge");
+    CASE(MOVGT, "movgt");
+    CASE(MOVEQ, "moveq");
+    CASE(MOVNE, "movne");
+
+    CASE(JMP, "b");
+    CASE(JLE, "ble");
+    CASE(JLT, "blt");
+    CASE(JGE, "jge");
+    CASE(JGT, "jgt");
+    CASE(JE, "je");
+    CASE(JNE, "jne");
+    default: return std::string("");
+  }
+
+#undef CASE
+
 }
 
 template <class T> std::string
@@ -14,11 +43,28 @@ to_string(T val) {
   return sstream.str();
 }
 
-std::pair<IR::List, IR::List>
-split_decl_func(IR::List &l);
+std::pair<std::list<IR::List>, std::list<IR::List> >
+split_decl_func(IR::List &l) {
+  std::list<IR::List> decl, func;
 
-std::list<IR::List>
-split_functions(IR::List &l);
+  while (!(l.empty())) {
+    if (l.front()->op_==IR::Op::VARDEF) {
+      IR::List tmp;
+      tmp.splice(tmp.end(), l, l.begin());
+      while (tmp.back()->op_ != IR::Op::VAREND) tmp.splice(tmp.end(), l, l.begin());
+      decl.push_back(tmp);
+    }
+    else if (l.front()->op_==IR::Op::FUNCDEF) {
+      IR::List tmp;
+      tmp.splice(tmp.end(), l, l.begin());
+      while (tmp.back()->op_ != IR::Op::FUNCEND) tmp.splice(tmp.end(), l, l.begin());
+      func.push_back(tmp);
+    }
+    else l.pop_front();
+  }
+
+  return std::make_pair(decl, func);
+}
 
 std::list<std::string>
 translate_function(IR::List &l) {
@@ -38,6 +84,7 @@ translate_function(IR::List &l) {
     if (var_alloc.count(regnum)) return var_alloc[regnum];
     var_alloc[regnum] = acc + size;
     acc += size;
+    return acc;
   };
 
   // IR地址存储的值移入寄存器
@@ -160,7 +207,10 @@ translate_function(IR::List &l) {
   }; 
 
   // 函数名称
-  ret.push_back(l.front()->a0->name + ":");
+  std::string name = l.front()->a0->name;
+  ret.push_back(std::string(".global\t") + name);
+  ret.push_back(std::string(".type\t") + name + ", %function");
+  ret.push_back(name + ":");
   // 将被调用者保存的9个寄存器统统压栈
   ret.push_back("push\t{fp, lr, r4-r10}");
   // 将fp指向新的栈帧
@@ -215,33 +265,35 @@ translate_function(IR::List &l) {
       // 先把所有的PARAM都放进list中
       std::list<IR::Ptr> param_list;
       while (l.front()->op_==IR::Op::PARAM) param_list.splice(param_list.end(), l, l.begin());
-      // 计算需要压栈的参数数量
-      int stack_size = param_list.size() - 4;
-      int remain_push = stack_size;
-      // TODO distinguish array
+      int stack_size = (param_list.size()*4-16);
+      if (stack_size<0) stack_size = 0;
       // 第四个以后的参数压栈
-      while (remain_push>=4) {
+      while (param_list.size()>=8) {
         for (int i=0 ; i<4 ; i++) {
           ret.splice(ret.end(), move_value(param_list.back()->a0, i)); 
           param_list.pop_back();
         }
         ret.push_back(std::string("push\t{r0-r4}"));
-        remain_push -= 4;
       }
+
+      int remain_push = param_list.size() - 4;
       for (int i=0 ; i<remain_push ; i++) {
         ret.splice(ret.end(), move_value(param_list.back()->a0, i)); 
         param_list.pop_back();
       }
-      if (remain_push) ret.push_back(std::string("push\t{r0-r" + to_string(stack_size-1) + "}"));
+      if (remain_push>1) ret.push_back(std::string("push\t{r0-r" + to_string(remain_push-1) + "}"));
+      else if (remain_push==1) ret.push_back(std::string("str\tr0, [sp, #4]!"));
+
       // 前四个参数放在a0到a3中
-      for (int i=0 ; i<4 ; i++) {
-        ret.splice(ret.end(), move_value(param_list.front()->a0, i)); 
-        param_list.pop_front();
+      int cnt = 0;
+      for (auto &ir_: param_list) {
+        ret.splice(ret.end(), move_value(ir_->a1, cnt++));
       }
+      param_list.clear();
       // 执行函数调用
       ret.push_back(std::string("bl\t") + l.front()->a0->name);
       // 恢复栈
-      ret.push_back(std::string("add\t sp, sp, #") + to_string(4*stack_size));
+      ret.push_back(std::string("add\t sp, sp, #") + to_string(stack_size));
     }
     // CALL
     else if (ir->op_==IR::Op::CALL) {
@@ -263,8 +315,56 @@ translate_function(IR::List &l) {
       ret.splice(ret.end(), store_arr(ir->a0, ir->a1, 4, 5, 6));
     }
     // ALLOC_IN_STACK
-    else if (ir->op_==IR::Op::STORE) {
+    else if (ir->op_==IR::Op::ALLOC_IN_STACK) {
       get_offset(ir->a0->val, ir->a1->val*4);
     }
+    l.pop_front();
+    ret.push_back("");
   }
+  return ret;
+}
+
+std::list<std::string>
+translate_decl(IR::List &l) {
+
+  std::list<std::string> ret;
+
+  std::string name = l.front()->a0->name;
+  ret.push_back(std::string(".global\t") + name);
+  ret.push_back(name + ":");
+  l.pop_front();
+
+  while (l.front()->op_!=IR::Op::VAREND) {
+    auto ir = l.front();
+
+    if (ir->op_==IR::Op::DATA) {
+      ret.push_back(std::string(".word\t") + to_string(ir->a0->val));
+    }
+    else if (ir->op_==IR::Op::ZERO) {
+      ret.push_back(std::string(".space\t") + to_string(ir->a0->val*4));
+    }
+
+    l.pop_front();
+  }
+
+  ret.push_back(std::string(".") + name + "_offset:");
+  ret.push_back(std::string(".word\t") + name);
+
+  return ret;
+}
+
+std::list<std::string>
+translate_arm(IR::List &l) {
+  std::list<std::string> ret;
+
+  auto pll = split_decl_func(l);
+  // 翻译全局变量
+  ret.push_back(std::string(".data"));
+  for (auto &decl: pll.first) ret.splice(ret.end(), translate_decl(decl));
+
+  // 翻译函数
+  ret.push_back(std::string(".text"));
+  for (auto &func: pll.second) ret.splice(ret.end(), translate_function(func));
+
+  return ret;
 }

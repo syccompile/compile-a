@@ -118,7 +118,7 @@ get_offset(const std::vector<int> &shape, Expression::List &dimens) {
     acc *= shape[i];
   } 
   // 如果所有下标都计算完了，就直接返回常地址
-  if (i==0) return std::make_pair(IR::Addr::make_imm(constant_offset), ret);
+  if (i<0) return std::make_pair(IR::Addr::make_imm(constant_offset), ret);
   // 常量优化结束
   
   // 再计算非编译期常数的偏移量

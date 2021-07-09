@@ -1,6 +1,7 @@
 #include "ast.h"
 #include "analyzer.hh"
 #include "ir_opt.h"
+#include "ir_to_asm/translate_to_asm.h"
 
 #include <vector>
 #include <fstream>
@@ -88,9 +89,11 @@ int main(int argc, char *argv[]) {
 
   // do some optimization for ASM
 
-  // std::ofstream ASMFile(asm_filename);
-  // for (const auto& code: asm_vector) {
-  //   ASMFile << code << std::endl;
-  // }
-  // ASMFile.close();
+  std::list<std::string> asm_content = translate_arm(ir_list);
+
+  std::ofstream ASMFile(asm_filename);
+  for (const auto& code: asm_content) {
+    ASMFile << code << std::endl;
+  }
+  ASMFile.close();
 }
