@@ -69,9 +69,9 @@ std::shared_ptr<BasicBlock> make_empty_basic_block() {
 }
 
 /* 通过ir_list新建一个FunctionBlock, 返回指向它的shared_ptr */
-std::shared_ptr<FunctionBlock>
+std::shared_ptr<Function>
 make_function_block(std::list<IR::Ptr> &ir_list) {
-  return std::make_shared<FunctionBlock>(ir_list);
+  return std::make_shared<Function>(ir_list);
 }
 
 inline Exp make_algo_exp(const IR::Ptr &ir) {
@@ -186,7 +186,7 @@ void BasicBlock::calc_use_def() {
   def_.sort();
 }
 
-FunctionBlock::FunctionBlock(std::list<IR::Ptr> &ir_list) {
+Function::Function(std::list<IR::Ptr> &ir_list) {
   func_name_ = ir_list.front()->a0->name;
   arg_num_ = ir_list.front()->a1->val;
   ir_list.pop_front();  // pop FUNCDEF
@@ -262,10 +262,10 @@ FunctionBlock::FunctionBlock(std::list<IR::Ptr> &ir_list) {
     }
   }
 }
-std::list<std::string> FunctionBlock::translate_to_arm() {
+std::list<std::string> Function::translate_to_arm() {
   return std::list<std::string>();
 }
-void FunctionBlock::debug() {
+void Function::debug() {
   std::cout << green << func_name_ << ": " << normal << std::endl;
   std::cout << "------------------------" << std::endl;
 //  _calc_gen_kill();
@@ -312,20 +312,20 @@ void FunctionBlock::debug() {
   std::cout << "------------------------\n" << std::endl;
 }
 
-void FunctionBlock::_build_gen_kill_map() {
+void Function::_build_gen_kill_map() {
   gen_kill_help_map_.clear();
   gen_map_.clear();
   kill_map_.clear();
   int lineno = -1;
   for (const auto &basic_block : basic_block_list_) {
-    for (const auto &ir : basic_block->ir_list_) {
+    for (const auto &ir : *basic_block) {
       ++lineno;
       _add_to_gen_kill_help_map(ir, lineno);
     }
   }
   lineno = -1;
   for (const auto &basic_block : basic_block_list_) {
-    for (const auto &ir : basic_block->ir_list_) {
+    for (const auto &ir : *basic_block) {
       ++lineno;
       _add_to_gen_map(ir, lineno);
       _add_to_kill_map(ir, lineno);
@@ -333,7 +333,7 @@ void FunctionBlock::_build_gen_kill_map() {
   }
 }
 
-void FunctionBlock::_add_to_gen_kill_help_map(const IR::Ptr &ir, int lineno) {
+void Function::_add_to_gen_kill_help_map(const IR::Ptr &ir, int lineno) {
   if (is_algo_op(ir->op_) || is_mov_op(ir->op_) || (ir->op_ == IR::Op::LOAD)) {
     if (ir->a0->kind == IR::Addr::Kind::PARAM) {  // 函数参数
       gen_kill_help_map_.insert(decltype(gen_kill_help_map_)::value_type(ir->a0->val, lineno));
@@ -342,12 +342,12 @@ void FunctionBlock::_add_to_gen_kill_help_map(const IR::Ptr &ir, int lineno) {
     }
   } // ignore else
 }
-void FunctionBlock::_add_to_gen_map(const IR::Ptr &ir, int lineno) {
+void Function::_add_to_gen_map(const IR::Ptr &ir, int lineno) {
   if (is_algo_op(ir->op_) || is_mov_op(ir->op_) || (ir->op_ == IR::Op::LOAD)) {
     gen_map_[lineno].push_back(lineno);
   } // ignore else
 }
-void FunctionBlock::_add_to_kill_map(const IR::Ptr &ir, int lineno) {
+void Function::_add_to_kill_map(const IR::Ptr &ir, int lineno) {
   if (is_algo_op(ir->op_) || is_mov_op(ir->op_) || (ir->op_ == IR::Op::LOAD)) {
     int val = ir->a0->val;
     decltype(gen_kill_help_map_)::iterator val_beg, val_end;
@@ -366,7 +366,7 @@ void FunctionBlock::_add_to_kill_map(const IR::Ptr &ir, int lineno) {
     }
   } // ignore else
 }
-void FunctionBlock::_calc_gen_kill() {
+void Function::_calc_gen_kill() {
   _build_lineno_ir_map();
   _build_gen_kill_map();
   for (const auto &basic_block : basic_block_list_) {
@@ -393,7 +393,7 @@ void FunctionBlock::_calc_gen_kill() {
     basic_block->kill_.swap(kill_list);
   }
 }
-void FunctionBlock::_calc_reach_define_IN_OUT() {
+void Function::_calc_reach_define_IN_OUT() {
   bool change = true;
   while (change) {
     change = false;
@@ -422,11 +422,11 @@ void FunctionBlock::_calc_reach_define_IN_OUT() {
     }
   }
 }
-void FunctionBlock::reach_define_analysis() {
+void Function::reach_define_analysis() {
   _calc_gen_kill();
   _calc_reach_define_IN_OUT();
 }
-void FunctionBlock::_build_lineno_ir_map() {
+void Function::_build_lineno_ir_map() {
   lineno_ir_map_.clear();
   int block_num = -1;
   int lineno = -1;
@@ -434,24 +434,24 @@ void FunctionBlock::_build_lineno_ir_map() {
     ++block_num;
     basic_block->block_num_ = block_num;
     basic_block->first_lineno_ = lineno + 1;
-    for (const auto &ir : basic_block->ir_list_) {
+    for (const auto &ir : *basic_block) {
       ++lineno;
       lineno_ir_map_[lineno] = ir; // 保存每一行对应的ir，加速后续的搜索
     }
     basic_block->last_lineno_ = lineno;
   }
 }
-void FunctionBlock::available_expression_analysis() {
+void Function::available_expression_analysis() {
   _calc_egen_ekill();
   _calc_available_expression_IN_OUT();
 }
-void FunctionBlock::_calc_egen_ekill() {
+void Function::_calc_egen_ekill() {
   _fill_all_exp_list();
   for (auto &basic_block : basic_block_list_) {
     basic_block->calc_egen_ekill(all_exp_list_);
   }
 }
-void FunctionBlock::_calc_available_expression_IN_OUT() {
+void Function::_calc_available_expression_IN_OUT() {
   for (auto &basic_block : basic_block_list_) {
     basic_block->available_expression_OUT_ = all_exp_list_;
   }
@@ -487,7 +487,7 @@ void FunctionBlock::_calc_available_expression_IN_OUT() {
     }
   }
 }
-void FunctionBlock::_fill_all_exp_list() {
+void Function::_fill_all_exp_list() {
   all_exp_list_.clear();
   auto exist_exp = [&](const Exp &exp) {
     auto result = std::find(all_exp_list_.begin(), all_exp_list_.end(), exp);
@@ -497,7 +497,7 @@ void FunctionBlock::_fill_all_exp_list() {
     return true;
   };
   for (const auto &basic_block: basic_block_list_) {
-    for (const auto &ir: basic_block->ir_list_) {
+    for (const auto &ir: *basic_block) {
       if (is_algo_op(ir->op_)) {
         auto exp = make_algo_exp(ir);
         if (!exist_exp(exp))  all_exp_list_.push_back(exp);
@@ -509,16 +509,16 @@ void FunctionBlock::_fill_all_exp_list() {
   }
   all_exp_list_.sort();
 }
-void FunctionBlock::live_variable_analysis() {
+void Function::live_variable_analysis() {
   _calc_use_def();
   _calc_live_variable_IN_OUT();
 }
-void FunctionBlock::_calc_use_def() {
+void Function::_calc_use_def() {
   for (auto &basic_block : basic_block_list_) {
     basic_block->calc_use_def();
   }
 }
-void FunctionBlock::_calc_live_variable_IN_OUT() {
+void Function::_calc_live_variable_IN_OUT() {
   bool change = true;
   while (change) {
     change = false;
@@ -547,8 +547,11 @@ void FunctionBlock::_calc_live_variable_IN_OUT() {
     }
   }
 }
+void Function::delete_global_common_expression() {
 
-FunctionBlocks::FunctionBlocks(std::list<IR::Ptr> &ir_list) {
+}
+
+Module::Module(std::list<IR::Ptr> &ir_list) {
   while (!ir_list.empty()) {
     while (!ir_list.empty() && (ir_list.front()->op_ != IR::Op::FUNCDEF)) {
       ir_list.pop_front();  // 忽略全局声明语句
@@ -561,34 +564,34 @@ FunctionBlocks::FunctionBlocks(std::list<IR::Ptr> &ir_list) {
     function_ir_code.splice(function_ir_code.end(),
                             ir_list,
                             ir_list.begin(), iter);
-    function_block_list_.push_back(make_function_block(function_ir_code));
+    function_list_.push_back(make_function_block(function_ir_code));
   }
 }
 
-std::list<std::string> FunctionBlocks::translate_to_arm() {
+std::list<std::string> Module::translate_to_arm() {
   std::list<std::string> ret;
-  for (const auto &function_block : function_block_list_) {
-    ret.splice(ret.end(), function_block->translate_to_arm());
+  for (const auto &function : function_list_) {
+    ret.splice(ret.end(), function->translate_to_arm());
   }
   return ret;
 }
-void FunctionBlocks::debug() {
-  for (auto &function_block : function_block_list_) {
-    function_block->debug();
+void Module::debug() {
+  for (auto &function : function_list_) {
+    function->debug();
   }
 }
-void FunctionBlocks::reach_define_analysis() {
-  for (auto &function_block: function_block_list_) {
-    function_block->reach_define_analysis();
+void Module::reach_define_analysis() {
+  for (auto &function: function_list_) {
+    function->reach_define_analysis();
   }
 }
-void FunctionBlocks::available_expression_analysis() {
-  for (auto &function_block: function_block_list_) {
-    function_block->available_expression_analysis();
+void Module::available_expression_analysis() {
+  for (auto &function: function_list_) {
+    function->available_expression_analysis();
   }
 }
-void FunctionBlocks::live_variable_analysis() {
-  for (auto &function_block: function_block_list_) {
-    function_block->live_variable_analysis();
+void Module::live_variable_analysis() {
+  for (auto &function: function_list_) {
+    function->live_variable_analysis();
   }
 }

@@ -70,6 +70,7 @@ class BasicBlock {
  public:
   using Ptr = std::shared_ptr<BasicBlock>;
   using Ptr_weak = std::weak_ptr<BasicBlock>;
+  using iterator = std::list<IR::Ptr>::iterator;
   int first_lineno_;
   int last_lineno_;
   int block_num_;
@@ -97,10 +98,12 @@ class BasicBlock {
   explicit BasicBlock(const std::list<IR::Ptr> &ir_list)
       : ir_list_(ir_list) {}
   std::list<std::string> translate_to_arm();  // 不确定是否需要
+  iterator begin() { return ir_list_.begin(); }
+  iterator end() { return ir_list_.end(); }
   void debug();
 };
 
-class FunctionBlock {
+class Function {
  private:
   std::map<int, int> symbol_table_;
   std::multimap<int, int> gen_kill_help_map_;
@@ -125,27 +128,41 @@ class FunctionBlock {
   void _calc_use_def();
   void _calc_live_variable_IN_OUT();
  public:
+  using Ptr = std::shared_ptr<Function>;
+  using iterator = std::list<BasicBlock::Ptr>::iterator;
+
   std::list<BasicBlock::Ptr> basic_block_list_;
   std::string func_name_;
   int arg_num_;
-  using Ptr = std::shared_ptr<FunctionBlock>;
-  explicit FunctionBlock(std::list<IR::Ptr> &ir_list);
+
+  explicit Function(std::list<IR::Ptr> &ir_list);
   std::list<std::string> translate_to_arm();
   void reach_define_analysis();   // 到达定值分析
   void live_variable_analysis();  // 活跃变量分析
   void available_expression_analysis(); // 可用表达式分析
+  void delete_global_common_expression();
+  iterator begin() { return basic_block_list_.begin(); }
+  iterator end() { return basic_block_list_.end(); }
   void debug();
 };
 
-class FunctionBlocks {
+class Module {
  public:
-  std::list<FunctionBlock::Ptr> function_block_list_;
-  using Ptr = std::shared_ptr<FunctionBlocks>;
-  explicit FunctionBlocks(std::list<IR::Ptr> &ir_list);
+  using Ptr = std::shared_ptr<Module>;
+  using iterator = std::list<Function::Ptr>::iterator;
+//  using const_iterator = std::list<Function::Ptr>::const_iterator;
+
+  std::list<Function::Ptr> function_list_;
+
+  explicit Module(std::list<IR::Ptr> &ir_list);
   std::list<std::string> translate_to_arm();
   void reach_define_analysis();
   void live_variable_analysis();
   void available_expression_analysis();
+  iterator begin() { return function_list_.begin(); }
+  iterator end() { return function_list_.end(); }
+//  const_iterator cbegin() const { return function_list_.cbegin(); }
+//  const_iterator cend() const { return function_list_.cend(); }
   void debug();
 };
 

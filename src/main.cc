@@ -72,8 +72,8 @@ int main(int argc, char *argv[]) {
   // do some optimization for IR
   remove_redunctant_label(ir_list);
 
-  FunctionBlocks fb(ir_list);
-  fb.debug();
+  Module m(ir_list);
+  m.debug();
 
 //  std::ofstream IRFile(ir_filename);
 //  auto old_cout_buf = std::cout.rdbuf(IRFile.rdbuf());
