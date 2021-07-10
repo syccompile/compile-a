@@ -82,6 +82,12 @@ inline Exp make_mov_exp(const IR::Ptr &ir) {
   return Exp(ir->op_, ir->a0, ir->a1);
 }
 
+inline int alloc_num() { return ++cur_num_; }
+inline IR::Addr::Ptr alloc_var() { return std::make_shared<IR::Addr>(IR::Addr::Kind::VAR, alloc_num()); }
+inline IR::Ptr make_tmp_assign_ir(const Exp &exp) {
+  return std::make_shared<IR>(exp.op_, alloc_var(), exp.a0_, exp.a1_);
+}
+
 std::list<std::string> BasicBlock::translate_to_arm() {
   return std::list<std::string>();
 }
@@ -191,30 +197,45 @@ void BasicBlock::calc_use_def() {
   def_.sort();
 }
 void BasicBlock::delete_local_common_expression() {
+  std::map<Exp, iterator> exp_to_iter;
   std::map<Exp, IR::Addr::Ptr> available_exps;
-  auto delete_avail_exp = [&](const IR::Addr::Ptr &a) {
+  auto delete_avail_exp = [&](const IR::Addr::Ptr &a, const iterator& store_iter) {
+    auto iter2 = exp_to_iter.begin();
     for (auto iter = available_exps.begin(); iter != available_exps.end();)
       if ((*iter).first.related_to(a)) {
         iter = available_exps.erase(iter);
+        iter2 = exp_to_iter.erase(iter2);
       } else {
         ++iter;
+        ++iter2;
       }
   };
-
-  for (const auto &cur_ir : ir_list_) {
+  for (auto iter = ir_list_.begin(); iter != ir_list_.end(); ++iter) {
+    auto cur_ir = *iter;
     if (is_algo_op(cur_ir->op_)) {
       auto exp = make_algo_exp(cur_ir);
       auto result = available_exps.find(exp);
       if (result != available_exps.end()) {
         cur_ir->op_ = IR::Op::MOV;
+        if (result->second == nullptr) {
+          auto exp_iter = exp_to_iter[exp];
+          auto exp_ir = *exp_iter;
+          auto tmp_ir = make_tmp_assign_ir(exp);
+          ir_list_.insert(exp_iter, tmp_ir);
+          exp_ir->op_ = IR::Op::MOV;
+          exp_ir->a1 = tmp_ir->a0;
+          exp_ir->a2 = nullptr;
+          result->second = tmp_ir->a0;
+        }
         cur_ir->a1 = result->second;
         cur_ir->a2 = nullptr;
       } else {
-        available_exps[exp] = cur_ir->a0; // add avail_exp
+        available_exps[exp] = nullptr; // add avail_exp
+        exp_to_iter[exp] = iter;
       }
-      delete_avail_exp(cur_ir->a0);
+      delete_avail_exp(cur_ir->a0, iter);
     } else if (is_mov_op(cur_ir->op_)) {
-      delete_avail_exp(cur_ir->a0);
+      delete_avail_exp(cur_ir->a0, iter);
     }
   }
 }
@@ -305,7 +326,7 @@ void Function::debug() {
   reach_define_analysis();
   available_expression_analysis();
   live_variable_analysis();
-  delete_local_common_expression();
+  //delete_local_common_expression();
   for (const auto &basic_block : basic_block_list_) {
     std::cout << blue << "block " << basic_block->block_num_ << ":" << normal << std::endl;
     basic_block->debug();
@@ -582,9 +603,14 @@ void Function::_calc_live_variable_IN_OUT() {
   }
 }
 void Function::delete_global_common_expression() {
+  available_expression_analysis();  // 可用表达式分析
   std::map<Exp, IR::Addr::Ptr> trace;
   for (auto &basic_block : basic_block_list_) {
+    for (const auto &exp: basic_block->available_expression_IN_) {
+      for (const auto &ir: basic_block->ir_list_) {
 
+      }
+    }
   }
 }
 void Function::delete_local_common_expression() {

@@ -10,7 +10,6 @@
 #include <iostream>
 #include <algorithm>
 
-
 bool is_mov_op(IR::Op op);
 bool is_algo_op(IR::Op op);
 
@@ -22,56 +21,50 @@ class Exp {
   IR::Addr::Ptr a0_;
   IR::Addr::Ptr a1_;
   Exp(IR::Op op, const IR::Addr::Ptr &a0, const IR::Addr::Ptr &a1) : op_(op), a0_(a0), a1_(a1) {}
-//  explicit Exp(const IR::Ptr &ir) : op_(ir->op_), a0_(ir->a1), a1_(ir->a2) {}
   bool operator==(const Exp &rhs) const {
-//    if (a1_ != nullptr) {
-      return op_ == rhs.op_ &&
-          a0_->kind == rhs.a0_->kind && a0_->val == rhs.a0_->val &&
-          a1_->kind == rhs.a1_->kind && a1_->val == rhs.a1_->val;
-//    } else {
-//      return op_ == rhs.op_ &&
-//          a0_->kind == rhs.a0_->kind && a0_->val == rhs.a0_->val;
-//    }
+    return op_ == rhs.op_ &&
+        a0_->kind == rhs.a0_->kind && a0_->val == rhs.a0_->val &&
+        a1_->kind == rhs.a1_->kind && a1_->val == rhs.a1_->val;
   }
   bool related_to(const IR::Addr::Ptr &a) const {
-//    if (a1_ != nullptr) {
     if (is_algo_op(op_)) {
       return (a0_->kind == a->kind && a0_->val == a->val) ||
           (a1_->kind == a->kind && a1_->val == a->val);
     } else {  // MOV
       return a1_->kind == a->kind && a1_->val == a->val;
     }
-//    } else {
-//      return (a0_->kind == a->kind && a0_->val == a->val);
-//    }
   }
   bool operator<(const Exp &exp) const {
     if (op_ != exp.op_) return op_ < exp.op_;
     if (a0_->kind != exp.a0_->kind) return a0_->kind < exp.a0_->kind;
     if (a0_->val != exp.a0_->val) return a0_->val < exp.a0_->val;
-//    if (a1_ != nullptr) {
-      if (a1_->kind != exp.a1_->kind) return a1_->kind < exp.a1_->kind;
-      return a0_->val < exp.a0_->val;
-//    } else {
-//      return a0_->val < exp.a0_->val;
-//    }
+    if (a1_->kind != exp.a1_->kind) return a1_->kind < exp.a1_->kind;
+    return a0_->val < exp.a0_->val;
   }
-  friend std::ostream& operator<<(std::ostream& os, const Exp &exp) {
+  friend std::ostream &operator<<(std::ostream &os, const Exp &exp) {
     exp.a0_->internal_print();
     switch (exp.op_) {
-      case IR::Op::ADD: os << "+"; break;
-      case IR::Op::SUB: os << "-"; break;
-      case IR::Op::MUL: os << "*"; break;
-      case IR::Op::DIV: os << "/"; break;
-      case IR::Op::MOD: os << "%"; break;
+      case IR::Op::ADD: os << "+";
+        break;
+      case IR::Op::SUB: os << "-";
+        break;
+      case IR::Op::MUL: os << "*";
+        break;
+      case IR::Op::DIV: os << "/";
+        break;
+      case IR::Op::MOD: os << "%";
+        break;
       default: os << "=";
     }
-//    if (exp.a1_ != nullptr) {
-      exp.a1_->internal_print();
-//    }
+    exp.a1_->internal_print();
     return os;
   }
 };
+
+int cur_num_ = 100;
+inline int alloc_num();
+inline IR::Addr::Ptr alloc_var();
+inline IR::Ptr make_tmp_assign_ir(const Exp &exp);
 
 class BasicBlock {
  private:
