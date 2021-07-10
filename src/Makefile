@@ -9,7 +9,7 @@ TEST_TXT = example.txt
 
 OBJS = analyzer.o ast.o debug.o flex.o ast_to_ir.o main.o\
 context/types.o context/vartab.o context/context.o\
-ir_opt/remove_redunctant_label.o
+ir_opt/remove_redunctant_label.o ir_to_asm/translate_to_asm.o
 
 BISON_SOURCE = analyzer.y
 BISON_FLAG  = 
