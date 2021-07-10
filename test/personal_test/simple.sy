@@ -3,6 +3,9 @@ int func2 (){
   a = b - 9;
   d = a - b;
   m = b - 9;
+  b = 3;
+  c = b - 9;
+  d = b - 9;
   m = c + 5;
   if (a == 1) {
     m = a - b;

@@ -10,6 +10,10 @@
 #include <iostream>
 #include <algorithm>
 
+
+bool is_mov_op(IR::Op op);
+bool is_algo_op(IR::Op op);
+
 // 用于可用表达式分析的“表达式”类
 class Exp {
  public:
@@ -31,8 +35,12 @@ class Exp {
   }
   bool related_to(const IR::Addr::Ptr &a) const {
 //    if (a1_ != nullptr) {
+    if (is_algo_op(op_)) {
       return (a0_->kind == a->kind && a0_->val == a->val) ||
           (a1_->kind == a->kind && a1_->val == a->val);
+    } else {  // MOV
+      return a1_->kind == a->kind && a1_->val == a->val;
+    }
 //    } else {
 //      return (a0_->kind == a->kind && a0_->val == a->val);
 //    }

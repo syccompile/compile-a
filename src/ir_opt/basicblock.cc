@@ -16,7 +16,7 @@ bool operator<(const IR::Addr &lhs, const IR::Addr &rhs) {
   return lhs.kind < rhs.kind || lhs.val < rhs.val;
 }
 
-std::ostream& operator<<(std::ostream& os, IR::Addr a) {
+std::ostream &operator<<(std::ostream &os, IR::Addr a) {
   a.internal_print();
   return os;
 }
@@ -95,24 +95,30 @@ void BasicBlock::calc_egen_ekill(const std::list<Exp> &all_exp_list) {
   ekill_.clear();
 
   auto delete_egen_exp = [&](IR::Addr::Ptr a) { // 删除和a相关的表达式
-    for (auto iter = egen_.begin(); iter != egen_.end(); ++iter) {
+    for (auto iter = egen_.begin(); iter != egen_.end();) {
       auto cur_exp = *iter;
       if (cur_exp.related_to(a)) {
         iter = egen_.erase(iter);
-      } // ignore else
+      } else {
+        ++iter;
+      }
     }
   };
   auto delete_ekill_exp = [&](const Exp &exp) {
-    for (auto iter = ekill_.begin(); iter != ekill_.end(); ++iter) {
+    for (auto iter = ekill_.begin(); iter != ekill_.end();) {
       if (*iter == exp) {
         iter = ekill_.erase(iter);
+      } else {
+        ++iter;
       }
     }
   };
   auto add_ekill_exp = [&](const IR::Addr::Ptr &a) {
     for (const auto &exp: all_exp_list) {
       if (exp.related_to(a)) {
-        ekill_.push_back(exp);
+        if (std::find(ekill_.begin(), ekill_.end(), exp) == ekill_.end()) {
+          ekill_.push_back(exp);
+        }
       }
     }
   };
@@ -137,7 +143,6 @@ void BasicBlock::calc_egen_ekill(const std::list<Exp> &all_exp_list) {
   egen_.sort();   // 后续的集合运算要求有序
   ekill_.sort();
 }
-
 
 void BasicBlock::calc_use_def() {
   use_.clear();
@@ -188,7 +193,7 @@ void BasicBlock::calc_use_def() {
 void BasicBlock::delete_local_common_expression() {
   std::map<Exp, IR::Addr::Ptr> available_exps;
   auto delete_avail_exp = [&](const IR::Addr::Ptr &a) {
-    for (auto iter = available_exps.begin(); iter != available_exps.end(); )
+    for (auto iter = available_exps.begin(); iter != available_exps.end();)
       if ((*iter).first.related_to(a)) {
         iter = available_exps.erase(iter);
       } else {
@@ -196,7 +201,7 @@ void BasicBlock::delete_local_common_expression() {
       }
   };
 
-  for (const auto& cur_ir : ir_list_) {
+  for (const auto &cur_ir : ir_list_) {
     if (is_algo_op(cur_ir->op_)) {
       auto exp = make_algo_exp(cur_ir);
       auto result = available_exps.find(exp);
@@ -300,7 +305,7 @@ void Function::debug() {
   reach_define_analysis();
   available_expression_analysis();
   live_variable_analysis();
-  // delete_local_common_expression();
+  delete_local_common_expression();
   for (const auto &basic_block : basic_block_list_) {
     std::cout << blue << "block " << basic_block->block_num_ << ":" << normal << std::endl;
     basic_block->debug();
@@ -529,8 +534,8 @@ void Function::_fill_all_exp_list() {
     for (const auto &ir: *basic_block) {
       if (is_algo_op(ir->op_)) {
         auto exp = make_algo_exp(ir);
-        if (!exist_exp(exp))  all_exp_list_.push_back(exp);
-      } else if (ir->op_ == IR::Op::MOV){
+        if (!exist_exp(exp)) all_exp_list_.push_back(exp);
+      } else if (ir->op_ == IR::Op::MOV) {
         auto exp = make_mov_exp(ir);
         if (!exist_exp(exp)) all_exp_list_.push_back(exp);
       }
