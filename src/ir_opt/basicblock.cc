@@ -185,6 +185,34 @@ void BasicBlock::calc_use_def() {
   use_.sort();
   def_.sort();
 }
+void BasicBlock::delete_local_common_expression() {
+  std::map<Exp, IR::Addr::Ptr> available_exps;
+  auto delete_avail_exp = [&](const IR::Addr::Ptr &a) {
+    for (auto iter = available_exps.begin(); iter != available_exps.end(); )
+      if ((*iter).first.related_to(a)) {
+        iter = available_exps.erase(iter);
+      } else {
+        ++iter;
+      }
+  };
+
+  for (const auto& cur_ir : ir_list_) {
+    if (is_algo_op(cur_ir->op_)) {
+      auto exp = make_algo_exp(cur_ir);
+      auto result = available_exps.find(exp);
+      if (result != available_exps.end()) {
+        cur_ir->op_ = IR::Op::MOV;
+        cur_ir->a1 = result->second;
+        cur_ir->a2 = nullptr;
+      } else {
+        available_exps[exp] = cur_ir->a0; // add avail_exp
+      }
+      delete_avail_exp(cur_ir->a0);
+    } else if (is_mov_op(cur_ir->op_)) {
+      delete_avail_exp(cur_ir->a0);
+    }
+  }
+}
 
 Function::Function(std::list<IR::Ptr> &ir_list) {
   func_name_ = ir_list.front()->a0->name;
@@ -272,6 +300,7 @@ void Function::debug() {
   reach_define_analysis();
   available_expression_analysis();
   live_variable_analysis();
+  // delete_local_common_expression();
   for (const auto &basic_block : basic_block_list_) {
     std::cout << blue << "block " << basic_block->block_num_ << ":" << normal << std::endl;
     basic_block->debug();
@@ -548,7 +577,15 @@ void Function::_calc_live_variable_IN_OUT() {
   }
 }
 void Function::delete_global_common_expression() {
+  std::map<Exp, IR::Addr::Ptr> trace;
+  for (auto &basic_block : basic_block_list_) {
 
+  }
+}
+void Function::delete_local_common_expression() {
+  for (const auto &basic_block : basic_block_list_) {
+    basic_block->delete_local_common_expression();
+  }
 }
 
 Module::Module(std::list<IR::Ptr> &ir_list) {

@@ -71,6 +71,7 @@ class BasicBlock {
   using Ptr = std::shared_ptr<BasicBlock>;
   using Ptr_weak = std::weak_ptr<BasicBlock>;
   using iterator = std::list<IR::Ptr>::iterator;
+  using reverse_iterator = std::list<IR::Ptr>::reverse_iterator;
   int first_lineno_;
   int last_lineno_;
   int block_num_;
@@ -98,8 +99,11 @@ class BasicBlock {
   explicit BasicBlock(const std::list<IR::Ptr> &ir_list)
       : ir_list_(ir_list) {}
   std::list<std::string> translate_to_arm();  // 不确定是否需要
+  void delete_local_common_expression();
   iterator begin() { return ir_list_.begin(); }
   iterator end() { return ir_list_.end(); }
+  reverse_iterator rbegin() { return ir_list_.rbegin(); }
+  reverse_iterator rend() { return ir_list_.rend(); }
   void debug();
 };
 
@@ -140,6 +144,7 @@ class Function {
   void reach_define_analysis();   // 到达定值分析
   void live_variable_analysis();  // 活跃变量分析
   void available_expression_analysis(); // 可用表达式分析
+  void delete_local_common_expression();
   void delete_global_common_expression();
   iterator begin() { return basic_block_list_.begin(); }
   iterator end() { return basic_block_list_.end(); }

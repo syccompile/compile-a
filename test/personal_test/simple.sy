@@ -2,6 +2,7 @@ int func2 (){
   int a, b, c, d, m;
   a = b - 9;
   d = a - b;
+  m = b - 9;
   m = c + 5;
   if (a == 1) {
     m = a - b;
