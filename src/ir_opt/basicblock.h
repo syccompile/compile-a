@@ -34,6 +34,14 @@ class Exp {
       return a1_->kind == a->kind && a1_->val == a->val;
     }
   }
+  bool be_used_by(const IR::Ptr &ir) const {
+    if (is_algo_op(ir->op_)) {  // 仅处理算术指令
+      return ir->op_ == op_ &&
+          ir->a1->kind == a0_->kind && ir->a1->val == a0_->val &&
+          ir->a2->kind == a1_->kind && ir->a2->val == a1_->val;
+    }
+    return false;
+  }
   bool operator<(const Exp &exp) const {
     if (op_ != exp.op_) return op_ < exp.op_;
     if (a0_->kind != exp.a0_->kind) return a0_->kind < exp.a0_->kind;
@@ -61,10 +69,10 @@ class Exp {
   }
 };
 
-int cur_num_ = 100;
+static int cur_num_ = 100;
 inline int alloc_num();
 inline IR::Addr::Ptr alloc_var();
-inline IR::Ptr make_tmp_assign_ir(const Exp &exp);
+inline IR::Ptr make_tmp_assign_exp_ir(const Exp &exp);
 
 class BasicBlock {
  private:
@@ -116,6 +124,7 @@ class Function {
   std::map<int, std::list<int>> gen_map_; // 从lineno到gen的映射
   std::map<int, std::list<int>> kill_map_;  // 从lineno到kill的映射
   std::list<Exp> all_exp_list_;
+  std::vector<bool> searched_; // _find_sources的辅助表，记录block_num是否被搜索过
 
   void _build_lineno_ir_map();  // 建立lineno到ir的映射表，并更新basic_block的block_num和first_lineno,last_lineno等信息
 
@@ -129,6 +138,11 @@ class Function {
   void _fill_all_exp_list();
   void _calc_egen_ekill();
   void _calc_available_expression_IN_OUT();
+  using source = std::pair<std::shared_ptr<BasicBlock>, BasicBlock::iterator>;
+  void _real_find_sources(const Exp &exp,
+                          const std::shared_ptr<BasicBlock> &cur_block,
+                          std::list<source> &sources);
+  std::list<source> _find_sources(const Exp &exp, const std::shared_ptr<BasicBlock> &cur_block);
 
   void _calc_use_def();
   void _calc_live_variable_IN_OUT();
@@ -146,7 +160,7 @@ class Function {
   void live_variable_analysis();  // 活跃变量分析
   void available_expression_analysis(); // 可用表达式分析
   void delete_local_common_expression();
-  void delete_global_common_expression();
+  void delete_global_common_expression(); // 请先调用delete_local_common_expression
   iterator begin() { return basic_block_list_.begin(); }
   iterator end() { return basic_block_list_.end(); }
   void debug();

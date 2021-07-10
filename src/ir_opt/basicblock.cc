@@ -84,7 +84,7 @@ inline Exp make_mov_exp(const IR::Ptr &ir) {
 
 inline int alloc_num() { return ++cur_num_; }
 inline IR::Addr::Ptr alloc_var() { return std::make_shared<IR::Addr>(IR::Addr::Kind::VAR, alloc_num()); }
-inline IR::Ptr make_tmp_assign_ir(const Exp &exp) {
+inline IR::Ptr make_tmp_assign_exp_ir(const Exp &exp) {
   return std::make_shared<IR>(exp.op_, alloc_var(), exp.a0_, exp.a1_);
 }
 
@@ -139,12 +139,15 @@ void BasicBlock::calc_egen_ekill(const std::list<Exp> &all_exp_list) {
       if (ir->op_ == IR::Op::MOV) { // 只有无条件赋值语句才将表达式加入
         auto new_exp = make_mov_exp(ir);
         egen_.push_back(new_exp);
+        delete_ekill_exp(new_exp);
       }
       // 每一种赋值语句都需要把表达式删除
       delete_egen_exp(ir->a0);
+      add_ekill_exp(ir->a0);
+    } else if (ir->op_ == IR::Op::LOAD) { // TODO: 完善LOAD的情形
       delete_egen_exp(ir->a0);
       add_ekill_exp(ir->a0);
-    } // 不处理LOAD指令
+    }
   }
   egen_.sort();   // 后续的集合运算要求有序
   ekill_.sort();
@@ -199,7 +202,7 @@ void BasicBlock::calc_use_def() {
 void BasicBlock::delete_local_common_expression() {
   std::map<Exp, iterator> exp_to_iter;
   std::map<Exp, IR::Addr::Ptr> available_exps;
-  auto delete_avail_exp = [&](const IR::Addr::Ptr &a, const iterator& store_iter) {
+  auto delete_avail_exp = [&](const IR::Addr::Ptr &a, const iterator &store_iter) {
     auto iter2 = exp_to_iter.begin();
     for (auto iter = available_exps.begin(); iter != available_exps.end();)
       if ((*iter).first.related_to(a)) {
@@ -220,7 +223,7 @@ void BasicBlock::delete_local_common_expression() {
         if (result->second == nullptr) {
           auto exp_iter = exp_to_iter[exp];
           auto exp_ir = *exp_iter;
-          auto tmp_ir = make_tmp_assign_ir(exp);
+          auto tmp_ir = make_tmp_assign_exp_ir(exp);
           ir_list_.insert(exp_iter, tmp_ir);
           exp_ir->op_ = IR::Op::MOV;
           exp_ir->a1 = tmp_ir->a0;
@@ -301,15 +304,27 @@ Function::Function(std::list<IR::Ptr> &ir_list) {
           next_block->predecessor_list_.push_back(basic_block);
         }
       } else if (last_ir->op_ >= IR::Op::JLE && last_ir->op_ <= IR::Op::JNE) {  // 条件跳转
-        auto next_block = *std::next(iter);
-        auto target_block = find_label(last_ir->a0->val);
-        if (next_block->block_num_ != target_block->block_num_) {
+        if (std::next(iter) != basic_block_list_.end()) {
+          auto next_block = *std::next(iter);
+          auto target_block = find_label(last_ir->a0->val);
+          if (next_block->block_num_ != target_block->block_num_) {
+            basic_block->successor_list_.push_back(next_block);
+            next_block->predecessor_list_.push_back(basic_block);
+          } // 两个目标相同则只建立前驱-后继关系一次，不确保该情况会出现
+          basic_block->successor_list_.push_back(target_block);
+          target_block->predecessor_list_.push_back(basic_block);
+        } else {
+          auto target_block = find_label(last_ir->a0->val);
+          basic_block->successor_list_.push_back(target_block);
+          target_block->predecessor_list_.push_back(basic_block);
+        }
+      } else {
+        if (std::next(iter) != basic_block_list_.end()) {
+          auto next_block = *std::next(iter);
           basic_block->successor_list_.push_back(next_block);
           next_block->predecessor_list_.push_back(basic_block);
-        } // 两个目标相同则只建立前驱-后继关系一次，不确保该情况会出现
-        basic_block->successor_list_.push_back(target_block);
-        target_block->predecessor_list_.push_back(basic_block);
-      } // ignore else
+        }
+      }
     } catch (const std::string &e) {
       std::cout << e << std::endl;
       exit(EXIT_FAILURE);
@@ -326,7 +341,8 @@ void Function::debug() {
   reach_define_analysis();
   available_expression_analysis();
   live_variable_analysis();
-  //delete_local_common_expression();
+  delete_local_common_expression();
+  delete_global_common_expression();
   for (const auto &basic_block : basic_block_list_) {
     std::cout << blue << "block " << basic_block->block_num_ << ":" << normal << std::endl;
     basic_block->debug();
@@ -604,11 +620,27 @@ void Function::_calc_live_variable_IN_OUT() {
 }
 void Function::delete_global_common_expression() {
   available_expression_analysis();  // 可用表达式分析
-  std::map<Exp, IR::Addr::Ptr> trace;
   for (auto &basic_block : basic_block_list_) {
     for (const auto &exp: basic_block->available_expression_IN_) {
+      if (!is_algo_op(exp.op_)) continue; // 只分析算术表达式
       for (const auto &ir: basic_block->ir_list_) {
-
+        if (exp.be_used_by(ir)) {
+          auto source_list = _find_sources(exp, basic_block);
+          auto assign_exp = make_tmp_assign_exp_ir(exp);
+          for (const auto &source : source_list) {
+            source.first->ir_list_.insert(source.second, assign_exp);
+            auto origin_ir = *source.second;
+            origin_ir->op_ = IR::Op::MOV;
+            origin_ir->a1 = assign_exp->a0;
+            origin_ir->a2 = nullptr;
+          }
+          ir->op_ = IR::Op::MOV;
+          ir->a1 = assign_exp->a0;
+          ir->a2 = nullptr;
+          break;  // 找到第一条指令就结束查找
+        } else if (exp.related_to(ir->a0)) { // 被杀死
+          break;
+        }
       }
     }
   }
@@ -616,6 +648,41 @@ void Function::delete_global_common_expression() {
 void Function::delete_local_common_expression() {
   for (const auto &basic_block : basic_block_list_) {
     basic_block->delete_local_common_expression();
+  }
+}
+std::list<Function::source> Function::_find_sources(const Exp &exp, const std::shared_ptr<BasicBlock> &cur_block) {
+  searched_.assign(basic_block_list_.size(), false);
+  std::list<source> sources;
+  _real_find_sources(exp, cur_block, sources);
+  return sources;
+}
+
+void Function::_real_find_sources(const Exp &exp,
+                                  const std::shared_ptr<BasicBlock> &cur_block,
+                                  std::list<Function::source> &sources) {
+  for (auto &pred_block: cur_block->predecessor_list_) {
+    const std::shared_ptr<BasicBlock> &block = pred_block.lock();
+    int cur_block_num = block->block_num_;
+    if (!searched_[cur_block_num]) {  // 只搜索未搜索过的块
+      searched_[cur_block_num] = true;
+      bool killed = false, find_flag = false;
+      // 从后往前逆向搜索
+      for (auto iter = block->ir_list_.rbegin(); iter != block->ir_list_.rend(); ++iter) {
+        const auto &cur_ir = *iter;
+        if (!is_algo_op(cur_ir->op_)) continue; // 只处理算术指令
+        if (exp.related_to(cur_ir->a0)) { // 被杀死了，NOTE: 理论上不会出现这种情况
+          killed = true;
+          break;
+        } else if (exp.be_used_by(cur_ir)) { // 找到了
+          sources.emplace_back(block, std::prev(iter.base()));
+          find_flag = true;
+          break;
+        }
+      }
+      if (!killed && !find_flag) {  // 没有被杀死，且没有找到
+        _real_find_sources(exp, block, sources);
+      }
+    }
   }
 }
 

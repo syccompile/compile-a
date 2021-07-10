@@ -1,11 +1,10 @@
 int func2 (){
   int a, b, c, d, m;
   a = b - 9;
-  c = 7;
-  d = b - 9;
-  m = b - 9;
-  b = 4;
-  a = b - 9;
-  c = 6;
+  if (a == 3) {
+    d = b - 9;
+  } else {
+    b = b - 9;
+  }
   c = b - 9;
 }
