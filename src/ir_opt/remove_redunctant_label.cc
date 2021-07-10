@@ -2,14 +2,15 @@
 #include <map>
 #include "../ir.h"
 
-void
-remove_redunctant_label(std::list<IR::Ptr> &l) {
+void remove_redunctant_label(std::list<IR::Ptr> &l) {
+  /*
   std::map<int, int> label_alias;
   std::list<IR::Ptr> new_list;
   int alias_acc = -1;
 
   new_list.splice(new_list.end(), l, l.begin());
-  if (new_list.back()->op_ == IR::Op::LABEL) label_alias[new_list.back()->a0->val] = ++alias_acc;
+  if (new_list.back()->op_ == IR::Op::LABEL)
+  label_alias[new_list.back()->a0->val] = ++alias_acc;
 
   while (!(l.empty())) {
     // 如果处理到一个标号
@@ -18,11 +19,12 @@ remove_redunctant_label(std::list<IR::Ptr> &l) {
       if (new_list.back()->op_ == IR::Op::LABEL) {
         label_alias[l.front()->a0->val] = alias_acc;
         l.pop_front();
-      } 
+      }
       // 还不存在一个连续标号序列
       else {
         new_list.splice(new_list.end(), l, l.begin());
-        if (new_list.back()->op_ == IR::Op::LABEL) label_alias[new_list.back()->a0->val] = ++alias_acc;
+        if (new_list.back()->op_ == IR::Op::LABEL)
+  label_alias[new_list.back()->a0->val] = ++alias_acc;
       }
     }
     // 没处理到标号
@@ -32,8 +34,9 @@ remove_redunctant_label(std::list<IR::Ptr> &l) {
   }
 
   for (auto i: new_list) {
-    #define single_process(ADDR) if (i->ADDR != nullptr && i->ADDR->kind == IR::Addr::Kind::BRANCH_LABEL)\
-    i->ADDR = IR::Addr::make_label(label_alias[i->ADDR->val]);
+    #define single_process(ADDR) if (i->ADDR != nullptr && i->ADDR->kind ==
+  IR::Addr::Kind::BRANCH_LABEL)\ i->ADDR =
+  IR::Addr::make_label(label_alias[i->ADDR->val]);
 
     single_process(a0);
     single_process(a1);
@@ -43,4 +46,5 @@ remove_redunctant_label(std::list<IR::Ptr> &l) {
   }
 
   l.splice(l.end(), new_list);
+  */
 }
