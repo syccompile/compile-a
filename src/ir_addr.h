@@ -1,13 +1,14 @@
 #pragma once
 #include "debug.h"
+#include "reg_allocate/flow_graph.h"
 #include <string>
 #include <memory>
-
-struct IR_Addr: public Debug_impl {
+using namespace color_graph;
+struct IR_Addr: public Debug_impl, public var{
 public:
   using Ptr = std::shared_ptr<IR_Addr>;
 
-  enum Kind: int { VAR, PARAM, IMM, BRANCH_LABEL, NAMED_LABEL, RET } kind;
+  enum Kind { VAR, PARAM, IMM, BRANCH_LABEL, NAMED_LABEL, RET } kind;
   int val;
   std::string name;
 

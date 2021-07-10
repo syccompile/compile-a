@@ -2,12 +2,13 @@
 
 #include "debug.h"
 #include "ir_addr.h"
+#include "reg_allocate/flow_graph.h"
 
 #include <memory>
 #include <vector>
 #include <list>
 
-class IR: public Debug_impl {
+class IR: public Debug_impl, public varUse{
 public:
   using Ptr = std::shared_ptr<IR>;
   using List = std::list<Ptr>;

@@ -25,9 +25,9 @@ class Variable;
 class Expression: public AST_base {
 public:
   using List = std::list<Expression*>;
-  enum Op: int {
+  enum Op{
     // logical operators
-    AND=0, //  '&&'
+    AND, //  '&&'
     OR,    //  '||'
     NOT,   //  '!'
 

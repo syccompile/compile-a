@@ -10,10 +10,6 @@
 #define ADD_UNR(OP, A0        ) ret.emplace_back(IR::make_unary (IR::Op:: OP , A0))
 #define ADD_NOP(OP            ) ret.emplace_back(IR::make_no_operand (IR::Op:: OP))
 
-static FunctionDecl *now_func;
-static WhileStmt *now_while;
-static bool jmp_revert = false;
-
 // helper: get correspond IR::Op of Expr::Op
 IR::Op get_ir_jmp_op(Expression::Op expr_op) {
 
@@ -348,7 +344,9 @@ BinaryExp::is_evaluable() const {
 int
 BinaryExp::eval() {
 
-#define CASE(EXPR_OP, ACTUAL_OP) case Expression::Op:: EXPR_OP : return this->left_->eval() ACTUAL_OP this->right_->eval()
+#define CASE(EXPR_OP, ACTUAL_OP)                                               \
+  case Expression::Op::EXPR_OP:                                                \
+    return this->left_->eval() ACTUAL_OP this->right_->eval()
 
   switch(this->op_) {
     case Expression::Op::AND:
