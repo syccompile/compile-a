@@ -5,7 +5,7 @@
 #include <string>
 
 
-Expression::Expression(Op op, bool evaluable) : op_(op), addr_(nullptr), label_fail_(nullptr) { }
+Expression::Expression(Op op, bool evaluable) : op_(op), addr_(nullptr), label_fail_(nullptr), allow_pass_base(false) { }
 Expression::~Expression() { }
 
 VarExp::VarExp(string *ident, Expression::List *dimens)

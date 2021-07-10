@@ -186,10 +186,11 @@ VarExp::is_evaluable() const {
 
   // 首先检查（数组表达式的）下标是否编译期可求值
   if (ent->is_array()) {
-    assert(this->dimens_!=nullptr);
+    // 如果是数组，而没有参数列表，则认为是需要传递数组地址，此时不可求值
+    if (this->dimens_==nullptr) return false;
     auto offset_pair = get_offset(ent->type.arr_shape, *(this->dimens_));
     if (offset_pair.first->kind != IR::Addr::IMM) return false;
-  } 
+  }
 
   // 再检查变量本身是不是编译期常量
   return ent->is_constant;
@@ -222,8 +223,16 @@ VarExp::get_var_addr() {
 
   // 如果该表达式是可求值的，就给该表达式分配常量地址
   if (this->is_evaluable()) this->addr_ = IR::Addr::make_imm(this->eval());
-  // 如果该表达式不可求值，且是数组型，就需要给该表达式分配一个临时变量，作为变址取数的目的地址
-  else if (ent->is_array()) this->addr_ = IR::Addr::make_var(context.allocator.allocate_addr());
+  // 如果该表达式不可求值，且是数组型
+  else if (ent->is_array()) {
+    // 如果带下标，则说明需要后续解析
+    if (this->dimens_!=nullptr) this->addr_ = IR::Addr::make_var(context.allocator.allocate_addr());
+    // 如果不带下标，则说明需要该数组的基地址，要求上级表达式显式地允许传递基地址
+    else {
+      assert(this->allow_pass_base);
+      this->addr_ = ent->addr;
+    }
+  }
   // 表达式是不可求值的单一变量
   else this->addr_ = ent->addr;
 
@@ -263,8 +272,9 @@ VarExp::translate() {
     assert(ent!=nullptr);
 
     // 如果是数组
-    if (ent->is_array()) {
-      // 计算数组下标
+    // 如果不存在数组下标，则无需翻译
+    if (ent->is_array() && this->dimens_!=nullptr) {
+      // 存在数组下标，则开始计算数组下标
       auto offset_pair = get_offset(ent->type.arr_shape, *(this->dimens_));
       ret.splice(ret.end(), offset_pair.second);
       // 读取数组内容
@@ -302,6 +312,7 @@ FuncCallExp::translate() {
     
     // 首先计算各个函数参数的值
     for (Expression *exp : *params_) {
+      exp->allow_pass_base = true;
       auto addr = exp->get_var_addr();
       ret.splice(ret.end(), exp->translate());
       ++i;

@@ -66,6 +66,8 @@ public:
   bool translate_to_logical() const;
   bool cast_to_logical;
   bool cast_to_regular;
+  // 允许引用数组基址
+  bool allow_pass_base;
 
   // debug
   virtual void internal_print() = 0;

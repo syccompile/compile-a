@@ -1,5 +1,5 @@
 if [[ $1 == "clean" ]]; then
-  rm -rf cmake-build-debug
+  rm -rf cmake-build-debug*
   cd test
   rm -rf *output
   cd ..

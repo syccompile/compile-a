@@ -191,6 +191,7 @@ translate_function(IR::List &l) {
   auto load_param = [&](IR::Addr::Ptr addr, int dst_reg) {
     std::list<std::string> r;
     if (addr->kind==IR::Addr::Kind::NAMED_LABEL) {
+      // auto ent = context
       r.splice(r.end(), move_addr(addr, dst_reg));
     }
     else if (addr->kind==IR::Addr::Kind::VAR) {
@@ -265,9 +266,12 @@ translate_function(IR::List &l) {
       // 先把所有的PARAM都放进list中
       std::list<IR::Ptr> param_list;
       while (l.front()->op_==IR::Op::PARAM) param_list.splice(param_list.end(), l, l.begin());
+      // 计算传参所需栈帧的大小
+      // 除了前四个参数放在寄存器内，后面的参数都要压栈
       int stack_size = (param_list.size()*4-16);
       if (stack_size<0) stack_size = 0;
-      // 第四个以后的参数压栈
+      
+      // 第四个参数以后的参数压栈
       while (param_list.size()>=8) {
         for (int i=0 ; i<4 ; i++) {
           ret.splice(ret.end(), move_value(param_list.back()->a0, i)); 
@@ -275,7 +279,6 @@ translate_function(IR::List &l) {
         }
         ret.push_back(std::string("push\t{r0-r4}"));
       }
-
       int remain_push = param_list.size() - 4;
       for (int i=0 ; i<remain_push ; i++) {
         ret.splice(ret.end(), move_value(param_list.back()->a0, i)); 
