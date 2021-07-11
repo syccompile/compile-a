@@ -1,17 +1,14 @@
 int func2 (){
-  //  0  1  2  3  4  5  6  7  8
-  int a, b, c, d, e, f, g, h, i;
-  a = b;
-  c = d;
-  d = a;
+  int a, b, c, d, m;
+  a = b - 9;
+  a = c + 9;
+  a = 9 + c;
+  a = b - 9;
   if (a == 3) {
-    e = d + 7;
-    f = 5 * c;
-    g = e;
-    h = 2;
+    d = 9 - b;
+    a = 9 + c;
   } else {
-    h = 2;
+    a = c + 9;
   }
-  i = a + b;
-  b = h;
+  m = 9 + c;
 }

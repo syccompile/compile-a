@@ -90,7 +90,7 @@ inline Exp make_mov_exp(const IR::Ptr &ir) {
 inline int alloc_num() { return ++cur_num; }
 inline IR::Addr::Ptr alloc_var() { return std::make_shared<IR::Addr>(IR::Addr::Kind::VAR, alloc_num()); }
 inline IR::Addr::Ptr make_imm(int val) { return std::make_shared<IR::Addr>(IR::Addr::Kind::IMM, val); }
-inline IR::Addr::Ptr make_var(int val) { return std::make_shared<IR::Addr>(IR::Addr::Kind::VAR, val);}
+inline IR::Addr::Ptr make_var(int val) { return std::make_shared<IR::Addr>(IR::Addr::Kind::VAR, val); }
 inline IR::Ptr make_tmp_assign_exp_ir(const Exp &exp) {
   return std::make_shared<IR>(exp.op_, alloc_var(), exp.a0_, exp.a1_);
 }
@@ -355,14 +355,14 @@ void BasicBlock::constant_folding() {
 void BasicBlock::algebraic_simplification() {
   for (auto &ir: ir_list_) {
     if (ir->op_ == IR::Op::ADD) {
-        if (ir->a1->kind == IR::Addr::Kind::IMM && ir->a1->val == 0) {  // 0+
-          ir->op_ = IR::Op::MOV;
-          ir->a1 = ir->a2;
-          ir->a2 = nullptr;
-        } else if (ir->a2->kind == IR::Addr::Kind::IMM && ir->a2->val == 0) { // +0
-          ir->op_ = IR::Op::MOV;
-          ir->a2 = nullptr;
-        }
+      if (ir->a1->kind == IR::Addr::Kind::IMM && ir->a1->val == 0) {  // 0+
+        ir->op_ = IR::Op::MOV;
+        ir->a1 = ir->a2;
+        ir->a2 = nullptr;
+      } else if (ir->a2->kind == IR::Addr::Kind::IMM && ir->a2->val == 0) { // +0
+        ir->op_ = IR::Op::MOV;
+        ir->a2 = nullptr;
+      }
     } else if (ir->op_ == IR::Op::SUB) {
       if (ir->a2->kind == IR::Addr::Kind::IMM && ir->a2->val == 0) { // -0
         ir->op_ = IR::Op::MOV;
@@ -435,6 +435,56 @@ void BasicBlock::local_copy_propagation(std::set<Exp> &available_copy_exps) {
       copy_value(ir->a1);
       copy_value(ir->a2);
       remove_exp(ir->a0);
+    }
+  }
+}
+void BasicBlock::remove_dead_code() {
+  auto live_variables = live_variable_OUT_;
+  auto is_live = [&](const IR::Addr::Ptr &a) {
+    assert(is_var_or_param(a));
+    if (std::find(live_variables.begin(), live_variables.end(), *a) ==
+        live_variables.end()) { // 没找到
+      return false;
+    }
+    return true;
+  };
+  auto add_live = [&](const IR::Addr::Ptr &a) {
+    if (a == nullptr) return;
+    if (!is_var_or_param(a)) return;
+    if (!is_live(a)) {
+      live_variables.push_back(*a);
+    }
+  };
+  for (auto iter = std::prev(ir_list_.end()); iter != std::prev(ir_list_.begin()); --iter) {
+    auto cur_ir = *iter;  // TODO: 未考虑PARAM, RET, ALLOC_IN_STACK
+    // bool removed = false;
+    if (is_mov_op(cur_ir->op_)) { // 赋值操作
+      if (is_live(cur_ir->a0)) {
+        add_live(cur_ir->a1);
+      } else {  // dead code
+        iter = ir_list_.erase(iter);
+      }
+    } else if (is_algo_op(cur_ir->op_)) { // 算术操作
+      if (is_live(cur_ir->a0)) {
+        add_live(cur_ir->a1);
+        add_live(cur_ir->a2);
+      } else {  // dead code
+        iter = ir_list_.erase(iter);
+      }
+    } else if (cur_ir->op_ == IR::Op::CMP) {  // 比较操作
+      add_live(cur_ir->a1);
+      add_live(cur_ir->a2);
+    } else if (cur_ir->op_ == IR::Op::LOAD) {
+      if (is_live(cur_ir->a0)) {
+        add_live(cur_ir->a1);
+        add_live(cur_ir->a2);
+      } else {
+        iter = ir_list_.erase(iter);
+      }
+    } else if (cur_ir->op_ == IR::Op::STORE) {
+      add_live(cur_ir->a0);
+      add_live(cur_ir->a1);
+      add_live(cur_ir->a2);
     }
   }
 }
@@ -539,6 +589,7 @@ void Function::debug() {
   delete_global_common_expression();
   local_copy_propagation();
   global_copy_propagation();
+  remove_dead_code();
   reach_define_analysis();
   available_expression_analysis();
   live_variable_analysis();
@@ -914,6 +965,12 @@ void Function::global_copy_propagation() {
     basic_block->local_copy_propagation(available_copy_exps);
   }
 }
+void Function::remove_dead_code() {
+  live_variable_analysis();
+  for (auto &basic_block : basic_block_list_) {
+    basic_block->remove_dead_code();
+  }
+}
 std::list<IR::Ptr> Function::merge() {
   std::list<IR::Ptr> ret;
   for (auto &basic_block : basic_block_list_) {
@@ -997,6 +1054,11 @@ void Module::global_copy_propagation() {
     function->global_copy_propagation();
   }
 }
+void Module::remove_dead_code() {
+  for (auto &function: function_list_) {
+    function->remove_dead_code();
+  }
+}
 std::list<IR::Ptr> Module::merge() {
   std::list<IR::Ptr> ret;
   for (auto &function: function_list_) {
@@ -1005,5 +1067,14 @@ std::list<IR::Ptr> Module::merge() {
   return ret;
 }
 void Module::optimize(int optimize_level) {
-
+  if (optimize_level == 0) return;  // no optimization
+  if (optimize_level >= 1) {
+    constant_folding();
+    algebraic_simplification();
+    delete_local_common_expression();
+    delete_global_common_expression();
+    local_copy_propagation();
+    global_copy_propagation();
+    return;
+  }
 }
