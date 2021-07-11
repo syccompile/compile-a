@@ -40,7 +40,7 @@ int main(int argc, char *argv[]) {
         }
         break;
       default:
-        std::cerr << "usage: compiler <sysy_file> [-S] [-o <asm_file>] [-O <optimize_level>] [-r <ir_file>]" << std::endl;
+        std::cerr << "usage: compiler <sysy_file> [-S] [-o <asm_file>] [-O<optimize_level>] [-r <ir_file>]" << std::endl;
         exit(0);
     }
   }

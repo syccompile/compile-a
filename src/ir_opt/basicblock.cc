@@ -150,7 +150,7 @@ bool Exp::related_to(const IR_Addr::Ptr &a) const {
   if (is_algo_op(op_)) {
     return (*a0_ == *a) || (*a1_ == *a);
   } else {  // MOV
-    return *a1_ == *a;
+    return *a1_ == *a || *a0_ == *a;
   }
 }
 bool Exp::operator==(const Exp &rhs) const {
@@ -226,13 +226,15 @@ void BasicBlock::calc_egen_ekill(const std::list<Exp> &all_exp_list) {
         continue;
       }
       if (ir->op_ == IR::Op::MOV) { // 只有无条件赋值语句才将表达式加入
+        delete_egen_exp(ir->a0);
         auto new_exp = make_mov_exp(ir);
         egen_.push_back(new_exp);
         delete_ekill_exp(new_exp);
+        add_ekill_exp(ir->a0);
+      } else {
+        delete_egen_exp(ir->a0);
+        add_ekill_exp(ir->a0);
       }
-      // 每一种赋值语句都需要把表达式删除
-      delete_egen_exp(ir->a0);
-      add_ekill_exp(ir->a0);
     } else if (ir->op_ == IR::Op::LOAD) { // TODO: 完善LOAD的情形
       delete_egen_exp(ir->a0);
       add_ekill_exp(ir->a0);
@@ -283,6 +285,10 @@ void BasicBlock::calc_use_def() {
       add_to_use(cur_ir->a0);
       add_to_use(cur_ir->a1);
       add_to_use(cur_ir->a2);
+    } else if (cur_ir->op_ == IR::Op::RET) {
+      add_to_use(cur_ir->a0);
+    } else if (cur_ir->op_ == IR::Op::PARAM) {
+      add_to_use(cur_ir->a1);
     }
   }
   use_.sort();
@@ -456,7 +462,7 @@ void BasicBlock::remove_dead_code() {
     }
   };
   for (auto iter = std::prev(ir_list_.end()); iter != std::prev(ir_list_.begin()); --iter) {
-    auto cur_ir = *iter;  // TODO: 未考虑PARAM, RET, ALLOC_IN_STACK
+    auto cur_ir = *iter;
     // bool removed = false;
     if (is_mov_op(cur_ir->op_)) { // 赋值操作
       if (is_live(cur_ir->a0)) {
@@ -485,6 +491,10 @@ void BasicBlock::remove_dead_code() {
       add_live(cur_ir->a0);
       add_live(cur_ir->a1);
       add_live(cur_ir->a2);
+    } else if (cur_ir->op_ == IR::Op::PARAM) {
+      add_live(cur_ir->a1);
+    } else if (cur_ir->op_ == IR::Op::RET) {
+      add_live(cur_ir->a0);
     }
   }
 }
@@ -594,7 +604,7 @@ void Function::debug() {
   available_expression_analysis();
   live_variable_analysis();
   for (const auto &basic_block : basic_block_list_) {
-    std::cout << blue << "block " << basic_block->block_num_ << ":" << normal << std::endl;
+    std::cout << red << "block " << basic_block->block_num_ << ":" << normal << std::endl;
     basic_block->debug();
     std::cout << blue << "predecessor: " << normal;
     PRINT_PRED_SUCC_BLOCKS(basic_block->predecessor_list_);
