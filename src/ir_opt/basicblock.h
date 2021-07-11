@@ -78,7 +78,7 @@ class BasicBlock {
   void delete_local_common_expression();
   void constant_folding();
   void algebraic_simplification();
-  void local_copy_propagation();
+  void local_copy_propagation(std::set<Exp> &available_copy_exps);
   iterator begin() { return ir_list_.begin(); }
   iterator end() { return ir_list_.end(); }
   reverse_iterator rbegin() { return ir_list_.rbegin(); }
@@ -134,6 +134,7 @@ class Function {
   void constant_folding();
   void algebraic_simplification();
   void local_copy_propagation();
+  void global_copy_propagation();
   iterator begin() { return basic_block_list_.begin(); }
   iterator end() { return basic_block_list_.end(); }
   std::list<IR::Ptr> merge();
@@ -158,6 +159,7 @@ class Module {
   void constant_folding();
   void algebraic_simplification();
   void local_copy_propagation();
+  void global_copy_propagation();
   iterator begin() { return function_list_.begin(); }
   iterator end() { return function_list_.end(); }
 //  const_iterator cbegin() const { return function_list_.cbegin(); }

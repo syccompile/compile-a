@@ -392,8 +392,8 @@ void BasicBlock::algebraic_simplification() {
     }
   }
 }
-void BasicBlock::local_copy_propagation() {
-  std::set<Exp> available_copy_exps;
+void BasicBlock::local_copy_propagation(std::set<Exp> &available_copy_exps) {
+//  std::set<Exp> available_copy_exps;
   auto copy_value = [&](IR::Addr::Ptr &a) {
     if (is_var_or_param(a)) {
       auto iter = available_copy_exps.begin();
@@ -537,7 +537,8 @@ void Function::debug() {
   algebraic_simplification();
   delete_local_common_expression();
   delete_global_common_expression();
-//  local_copy_propagation();
+  local_copy_propagation();
+  global_copy_propagation();
   reach_define_analysis();
   available_expression_analysis();
   live_variable_analysis();
@@ -894,8 +895,23 @@ void Function::algebraic_simplification() {
   }
 }
 void Function::local_copy_propagation() {
+  std::set<Exp> available_copy_exps;
   for (auto &basic_block : basic_block_list_) {
-    basic_block->local_copy_propagation();
+    available_copy_exps.clear();
+    basic_block->local_copy_propagation(available_copy_exps);
+  }
+}
+void Function::global_copy_propagation() {
+  available_expression_analysis();
+  std::set<Exp> available_copy_exps;
+  for (auto &basic_block : basic_block_list_) {
+    available_copy_exps.clear();
+    for (const auto &exp: basic_block->available_expression_IN_) {
+      if (exp.op_ == IR::Op::MOV) {
+        available_copy_exps.insert(exp);
+      }
+    }
+    basic_block->local_copy_propagation(available_copy_exps);
   }
 }
 std::list<IR::Ptr> Function::merge() {
@@ -974,6 +990,11 @@ void Module::algebraic_simplification() {
 void Module::local_copy_propagation() {
   for (auto &function: function_list_) {
     function->local_copy_propagation();
+  }
+}
+void Module::global_copy_propagation() {
+  for (auto &function: function_list_) {
+    function->global_copy_propagation();
   }
 }
 std::list<IR::Ptr> Module::merge() {
