@@ -9,9 +9,13 @@
 #include <string>
 #include <iostream>
 #include <algorithm>
+#include <cassert>
 
 bool is_mov_op(IR::Op op);
 bool is_algo_op(IR::Op op);
+
+bool operator==(const IR::Addr &lhs, const IR::Addr &rhs);
+bool operator<(const IR::Addr &lhs, const IR::Addr &rhs);
 
 // 用于可用表达式分析的“表达式”类
 class Exp {
@@ -21,52 +25,11 @@ class Exp {
   IR::Addr::Ptr a0_;
   IR::Addr::Ptr a1_;
   Exp(IR::Op op, const IR::Addr::Ptr &a0, const IR::Addr::Ptr &a1) : op_(op), a0_(a0), a1_(a1) {}
-  bool operator==(const Exp &rhs) const {
-    return op_ == rhs.op_ &&
-        a0_->kind == rhs.a0_->kind && a0_->val == rhs.a0_->val &&
-        a1_->kind == rhs.a1_->kind && a1_->val == rhs.a1_->val;
-  }
-  bool related_to(const IR::Addr::Ptr &a) const {
-    if (is_algo_op(op_)) {
-      return (a0_->kind == a->kind && a0_->val == a->val) ||
-          (a1_->kind == a->kind && a1_->val == a->val);
-    } else {  // MOV
-      return a1_->kind == a->kind && a1_->val == a->val;
-    }
-  }
-  bool be_used_by(const IR::Ptr &ir) const {
-    if (is_algo_op(ir->op_)) {  // 仅处理算术指令
-      return ir->op_ == op_ &&
-          ir->a1->kind == a0_->kind && ir->a1->val == a0_->val &&
-          ir->a2->kind == a1_->kind && ir->a2->val == a1_->val;
-    }
-    return false;
-  }
-  bool operator<(const Exp &exp) const {
-    if (op_ != exp.op_) return op_ < exp.op_;
-    if (a0_->kind != exp.a0_->kind) return a0_->kind < exp.a0_->kind;
-    if (a0_->val != exp.a0_->val) return a0_->val < exp.a0_->val;
-    if (a1_->kind != exp.a1_->kind) return a1_->kind < exp.a1_->kind;
-    return a0_->val < exp.a0_->val;
-  }
-  friend std::ostream &operator<<(std::ostream &os, const Exp &exp) {
-    exp.a0_->internal_print();
-    switch (exp.op_) {
-      case IR::Op::ADD: os << "+";
-        break;
-      case IR::Op::SUB: os << "-";
-        break;
-      case IR::Op::MUL: os << "*";
-        break;
-      case IR::Op::DIV: os << "/";
-        break;
-      case IR::Op::MOD: os << "%";
-        break;
-      default: os << "=";
-    }
-    exp.a1_->internal_print();
-    return os;
-  }
+  bool operator==(const Exp &rhs) const;
+  bool related_to(const IR::Addr::Ptr &a) const;  // 当前表达式用到了a
+  bool be_used_by(const IR::Ptr &ir) const; // ir中用到了当前表达式
+  bool operator<(const Exp &exp) const;
+  friend std::ostream &operator<<(std::ostream &os, const Exp &exp);
 };
 
 static int cur_num_ = 100;
@@ -167,6 +130,7 @@ class Function {
   void algebraic_simplification();
   iterator begin() { return basic_block_list_.begin(); }
   iterator end() { return basic_block_list_.end(); }
+  std::list<IR::Ptr> merge();
   void debug();
 };
 
@@ -191,6 +155,7 @@ class Module {
   iterator end() { return function_list_.end(); }
 //  const_iterator cbegin() const { return function_list_.cbegin(); }
 //  const_iterator cend() const { return function_list_.cend(); }
+  std::list<IR::Ptr> merge();
   void debug();
 };
 

@@ -84,8 +84,77 @@ inline Exp make_mov_exp(const IR::Ptr &ir) {
 
 inline int alloc_num() { return ++cur_num_; }
 inline IR::Addr::Ptr alloc_var() { return std::make_shared<IR::Addr>(IR::Addr::Kind::VAR, alloc_num()); }
+inline IR::Addr::Ptr make_imm(int val) { return std::make_shared<IR::Addr>(IR::Addr::Kind::IMM, val); }
+inline IR::Addr::Ptr make_var(int val) { return std::make_shared<IR::Addr>(IR::Addr::Kind::VAR, val);}
 inline IR::Ptr make_tmp_assign_exp_ir(const Exp &exp) {
   return std::make_shared<IR>(exp.op_, alloc_var(), exp.a0_, exp.a1_);
+}
+
+void testExp() {
+  auto exp1 = Exp(IR::Op::SUB, make_var(1), make_imm(9));
+  auto exp2 = Exp(IR::Op::SUB, make_var(1), make_imm(9));
+  assert(exp1 == exp2);
+  assert(!(exp1 < exp2));
+  assert(!(exp2 < exp1));
+}
+
+std::ostream &operator<<(std::ostream &os, const Exp &exp) {
+  exp.a0_->internal_print();
+  switch (exp.op_) {
+    case IR::Op::ADD: os << "+";
+      break;
+    case IR::Op::SUB: os << "-";
+      break;
+    case IR::Op::MUL: os << "*";
+      break;
+    case IR::Op::DIV: os << "/";
+      break;
+    case IR::Op::MOD: os << "%";
+      break;
+    default: os << "=";
+  }
+  exp.a1_->internal_print();
+  return os;
+}
+bool Exp::operator<(const Exp &exp) const {
+  if (op_ != exp.op_) return op_ < exp.op_;
+  if (op_ == IR::Op::ADD || op_ == IR::Op::MUL) { // 可交换
+    if (*a0_ < *a1_) {
+      if (*exp.a0_ < *exp.a1_) return *a0_ < *exp.a0_ || *a1_ < *exp.a1_;
+      else return *a0_ < *exp.a1_ || *a1_ < *exp.a1_;
+    } else {
+      if (*exp.a0_ < *exp.a1_) return *a1_ < *exp.a0_ || *a0_ < *exp.a1_;
+      else return *a1_ < *exp.a1_ || *a0_ < *exp.a1_;
+    }
+  } else {
+    return *a0_ < *exp.a0_ || *a1_ < *exp.a1_;
+  }
+}
+bool Exp::be_used_by(const IR::Ptr &ir) const {
+  if (is_algo_op(ir->op_)) {  // 仅处理算术指令
+    if (op_ == IR::Op::ADD || op_ == IR::Op::MUL) { // 可交换
+      return op_ == ir->op_ &&
+          ((*a0_ == *ir->a1 && *a1_ == *ir->a2) || (*a0_ == *ir->a2 && *a1_ == *ir->a1));
+    } else {
+      return ir->op_ == op_ && *ir->a1 == *a0_ && *ir->a2 == *a1_;
+    }
+  }
+  return false;
+}
+bool Exp::related_to(const IR_Addr::Ptr &a) const {
+  if (is_algo_op(op_)) {
+    return (*a0_ == *a) || (*a1_ == *a);
+  } else {  // MOV
+    return *a1_ == *a;
+  }
+}
+bool Exp::operator==(const Exp &rhs) const {
+  if (op_ == IR::Op::ADD || op_ == IR::Op::MUL) { // 可交换
+    return op_ == rhs.op_ &&
+        ((*a0_ == *rhs.a0_ && *a1_ == *rhs.a1_) || (*a0_ == *rhs.a1_ && *a1_ == *rhs.a0_));
+  } else {
+    return op_ == rhs.op_ && *a0_ == *rhs.a0_ && *a1_ == *rhs.a1_;
+  }
 }
 
 std::list<std::string> BasicBlock::translate_to_arm() {
@@ -760,6 +829,13 @@ void Function::algebraic_simplification() {
     basic_block->algebraic_simplification();
   }
 }
+std::list<IR::Ptr> Function::merge() {
+  std::list<IR::Ptr> ret;
+  for (auto &basic_block : basic_block_list_) {
+    ret.splice(ret.end(), basic_block->ir_list_);
+  }
+  return ret;
+}
 
 Module::Module(std::list<IR::Ptr> &ir_list) {
   while (!ir_list.empty()) {
@@ -786,6 +862,7 @@ std::list<std::string> Module::translate_to_arm() {
   return ret;
 }
 void Module::debug() {
+//  testExp();
   for (auto &function : function_list_) {
     function->debug();
   }
@@ -824,4 +901,11 @@ void Module::algebraic_simplification() {
   for (auto &function: function_list_) {
     function->algebraic_simplification();
   }
+}
+std::list<IR::Ptr> Module::merge() {
+  std::list<IR::Ptr> ret;
+  for (auto &function: function_list_) {
+    ret.splice(ret.end(), function->merge());
+  }
+  return ret;
 }
