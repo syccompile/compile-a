@@ -83,7 +83,7 @@ color_node::nodes color_node::get_colored_neighbors() {
   nodes n;
   for (ptr p : get_neighbors()) {
     if (p->is_colored()) {
-      n.push_back(p);
+      n.insert(p);
     }
   }
   return n;

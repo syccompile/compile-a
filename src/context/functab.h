@@ -5,14 +5,21 @@
 #include <memory>
 
 #include "types.h"
+#include "vartab.h"
+#include "../ir_addr.h"
 
 class FuncTabEntry {
 public:
   // 函数名
   std::string name;
 
+  // 函数label
+  IR_Addr::Ptr label;
+
   // 参数表
-  std::vector<VarTabEntry> param_list;
+  std::list<Type> param_list;
+
+  FuncTabEntry(std::string _name, std::list<Type> _param_list) : name(_name), param_list(_param_list) {}
 };
 
 class FuncTab {
@@ -23,5 +30,5 @@ private:
   std::unordered_map<std::string, EntPtr> functab;
 public:
   void put(std::string name, std::list<Type> param_types);
-  EntPtr_const get(std::string name);
+  EntPtr get(std::string name);
 };

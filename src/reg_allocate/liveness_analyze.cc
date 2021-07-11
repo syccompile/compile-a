@@ -5,6 +5,7 @@
 #include <tuple>
 #include <vector>
 #include <list>
+#include <set>
 
 namespace  // helper
 {
@@ -47,18 +48,20 @@ IR::Ptr find_label(IR::List list, IR_Addr::Ptr label) {
 #define ACCEPT_ADDR_NOT_IMM(set, addr)                                         \
   if (ir->addr->kind != IR_Addr::Kind::IMM) {                                  \
     ir->set.insert(ir->addr);                                                  \
-    vars.push_back(ir->addr);                                                  \
+    vars.insert(ir->addr);                                                     \
   }                                                                            \
   if (ir->addr->kind == IR_Addr::Kind::PARAM) {                                \
-    params.push_back(ir->addr);                                                \
+    params.insert(ir->addr);                                                   \
   }
 
-tuple<vector<color_node::ptr>, vector<color_node::ptr>>
+// 分析ir，填写varUse中的used、def、pred、succ
+// 返回<所有IR::Addr, 所有为PARAM的IR::Addr>
+tuple<set<color_node::ptr>, set<color_node::ptr>>
 ir_parse(IR::List ir_list) {
   // 函数中使用的所有变量
-  vector<color_node::ptr> vars;
+  set<color_node::ptr> vars;
   // 变量中函数的参数
-  vector<color_node::ptr> params;
+  set<color_node::ptr> params;
   IR::Ptr prev_ir;
   for (auto ir : ir_list) {
     switch (ir->op_) {
@@ -136,13 +139,13 @@ ir_parse(IR::List ir_list) {
 
 // 构造冲突图
 // 由函数liveness_analyze调用
-void make_conflict_graph(vector<varUse::ptr> var_uses, vector<color_node::ptr> nodes) {
+void make_conflict_graph(vector<varUse::ptr> var_uses, set<color_node::ptr> nodes) {
   // 1. 对于对变量a的def操作, 为a与出口活跃的变量添加冲突边, 例如 a <- b + c ...
   // 2. 对于传送指令 a <- c ， 为a与出口活跃的变量除了c外的变量添加冲突边
-  vector<shared_ptr<var>> vars;
+  set<shared_ptr<var>> vars;
   for(auto node : nodes ){
     // 指针转换必须是有效的
-    vars.push_back(dynamic_pointer_cast<var>(node));
+    vars.insert(dynamic_pointer_cast<var>(node));
   }
   for (shared_ptr<varUse> t : var_uses) {
     // def 最多只能有一个元素
@@ -170,9 +173,8 @@ void make_conflict_graph(vector<varUse::ptr> var_uses, vector<color_node::ptr> n
 // 活跃分析
 // pre-condition: ir_list必须是一个函数的完整ir
 //      ir_list不能为空
-void liveness_analyze(IR::List ir_list) {
-  vector<color_node::ptr> vars, params;
-  std::tie(vars, params) = ir_parse(ir_list);
+tuple<set<color_node::ptr>, set<color_node::ptr>> liveness_analyze(IR::List& ir_list) {
+  auto[vars, params] = ir_parse(ir_list);
   std::vector<varUse::ptr> nodes;
   for (auto ir : ir_list) { nodes.push_back(ir);
   }
@@ -201,11 +203,6 @@ void liveness_analyze(IR::List ir_list) {
 
   // 构造冲突图
   make_conflict_graph(nodes, vars);
-  // 预先着色函数参数
-  color_allocate alloc;
-  for (auto param : params) {
-    param->colorize(alloc.get_new_color());
-  }
 
-  colorize_nodes_allocate(vars, alloc);
+  return make_tuple(vars, params);
 }

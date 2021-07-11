@@ -13,6 +13,5 @@ void Context::new_scope() {
 }
 
 void Context::end_scope() {
-  if (this->vartab_cur->fa == nullptr) return;
   this->vartab_cur = this->vartab_cur->fa;
 }

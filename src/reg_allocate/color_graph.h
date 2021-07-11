@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <set>
 #include <memory>
 
 namespace color_graph{
@@ -14,7 +15,7 @@ color spill_color();
 class color_node {
 public:
   using ptr = std::shared_ptr<color_node>;
-  using nodes = std::vector<ptr>;
+  using nodes = std::set<ptr>;
   color_node() {}
   // Check whether node has been colorized
   bool is_colored() { return col != none_color(); }

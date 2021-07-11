@@ -2,4 +2,4 @@
 
 #include "../ir.h"
 
-void liveness_analyze(IR::List ir_list);
+tuple<set<color_node::ptr>, set<color_node::ptr>> liveness_analyze(IR::List ir_list);

@@ -4,6 +4,7 @@
 
 #include <cassert>
 #include <stack>
+#include <list>
 
 #define ADD_TRP(OP, A0, A1, A2) ret.emplace_back(IR::make_triple(IR::Op:: OP , A0, A1, A2))
 #define ADD_BIN(OP, A0, A1    ) ret.emplace_back(IR::make_binary(IR::Op:: OP , A0, A1))
@@ -315,11 +316,11 @@ FuncCallExp::translate() {
     }
 
     // 然后生成传参中间代码
-    for (Expression *exp : *params_) ADD_BIN(PARAM, nullptr, exp->get_var_addr());
+    for (Expression *exp : *params_) ADD_UNR(PARAM, exp->get_var_addr());
   }
 
   // 生成函数调用的代码
-  ADD_UNR(CALL, IR::Addr::make_named_label(this->name_));
+  ADD_UNR(CALL, context.functab->get(name_)->label);
 
   return ret;
 }
@@ -1221,9 +1222,13 @@ FunctionDecl::translate() {
     this->body_->pre_defined.push_back(i_ent);
   }
 
-  ADD_BIN(FUNCDEF, IR::Addr::make_named_label(this->name_), IR::Addr::make_imm(cnt));
+  ADD_UNR(LABEL, IR::Addr::make_named_label(this->name()));
+  ADD_UNR(FUNCDEF, IR::Addr::make_imm(cnt));
   ret.splice(ret.end(), this->body_->translate());
   ADD_NOP(FUNCEND);
+  std::list<Type> *list = new std::list<Type>();
+  // FIX: 空的参数表
+  context.functab->put(name(), *list);
 
   return ret;
 }

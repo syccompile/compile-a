@@ -35,7 +35,7 @@ public :
   virtual nodes get_neighbors() override {
     nodes n;
     for (auto p : neighbors) {
-      n.push_back(p);
+      n.insert(p);
     }
     return n;
   }
