@@ -109,6 +109,8 @@ class BasicBlock {
       : ir_list_(ir_list) {}
   std::list<std::string> translate_to_arm();  // 不确定是否需要
   void delete_local_common_expression();
+  void constant_folding();
+  void algebraic_simplification();
   iterator begin() { return ir_list_.begin(); }
   iterator end() { return ir_list_.end(); }
   reverse_iterator rbegin() { return ir_list_.rbegin(); }
@@ -161,6 +163,8 @@ class Function {
   void available_expression_analysis(); // 可用表达式分析
   void delete_local_common_expression();
   void delete_global_common_expression(); // 请先调用delete_local_common_expression
+  void constant_folding();
+  void algebraic_simplification();
   iterator begin() { return basic_block_list_.begin(); }
   iterator end() { return basic_block_list_.end(); }
   void debug();
@@ -179,6 +183,10 @@ class Module {
   void reach_define_analysis();
   void live_variable_analysis();
   void available_expression_analysis();
+  void delete_local_common_expression();
+  void delete_global_common_expression();
+  void constant_folding();
+  void algebraic_simplification();
   iterator begin() { return function_list_.begin(); }
   iterator end() { return function_list_.end(); }
 //  const_iterator cbegin() const { return function_list_.cbegin(); }

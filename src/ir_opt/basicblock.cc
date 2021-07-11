@@ -136,6 +136,9 @@ void BasicBlock::calc_egen_ekill(const std::list<Exp> &all_exp_list) {
       delete_ekill_exp(new_exp);
       add_ekill_exp(ir->a0);
     } else if (is_mov_op(ir->op_)) {  // 赋值语句
+      if (ir->a1->kind == ir->a0->kind && ir->a1->val == ir->a0->val) { // 自赋值
+        continue;
+      }
       if (ir->op_ == IR::Op::MOV) { // 只有无条件赋值语句才将表达式加入
         auto new_exp = make_mov_exp(ir);
         egen_.push_back(new_exp);
@@ -242,6 +245,67 @@ void BasicBlock::delete_local_common_expression() {
     }
   }
 }
+void BasicBlock::constant_folding() {
+  for (auto &ir: ir_list_) {
+    if (is_algo_op(ir->op_) && ir->a1->kind == IR::Addr::Kind::IMM && ir->a2->kind == IR::Addr::Kind::IMM) {
+      switch (ir->op_) {
+        case IR::Op::ADD: ir->a1->val = (ir->a1->val + ir->a2->val);
+          break;
+        case IR::Op::SUB: ir->a1->val = (ir->a1->val - ir->a2->val);
+          break;
+        case IR::Op::MUL: ir->a1->val = (ir->a1->val * ir->a2->val);
+          break;
+        case IR::Op::DIV: ir->a1->val = (ir->a1->val / ir->a2->val);
+          break;
+        case IR::Op::MOD: ir->a1->val = (ir->a1->val % ir->a2->val);
+          break;
+        default: break; // unreachable!
+      }
+      ir->op_ = IR::Op::MOV;
+      ir->a2 = nullptr;
+    }
+  }
+}
+void BasicBlock::algebraic_simplification() {
+  for (auto &ir: ir_list_) {
+    if (ir->op_ == IR::Op::ADD) {
+        if (ir->a1->kind == IR::Addr::Kind::IMM && ir->a1->val == 0) {  // 0+
+          ir->op_ = IR::Op::MOV;
+          ir->a1 = ir->a2;
+          ir->a2 = nullptr;
+        } else if (ir->a2->kind == IR::Addr::Kind::IMM && ir->a2->val == 0) { // +0
+          ir->op_ = IR::Op::MOV;
+          ir->a2 = nullptr;
+        }
+    } else if (ir->op_ == IR::Op::SUB) {
+      if (ir->a2->kind == IR::Addr::Kind::IMM && ir->a2->val == 0) { // -0
+        ir->op_ = IR::Op::MOV;
+        ir->a2 = nullptr;
+      }
+    } else if (ir->op_ == IR::Op::MUL) {
+      if (ir->a1->kind == IR::Addr::Kind::IMM && ir->a1->val == 0) {  // 0*
+        ir->op_ = IR::Op::MOV;  // MOV a0 0
+        ir->a2 = nullptr;
+      } else if (ir->a2->kind == IR::Addr::Kind::IMM && ir->a2->val == 0) { // *0
+        ir->op_ = IR::Op::MOV;  // MOV a0 0
+        ir->a1 = ir->a2;
+        ir->a2 = nullptr;
+      } else if (ir->a1->kind == IR::Addr::Kind::IMM && ir->a1->val == 1) {  // 1*
+        ir->op_ = IR::Op::MOV;  // MOV a0 a2
+        ir->a1 = ir->a2;
+        ir->a2 = nullptr;
+      } else if (ir->a2->kind == IR::Addr::Kind::IMM && ir->a2->val == 1) { // *1
+        ir->op_ = IR::Op::MOV;  // MOV a0 a1
+        ir->a2 = nullptr;
+      }
+    } else if (ir->op_ == IR::Op::DIV) {
+      if (ir->a2->kind == IR::Addr::Kind::IMM && ir->a2->val == 1) { // /1
+        ir->op_ = IR::Op::MOV;  // MOV a0 a1
+        ir->a2 = nullptr;
+      }
+    }
+  }
+}
 
 Function::Function(std::list<IR::Ptr> &ir_list) {
   func_name_ = ir_list.front()->a0->name;
@@ -337,7 +401,8 @@ std::list<std::string> Function::translate_to_arm() {
 void Function::debug() {
   std::cout << green << func_name_ << ": " << normal << std::endl;
   std::cout << "------------------------" << std::endl;
-//  _calc_gen_kill();
+  constant_folding();
+  algebraic_simplification();
   reach_define_analysis();
   available_expression_analysis();
   live_variable_analysis();
@@ -685,6 +750,16 @@ void Function::_real_find_sources(const Exp &exp,
     }
   }
 }
+void Function::constant_folding() {
+  for (auto &basic_block : basic_block_list_) {
+    basic_block->constant_folding();
+  }
+}
+void Function::algebraic_simplification() {
+  for (auto &basic_block : basic_block_list_) {
+    basic_block->algebraic_simplification();
+  }
+}
 
 Module::Module(std::list<IR::Ptr> &ir_list) {
   while (!ir_list.empty()) {
@@ -728,5 +803,25 @@ void Module::available_expression_analysis() {
 void Module::live_variable_analysis() {
   for (auto &function: function_list_) {
     function->live_variable_analysis();
+  }
+}
+void Module::delete_local_common_expression() {
+  for (auto &function: function_list_) {
+    function->delete_local_common_expression();
+  }
+}
+void Module::delete_global_common_expression() {
+  for (auto &function: function_list_) {
+    function->delete_global_common_expression();
+  }
+}
+void Module::constant_folding() {
+  for (auto &function: function_list_) {
+    function->constant_folding();
+  }
+}
+void Module::algebraic_simplification() {
+  for (auto &function: function_list_) {
+    function->algebraic_simplification();
   }
 }
