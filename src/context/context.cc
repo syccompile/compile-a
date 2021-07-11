@@ -4,6 +4,7 @@ Context context;
 
 Context::Context(): allocator() {
   vartab_cur = std::make_shared<VarTab>();
+  functab = std::make_shared<FuncTab>();
 } 
 
 void Context::new_scope() {
