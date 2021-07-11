@@ -59,6 +59,11 @@ bool is_algo_op(IR::Op op) {
   return op >= IR::Op::ADD && op <= IR::Op::MOD;
 }
 
+inline bool is_var_or_param(const IR::Addr::Ptr &a) {
+  if (a == nullptr) return false;
+  return a->kind == IR::Addr::Kind::VAR || a->kind == IR::Addr::Kind::PARAM;
+}
+
 /* 通过ir_list新建一个BasicBlock, 返回指向它的shared_ptr */
 std::shared_ptr<BasicBlock> make_basic_block(const std::list<IR::Ptr> &ir_list) {
   return std::make_shared<BasicBlock>(ir_list);
@@ -82,7 +87,7 @@ inline Exp make_mov_exp(const IR::Ptr &ir) {
   return Exp(ir->op_, ir->a0, ir->a1);
 }
 
-inline int alloc_num() { return ++cur_num_; }
+inline int alloc_num() { return ++cur_num; }
 inline IR::Addr::Ptr alloc_var() { return std::make_shared<IR::Addr>(IR::Addr::Kind::VAR, alloc_num()); }
 inline IR::Addr::Ptr make_imm(int val) { return std::make_shared<IR::Addr>(IR::Addr::Kind::IMM, val); }
 inline IR::Addr::Ptr make_var(int val) { return std::make_shared<IR::Addr>(IR::Addr::Kind::VAR, val);}
@@ -155,6 +160,18 @@ bool Exp::operator==(const Exp &rhs) const {
   } else {
     return op_ == rhs.op_ && *a0_ == *rhs.a0_ && *a1_ == *rhs.a1_;
   }
+}
+bool Exp::copy_be_used_by(const IR_Addr::Ptr &a) const {
+  if (op_ == IR::Op::MOV) {
+    return *a0_ == *a;
+  }
+  return false;
+}
+bool Exp::copy_related_to(const IR_Addr::Ptr &a) const {
+  if (op_ == IR::Op::MOV) {
+    return *a0_ == *a || *a1_ == *a;
+  }
+  return false;
 }
 
 std::list<std::string> BasicBlock::translate_to_arm() {
@@ -375,6 +392,52 @@ void BasicBlock::algebraic_simplification() {
     }
   }
 }
+void BasicBlock::local_copy_propagation() {
+  std::set<Exp> available_copy_exps;
+  auto copy_value = [&](IR::Addr::Ptr &a) {
+    if (is_var_or_param(a)) {
+      auto iter = available_copy_exps.begin();
+      for (; iter != available_copy_exps.end(); ++iter) {
+        if ((*iter).copy_be_used_by(a)) {
+          a = (*iter).a1_;
+        }
+      }
+    } // ignore else
+  };
+  auto remove_exp = [&](const IR::Addr::Ptr &a) {
+    assert(is_var_or_param(a));
+    auto iter = available_copy_exps.begin();
+    for (; iter != available_copy_exps.end();) {
+      if ((*iter).copy_related_to(a)) {
+        iter = available_copy_exps.erase(iter);
+      } else {
+        ++iter;
+      }
+    }
+  };
+  for (auto &ir: ir_list_) {  // TODO: 未处理PARAM,RET,ALLOC_IN_STACK
+    if (is_mov_op(ir->op_)) { // 赋值指令
+      copy_value(ir->a1);
+      remove_exp(ir->a0);
+      available_copy_exps.insert(make_mov_exp(ir));
+    } else if (is_algo_op(ir->op_)) { // 算术指令
+      copy_value(ir->a1);
+      copy_value(ir->a2);
+      remove_exp(ir->a0);
+    } else if (ir->op_ == IR::Op::CMP) {  // 比较指令
+      copy_value(ir->a1);
+      copy_value(ir->a2);
+    } else if (ir->op_ != IR::Op::STORE) {  // 存储
+      copy_value(ir->a0);
+      copy_value(ir->a1);
+      copy_value(ir->a2);
+    } else if (ir->op_ != IR::Op::LOAD) { // 取数
+      copy_value(ir->a1);
+      copy_value(ir->a2);
+      remove_exp(ir->a0);
+    }
+  }
+}
 
 Function::Function(std::list<IR::Ptr> &ir_list) {
   func_name_ = ir_list.front()->a0->name;
@@ -472,11 +535,12 @@ void Function::debug() {
   std::cout << "------------------------" << std::endl;
   constant_folding();
   algebraic_simplification();
+  delete_local_common_expression();
+  delete_global_common_expression();
+//  local_copy_propagation();
   reach_define_analysis();
   available_expression_analysis();
   live_variable_analysis();
-  delete_local_common_expression();
-  delete_global_common_expression();
   for (const auto &basic_block : basic_block_list_) {
     std::cout << blue << "block " << basic_block->block_num_ << ":" << normal << std::endl;
     basic_block->debug();
@@ -829,6 +893,11 @@ void Function::algebraic_simplification() {
     basic_block->algebraic_simplification();
   }
 }
+void Function::local_copy_propagation() {
+  for (auto &basic_block : basic_block_list_) {
+    basic_block->local_copy_propagation();
+  }
+}
 std::list<IR::Ptr> Function::merge() {
   std::list<IR::Ptr> ret;
   for (auto &basic_block : basic_block_list_) {
@@ -902,10 +971,18 @@ void Module::algebraic_simplification() {
     function->algebraic_simplification();
   }
 }
+void Module::local_copy_propagation() {
+  for (auto &function: function_list_) {
+    function->local_copy_propagation();
+  }
+}
 std::list<IR::Ptr> Module::merge() {
   std::list<IR::Ptr> ret;
   for (auto &function: function_list_) {
     ret.splice(ret.end(), function->merge());
   }
   return ret;
+}
+void Module::optimize(int optimize_level) {
+
 }

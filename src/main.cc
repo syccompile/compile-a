@@ -73,12 +73,9 @@ int main(int argc, char *argv[]) {
   remove_redunctant_label(ir_list);
 
   Module m(ir_list);
-//  m.constant_folding();
-//  m.algebraic_simplification();
-//  m.delete_local_common_expression();
-//  m.delete_global_common_expression();
-//  ir_list = m.merge();
+  m.optimize(optimize_level);
   m.debug();
+  ir_list = m.merge();  // m不再可用
 
 //  std::ofstream IRFile(ir_filename);
 //  auto old_cout_buf = std::cout.rdbuf(IRFile.rdbuf());

@@ -6,6 +6,7 @@
 #include <memory>
 #include <list>
 #include <map>
+#include <set>
 #include <string>
 #include <iostream>
 #include <algorithm>
@@ -16,6 +17,7 @@ bool is_algo_op(IR::Op op);
 
 bool operator==(const IR::Addr &lhs, const IR::Addr &rhs);
 bool operator<(const IR::Addr &lhs, const IR::Addr &rhs);
+inline bool is_var_or_param(const IR::Addr::Ptr &a);
 
 // 用于可用表达式分析的“表达式”类
 class Exp {
@@ -28,11 +30,13 @@ class Exp {
   bool operator==(const Exp &rhs) const;
   bool related_to(const IR::Addr::Ptr &a) const;  // 当前表达式用到了a
   bool be_used_by(const IR::Ptr &ir) const; // ir中用到了当前表达式
+  bool copy_be_used_by(const IR::Addr::Ptr &a) const;
+  bool copy_related_to(const IR::Addr::Ptr &a) const;
   bool operator<(const Exp &exp) const;
   friend std::ostream &operator<<(std::ostream &os, const Exp &exp);
 };
 
-static int cur_num_ = 100;
+static int cur_num = 100;
 inline int alloc_num();
 inline IR::Addr::Ptr alloc_var();
 inline IR::Ptr make_tmp_assign_exp_ir(const Exp &exp);
@@ -74,6 +78,7 @@ class BasicBlock {
   void delete_local_common_expression();
   void constant_folding();
   void algebraic_simplification();
+  void local_copy_propagation();
   iterator begin() { return ir_list_.begin(); }
   iterator end() { return ir_list_.end(); }
   reverse_iterator rbegin() { return ir_list_.rbegin(); }
@@ -128,6 +133,7 @@ class Function {
   void delete_global_common_expression(); // 请先调用delete_local_common_expression
   void constant_folding();
   void algebraic_simplification();
+  void local_copy_propagation();
   iterator begin() { return basic_block_list_.begin(); }
   iterator end() { return basic_block_list_.end(); }
   std::list<IR::Ptr> merge();
@@ -151,10 +157,12 @@ class Module {
   void delete_global_common_expression();
   void constant_folding();
   void algebraic_simplification();
+  void local_copy_propagation();
   iterator begin() { return function_list_.begin(); }
   iterator end() { return function_list_.end(); }
 //  const_iterator cbegin() const { return function_list_.cbegin(); }
 //  const_iterator cend() const { return function_list_.cend(); }
+  void optimize(int optimize_level);
   std::list<IR::Ptr> merge();
   void debug();
 };
