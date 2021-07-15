@@ -120,13 +120,13 @@ get_offset(const std::vector<int> &shape, Expression::List &dimens) {
   
   // 再计算非编译期常数的偏移量
   // 为变址分配存储空间
-  IR::Addr::Ptr offset_addr = IR::Addr::make_var();
+  IR::Addr::Ptr offset_addr = context.allocator.allocate_addr();
 
   // 先将常量变址计算结果拷贝过来
   ADD_BIN(MOV, offset_addr, IR::Addr::make_imm(constant_offset));
   // 再根据余下的下标计算变址（运行时计算）
   for (; i>=0 ; i--) {
-    auto tmp = IR::Addr::make_var();
+    auto tmp = context.allocator.allocate_addr();
     ADD_TRP(MUL, tmp, dims[i], IR::Addr::make_imm(acc));
     ADD_TRP(ADD, offset_addr, offset_addr, tmp);
     acc *= shape[i];
@@ -149,7 +149,7 @@ Expression::op_logical() const {
 
 bool
 Expression::op_rel() const {
-  return EQ<=this->op_ &&this->op_<=GE;
+  return EQ<=this->op_ && this->op_<=GE;
 }
 
 bool
@@ -161,13 +161,13 @@ IR::Addr::Ptr
 Expression::get_var_addr() {
   if (this->addr_!=nullptr) return this->addr_;
   if (this->is_evaluable()) return this->addr_ = IR::Addr::make_imm(this->eval());
-  return this->addr_ = IR::Addr::make_var();
+  return this->addr_ = context.allocator.allocate_addr();
 }
 
 IR::Addr::Ptr
 Expression::get_fail_label() {
   if (this->label_fail_!=nullptr) return this->label_fail_;
-  return this->label_fail_ = IR::Addr::make_label();
+  return this->label_fail_ = context.allocator.allocate_label();
 }
 
 void
@@ -223,7 +223,7 @@ VarExp::get_var_addr() {
   // 如果该表达式不可求值，且是数组型
   else if (ent->is_array()) {
     // 如果带下标，则说明需要后续解析
-    if (this->dimens_!=nullptr) this->addr_ = IR::Addr::make_var();
+    if (this->dimens_!=nullptr) this->addr_ = context.allocator.allocate_addr();
     // 如果不带下标，则说明需要该数组的基地址，要求上级表达式显式地允许传递基地址
     else {
       assert(this->allow_pass_base);
@@ -456,8 +456,8 @@ BinaryExp::_translate_logical() {
         // ... <codes that execute on success>
         // fail:
         // ... <codes that execute on fail>
-        auto lhs_success_label = IR::Addr::make_label();
-        auto lhs_fail_label = IR::Addr::make_label();
+        auto lhs_success_label = context.allocator.allocate_label();
+        auto lhs_fail_label = context.allocator.allocate_label();
 
         this->left_->set_fail_label(lhs_fail_label);
         this->right_->set_fail_label(this->label_fail_);
@@ -480,7 +480,7 @@ BinaryExp::_translate_logical() {
     // fail:
     // mov <this address>, imm(0)
     // end:
-    auto end_label = IR::Addr::make_label();
+    auto end_label = context.allocator.allocate_label();
 
     ADD_BIN(MOV, this->addr_, IR::Addr::make_imm(1));
     ADD_UNR(JMP, end_label);
@@ -731,7 +731,7 @@ Variable::_translate_param() {
   this->vartab_ent = std::shared_ptr<VarTabEntry>(new VarTabEntry(
     this->name_,
     std::vector<int>(),
-    IR::Addr::make_param(),
+    IR::Addr::make_param(this->param_no),
     std::vector<int>(),
     false
   ));
@@ -753,7 +753,7 @@ Variable::_translate_local() {
     init_val.push_back(val);
   }
   else {
-    addr = IR::Addr::make_var();
+    addr = context.allocator.allocate_addr();
     if (this->initval_) {
       auto initval_addr = this->initval_->get_var_addr();
       ret.splice(ret.end(), this->initval_->translate());
@@ -899,7 +899,7 @@ Array::_translate_param() {
   this->vartab_ent = std::make_shared<VarTabEntry>(
     this->name_,
     shape,
-    IR::Addr::make_param(),
+    IR::Addr::make_param(this->param_no),
     std::vector<int>(),
     false
   );
@@ -917,7 +917,7 @@ Array::_translate_local() {
   Expression::List flattened_container = this->_flatten_initval(shape, 0, this->initval_container_);
     
   // 栈上分配空间
-  IR::Addr::Ptr addr = IR::Addr::make_var();
+  IR::Addr::Ptr addr = context.allocator.allocate_addr();
   ADD_BIN(ALLOC_IN_STACK, addr, IR::Addr::make_imm(total_size));
   
   int offset = 0;
@@ -1081,8 +1081,8 @@ IfStmt::translate() {
   // label_end:
 
   // 为条件表达式分配标号
-  auto label_else = IR::Addr::make_label();
-  auto label_end  = IR::Addr::make_label();
+  auto label_else = context.allocator.allocate_label();
+  auto label_end  = context.allocator.allocate_label();
   this->condition_->set_fail_label(label_else);
 
   // 翻译条件表达式
@@ -1099,7 +1099,7 @@ IfStmt::translate() {
   // false expressions: else may not exist
   if (this->no_!=nullptr) ret.splice(ret.end(), this->no_->translate());
   // set label label_end
-  ADD_UNR(LABEL, IR::Addr::make_label());
+  ADD_UNR(LABEL, label_end);
 
   return ret;
 }
@@ -1111,8 +1111,8 @@ WhileStmt::translate() {
   context.while_chain.push_back(this);
 
   // 为自己分配标号
-  this->label_cond = IR::Addr::make_label();
-  this->label_end  = IR::Addr::make_label();
+  this->label_cond = context.allocator.allocate_label();
+  this->label_end  = context.allocator.allocate_label();
 
   // 常量优化
   if (this->condition_->is_evaluable()) {

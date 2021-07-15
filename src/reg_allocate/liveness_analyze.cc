@@ -176,8 +176,7 @@ void make_conflict_graph(vector<varUse::ptr> var_uses, set<color_node::ptr> node
 tuple<set<color_node::ptr>, set<color_node::ptr>> liveness_analyze(IR::List& ir_list) {
   auto[vars, params] = ir_parse(ir_list);
   std::vector<varUse::ptr> nodes;
-  for (auto ir : ir_list) { nodes.push_back(ir);
-  }
+  for (auto ir : ir_list) { nodes.push_back(ir); }
   while (true) {
     int immut_time = 0;
     for (varUse::ptr n : nodes) {
