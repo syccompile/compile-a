@@ -60,6 +60,9 @@ IR::Op get_ir_regular_op(Expression::Op expr_op) {
     CASE(MUL, MUL);
     CASE(DIV, DIV);
     CASE(MOD, MOD);
+    CASE(AND, AND);
+    CASE(OR , OR );
+    CASE(NOT, NOT);
     default: return IR::Op::NOP;
   }
 
@@ -98,7 +101,7 @@ get_offset(const std::vector<int> &shape, Expression::List &dimens) {
     IR::Addr::Ptr addr = exp->get_var_addr();
     ret.splice(ret.end(), exp->translate());
     dims.push_back(addr);
-  }  
+  }
 
   int acc = 1;
   int i = dims.size() - 1;

@@ -19,8 +19,13 @@ public:
     MUL,
     DIV,
     MOD,
+    AND,
+    OR,
+    NOT,
+    XOR,
 
-    MOV = 5,
+    MOV,
+    MVN,
     MOVLE,
     MOVLT,
     MOVGE,
@@ -28,7 +33,7 @@ public:
     MOVEQ,
     MOVNE,
 
-    CMP = 12,
+    CMP,
 
     LABEL,
 
@@ -49,6 +54,7 @@ public:
     VARDEF,
     DATA,
     ZERO,
+    LABVAL,
     VAREND,
     ALLOC_IN_STACK,
 
@@ -75,6 +81,11 @@ public:
   make_unary(Op op, Addr::Ptr a0) { return make_binary(op, a0, nullptr); }
   static std::shared_ptr<IR>
   make_no_operand(Op op) { return make_unary(op, nullptr); }
+
+  // operand type
+  bool is_al()  const { return this->op_<=XOR; }
+  bool is_mov() const { return MOV<=this->op_ && this->op_<=MOVNE; }
+  bool is_jmp() const { return JMP<=this->op_ && this->op_<=JNE; }
 
   Op op_;
 
