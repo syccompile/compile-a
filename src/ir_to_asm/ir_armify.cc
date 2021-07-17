@@ -33,6 +33,7 @@ move_into_var(IR::Addr::Ptr a) {
   static std::unordered_map<std::string, IR::Addr::Ptr> glob_var_map;
 
   IR::Addr::Ptr ret = nullptr;
+  VarTabEntry::Ptr_const ent = nullptr;
   IR::List ret_def, ret_func;
 
 #define CASE(TYPE) case IR::Addr::Kind:: TYPE :
@@ -41,11 +42,11 @@ move_into_var(IR::Addr::Ptr a) {
     CASE(VAR)
       ret = a;
       break;
+      
     CASE(IMM)
       // 立即数本身可被ARM指令表示
       if (is_arm_imm(a->val)) {
         ret = a;
-        break;
       }
       // 立即数反值也可
       // 利用MVN
@@ -84,6 +85,7 @@ move_into_var(IR::Addr::Ptr a) {
         ret_func.push_back(IR::make_binary(IR::Op::MOV, ret, imm_globl_addr));
       }
       break;
+      
     CASE(PARAM)
       // 通过寄存器传过来的参数
       if (a->val<4) {
@@ -95,9 +97,10 @@ move_into_var(IR::Addr::Ptr a) {
         ret_func.push_back(IR::make_binary(IR::Op::MOV, ret, a));
       }
       break;
+      
     CASE(NAMED_LABEL)
       // 从全局变量表获取信息
-      auto ent = context.vartab_cur->get(a->name);
+      ent = context.vartab_cur->get(a->name);
       ret = context.allocator.allocate_addr();
 
       // a代表数组名
@@ -128,6 +131,10 @@ move_into_var(IR::Addr::Ptr a) {
         ret_func.push_back(IR::make_binary(IR::Op::MOV, ret, a));
       }
       break;
+
+      default:
+        ret = a;
+        break;
   }
 
 #undef CASE
@@ -182,12 +189,43 @@ ir_armify(IR::List &defs, IR::List &funcs) {
         defs.splice(defs.end(), a1_def_app);
         new_funcs.splice(funcs.end(), a1_func_app);
         // 修改原IR
-        // 修改原IR
         ir->a1 = a1;
       }
     }
 
-    funcs.splice(new_funcs.end(), funcs, funcs.begin());
+    // 数组变址取数
+    else if (ir->op_==IR::Op::LOAD) {
+      // 保证基址在VAR中
+      auto [a1, a1_def_app, a1_func_app] = move_into_var(ir->a1);
+      // 将需要加入的IR加入对应IR串中
+      defs.splice(defs.end(), a1_def_app);
+      new_funcs.splice(funcs.end(), a1_func_app);
+      // 修改原ir
+      ir->a1 = a1;
+    }
+
+    // 数组变址存数
+    else if (ir->op_==IR::Op::STORE) {
+      // 保证基址在VAR中
+      auto [a0, a0_def_app, a0_func_app] = move_into_var(ir->a0);
+      // 将需要加入的IR加入对应IR串中
+      defs.splice(defs.end(), a0_def_app);
+      new_funcs.splice(funcs.end(), a0_func_app);
+      // 修改原ir
+      ir->a0 = a0;
+
+      // 保证源地址在VAR中
+      auto [a2, a2_def_app, a2_func_app] = move_into_var(ir->a2);
+      // 将需要加入的IR加入对应IR串中
+      defs.splice(defs.end(), a2_def_app);
+      new_funcs.splice(funcs.end(), a2_func_app);
+      // 修改原ir
+      ir->a2 = a2;
+    }
+
+    new_funcs.splice(new_funcs.end(), funcs, funcs.begin());
   }
+
+  funcs.splice(funcs.end(), new_funcs);
 
 }
