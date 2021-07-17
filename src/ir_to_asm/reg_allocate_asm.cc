@@ -1,4 +1,3 @@
-#include "translate_to_asm.h"
 #include "../reg_allocate/liveness_analyze.h"
 
 #include <stdarg.h>

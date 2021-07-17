@@ -24,20 +24,15 @@
   * 功能：根据对应的判断结果跳转
   * `addr0`：`BRANCH_LABEL` 跳转到的跳转标号
 
-3. 传参指令 `PARAM`
-  * 功能：执行函数传参，若干个连续的PARAM之后将紧跟一个CALL
-  * `addr0`：空
-  * `addr1`：`VAR`/`IMM`/`PARAM` 要传入的参数地址
-
-4. 函数调用指令 `CALL`
+3. 函数调用指令 `CALL`
   * 功能：执行函数调用
   * `addr0`：`NAMED_LABEL` 函数名称
 
-5. 函数返回指令 `RET`
+4. 函数返回指令 `RET`
   * 功能：函数返回
   * `addr0`：`VAR`/`IMM`/`PARAM` 返回值
 
-6. 标号值指令`LABVAL`
+5. 标号值指令`LABVAL`
   * 功能：定义全局变量标号值
   * `addr0`：`NAMED_LABEL` 对应全局标号
 
@@ -69,6 +64,13 @@
   * 功能：指定对应算术逻辑运算
   * `addr0`：`VAR`               目的寄存器
   * `addr1`：`VAR`/`IMM`/`PARAM`/`NAMED_LABEL` 左操作数
+
+6. 传参指令 `PARAM`
+  * 功能：执行函数传参，若干个连续的PARAM之后将紧跟一个CALL
+  * `addr0`：空
+  * `addr1`：`VAR`/`IMM`/`PARAM` 要传入的参数地址
+  * `addr2`：`IMM`               参数序号
+
 
 ### 三操作数指令
 

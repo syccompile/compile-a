@@ -22,7 +22,7 @@ is_arm_imm(uint32_t imm) {
   return false;
 }
 
-// 将一个未知类型的地址a移动到ARM可接受类型的地址中
+// 将一个未知类型的地址a移动到寄存器（VAR）地址中
 // 返回：[新地址, 需要向全局变量定义加入的IR，需要向函数定义加入的IR]
 std::tuple<IR::Addr::Ptr, IR::List, IR::List>
 move_into_var(IR::Addr::Ptr a) {
@@ -42,13 +42,14 @@ move_into_var(IR::Addr::Ptr a) {
       ret = a;
       break;
     CASE(IMM)
-      // 立即数本身可
+      // 立即数本身可被ARM指令表示
       if (is_arm_imm(a->val)) {
         ret = a;
         break;
       }
       // 立即数反值也可
       // 利用MVN
+      // 例：mvn %1, 0 同 mov %1, ~0 同 mov %1, -1
       else if (is_arm_imm(~(a->val))) {
         ret = context.allocator.allocate_addr();
         ret_func.push_back(IR::make_binary(
@@ -157,6 +158,7 @@ ir_armify(IR::List &defs, IR::List &funcs) {
       ir->a1 = a1;
       ir->a2 = a2;
     }
+
     // ir为移动型
     else if (ir->is_mov()) {
       // 首先保证a1在VAR中
@@ -167,6 +169,25 @@ ir_armify(IR::List &defs, IR::List &funcs) {
       // 修改原IR
       ir->a1 = a1;
     }
+
+    // ir为传参型
+    else if (ir->op_==IR::Op::PARAM) {
+      // 若目的为寄存器（前4个参数）
+      // 则无需多余寄存器
+      // 反之，则需要先将目标保存在寄存器中
+      if (ir->a2->val>4) {
+        // 首先保证IR在VAR中
+        auto [a1, a1_def_app, a1_func_app] = move_into_var(ir->a1);
+        // 将需要加入的IR加入对应IR串中
+        defs.splice(defs.end(), a1_def_app);
+        new_funcs.splice(funcs.end(), a1_func_app);
+        // 修改原IR
+        // 修改原IR
+        ir->a1 = a1;
+      }
+    }
+
+    funcs.splice(new_funcs.end(), funcs, funcs.begin());
   }
 
 }

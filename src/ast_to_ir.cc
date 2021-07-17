@@ -319,11 +319,19 @@ FuncCallExp::translate() {
     }
 
     // 然后生成传参中间代码
-    for (Expression *exp : *params_) ADD_UNR(PARAM, exp->get_var_addr());
+    i=0;
+    for (Expression *exp : *params_) {
+      ADD_TRP(PARAM, nullptr, exp->get_var_addr(), IR::Addr::make_imm(i++));
+    }
   }
 
   // 生成函数调用的代码
-  ADD_UNR(CALL, context.functab->get(name_)->label);
+  // TODO 未定义函数，参数类型不一致
+  auto func_ent = context.functab->get(this->name_);
+  if (func_ent != nullptr)
+    ADD_UNR(CALL, func_ent->label);
+  else
+    ADD_UNR(CALL, IR::Addr::make_named_label(this->name_));
 
   return ret;
 }
@@ -1225,7 +1233,6 @@ FunctionDecl::translate() {
     this->body_->pre_defined.push_back(i_ent);
   }
 
-  ADD_UNR(LABEL, IR::Addr::make_named_label(this->name()));
   ADD_UNR(FUNCDEF, IR::Addr::make_imm(cnt));
   ret.splice(ret.end(), this->body_->translate());
   ADD_NOP(FUNCEND);
