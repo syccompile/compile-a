@@ -3,8 +3,8 @@
 #include <map>
 
 namespace color_graph {
-namespace // helper
-{
+
+namespace { // helper
 // 为一个节点着色
 void _colorize_node(color_node::ptr p, color_allocate& alloc) {
   if (p->is_colored()) {
@@ -40,8 +40,9 @@ void _colorize_node(color_node::ptr p, color_allocate& alloc) {
 }
 
 } // helper
+
 color none_color() { return 0; }
-// spill color
+
 color spill_color() { return -1; }
 
 color color_allocate::get_new_color() { return ++allocated_num; }
@@ -63,7 +64,7 @@ void colorize_nodes_allocate(color_node::nodes nodes, color_allocate alloc) {
   }
 }
 
-void colorize_num_allocate(color_node::nodes nodes, int color_num, color_allocate alloc){
+void colorize_num_allocate(color_node::nodes nodes, int color_num, color_allocate alloc) {
   for (color_node::ptr p : nodes) {
     _colorize_node(p, alloc);
     // 变量实际溢出
@@ -88,4 +89,4 @@ color_node::nodes color_node::get_colored_neighbors() {
   }
   return n;
 }
-}
+} // namespace color_graph

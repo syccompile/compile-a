@@ -12,7 +12,7 @@ void remove_redunctant_label(std::list<IR::Ptr> &l) {
   // 标号消除
   while (!(l.empty())) {
     // 如果已处理列表内已经有一个标号，且已经存在一个标号序列
-    if (l.front()->op_ == IR::Op::LABEL) {
+    if (l.front()->op_ == IR::Op::LABEL && new_list.back()->op_ == IR::Op::LABEL) {
       label_alias[l.front()->a0] = new_list.back()->a0;
       l.front()->a0 = new_list.back()->a0;
     }

@@ -67,9 +67,9 @@
 
 6. 传参指令 `PARAM`
   * 功能：执行函数传参，若干个连续的PARAM之后将紧跟一个CALL
-  * `addr0`：空
-  * `addr1`：`VAR`/`IMM`/`PARAM` 要传入的参数地址
-  * `addr2`：`IMM`               参数序号
+  * 说明：相当于一个MOV指令，但是不可懒复制
+  * `addr0`：`PARAM`             参数位置
+  * `addr1`：`VAR`/`IMM`/`PARAM` 要传入的参数数值地址
 
 
 ### 三操作数指令

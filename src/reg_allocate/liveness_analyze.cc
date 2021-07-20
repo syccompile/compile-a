@@ -9,10 +9,13 @@
 
 namespace  // helper
 {
-/**
- * 集合相减，返回一个只包含元素a的集合, a属于lhs,且a不属于rhs
- */
-template <class T> set<T> set_sub(set<T> lhs, set<T> rhs) {
+// 前4个参数使用寄存器传递
+const int kTransfer_Reg = 4;
+
+// 集合相减
+// ret = lhs\rhs
+template <class T> set<T>
+set_sub(set<T> lhs, set<T> rhs) {
   set<T> ret;
   for (T t : lhs) {
     if (find(rhs.begin(), rhs.end(), t) == rhs.end()) {
@@ -22,11 +25,10 @@ template <class T> set<T> set_sub(set<T> lhs, set<T> rhs) {
   return ret;
 }
 
-/**
- * 集合合并，返回一个只包含元素a的集合, a属于lhs,或a属于rhs
- * post-condition: 返回集合不包含相同的元素
- */
-template <class T> set<T> set_union(set<T> lhs, set<T> rhs) {
+// 集合合并
+// ret = lhs U rhs
+template <class T> set<T>
+set_union(set<T> lhs, set<T> rhs) {
   set<T> ret = lhs;
   for (T t : rhs) {
     if (find(lhs.begin(), lhs.end(), t) == lhs.end()) {
@@ -36,7 +38,8 @@ template <class T> set<T> set_union(set<T> lhs, set<T> rhs) {
   return ret;
 }
 
-IR::Ptr find_label(IR::List list, IR_Addr::Ptr label) {
+IR::Ptr
+find_label(IR::List list, IR_Addr::Ptr label) {
   for (auto ir : list) {
     if (ir->op_ == IR::Op::LABEL && ir->a0 == label) {
       return ir;
@@ -45,19 +48,22 @@ IR::Ptr find_label(IR::List list, IR_Addr::Ptr label) {
   return nullptr;
 }
 
-#define ACCEPT_ADDR_NOT_IMM(set, addr)                                         \
-  if (ir->addr->kind != IR_Addr::Kind::IMM) {                                  \
-    ir->set.insert(ir->addr);                                                  \
-    vars.insert(ir->addr);                                                     \
-  }                                                                            \
-  if (ir->addr->kind == IR_Addr::Kind::PARAM) {                                \
-    params.insert(ir->addr);                                                   \
+#define ACCEPT_VAR(set, addr)                                                          \
+  if (ir->addr->kind == IR_Addr::Kind::VAR && !(local_array.count(ir->addr->val))) {   \
+    ir->set.insert(ir->addr);                                                          \
+    vars.insert(ir->addr);                                                             \
+  }                                                                                    \
+  else if (ir->addr->kind==IR_Addr::Kind::PARAM && ir->addr->val<kTransfer_Reg) {      \
+    ir->set.insert(ir->addr);                                                          \
+    vars.insert(ir->addr);                                                             \
+    params.insert(ir->addr);                                                           \
   }
 
 // 分析ir，填写varUse中的used、def、pred、succ
 // 返回<所有IR::Addr, 所有为PARAM的IR::Addr>
 tuple<set<color_node::ptr>, set<color_node::ptr>>
-ir_parse(IR::List ir_list) {
+ir_parse(IR::List &ir_list) {
+  std::unordered_map<int, bool> local_array;
   // 函数中使用的所有变量
   set<color_node::ptr> vars;
   // 变量中函数的参数
@@ -71,12 +77,16 @@ ir_parse(IR::List ir_list) {
       OP_CASE(MUL)
       OP_CASE(DIV)
       OP_CASE(MOD) {
-          ACCEPT_ADDR_NOT_IMM(used, a1);
-          ACCEPT_ADDR_NOT_IMM(used, a2);
-          ACCEPT_ADDR_NOT_IMM(def, a0);
+          ACCEPT_VAR(used, a1);
+          ACCEPT_VAR(used, a2);
+          ACCEPT_VAR(def, a0);
           break;
         }
-      OP_CASE(CMP)
+      OP_CASE(CMP) {
+        ACCEPT_VAR(used, a1);
+        ACCEPT_VAR(used, a2);
+        break;
+      }
       OP_CASE(MOVLE)
       OP_CASE(MOVLT)
       OP_CASE(MOVGE)
@@ -84,8 +94,8 @@ ir_parse(IR::List ir_list) {
       OP_CASE(MOVEQ)
       OP_CASE(MOVNE)
       OP_CASE(MOV) {
-          ACCEPT_ADDR_NOT_IMM(used, a1);
-          ACCEPT_ADDR_NOT_IMM(def, a0);
+          ACCEPT_VAR(used, a1);
+          ACCEPT_VAR(def, a0);
           break;
       }
       OP_CASE(JMP)
@@ -101,27 +111,34 @@ ir_parse(IR::List ir_list) {
         break;
       }
       OP_CASE(STORE) {
-        ACCEPT_ADDR_NOT_IMM(used, a0);
-        ACCEPT_ADDR_NOT_IMM(used, a1);
-        ACCEPT_ADDR_NOT_IMM(used, a2);
+        ACCEPT_VAR(used, a0);
+        ACCEPT_VAR(used, a1);
+        ACCEPT_VAR(used, a2);
         break;
       }
       OP_CASE(LOAD) {
-        ACCEPT_ADDR_NOT_IMM(def, a0);
-        ACCEPT_ADDR_NOT_IMM(used, a1);
+        ACCEPT_VAR(def, a0);
+        ACCEPT_VAR(used, a1);
+        ACCEPT_VAR(used, a2);
+        break;
+      }
+      OP_CASE(PARAM) {
+        ACCEPT_VAR(def, a0);
+        ACCEPT_VAR(used, a1);
+      }
+      OP_CASE(ALLOC_IN_STACK) {
+        local_array[ir->a0->val] = true;
         break;
       }
       OP_CASE(LABEL)
       OP_CASE(FUNCDEF)
       OP_CASE(FUNCEND)
-      OP_CASE(PARAM)
       OP_CASE(CALL)
       OP_CASE(RET)
       OP_CASE(VARDEF)
       OP_CASE(DATA)
       OP_CASE(ZERO)
       OP_CASE(VAREND)
-      OP_CASE(ALLOC_IN_STACK)
       OP_CASE(NOP) {
         break;
       }
@@ -135,11 +152,12 @@ ir_parse(IR::List ir_list) {
   }
   return make_tuple(vars, params);
 }
-#undef ACCEPT_ADDR_NOT_IMM
+#undef ACCEPT_VAR
 
 // 构造冲突图
 // 由函数liveness_analyze调用
-void make_conflict_graph(vector<varUse::ptr> var_uses, set<color_node::ptr> nodes) {
+void
+make_conflict_graph(vector<varUse::ptr> var_uses, set<color_node::ptr> nodes) {
   // 1. 对于对变量a的def操作, 为a与出口活跃的变量添加冲突边, 例如 a <- b + c ...
   // 2. 对于传送指令 a <- c ， 为a与出口活跃的变量除了c外的变量添加冲突边
   set<shared_ptr<var>> vars;
@@ -173,10 +191,14 @@ void make_conflict_graph(vector<varUse::ptr> var_uses, set<color_node::ptr> node
 // 活跃分析
 // pre-condition: ir_list必须是一个函数的完整ir
 //      ir_list不能为空
-tuple<set<color_node::ptr>, set<color_node::ptr>> liveness_analyze(IR::List& ir_list) {
+tuple<set<color_node::ptr>, set<color_node::ptr>>
+liveness_analyze(IR::List &ir_list) {
+
   auto[vars, params] = ir_parse(ir_list);
   std::vector<varUse::ptr> nodes;
+  
   for (auto ir : ir_list) { nodes.push_back(ir); }
+  
   while (true) {
     int immut_time = 0;
     for (varUse::ptr n : nodes) {

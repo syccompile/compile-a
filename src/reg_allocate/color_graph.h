@@ -64,10 +64,8 @@ void colorize_num(color_node::nodes nodes, int color_num);
 // 使用显式的颜色分配器
 // 对于预着色节点可以
 // 使用颜色分配器为预着色
-// 节点分配颜色后再将该分配器
-// 传入
-void colorize_nodes_allocate(color_node::nodes nodes,
-                             color_allocate alloc);
+// 节点分配颜色后再将该分配器传入
+void colorize_nodes_allocate(color_node::nodes nodes, color_allocate alloc);
 
 // 使用显式分配器分配器
 // 如果已经为预着色节点

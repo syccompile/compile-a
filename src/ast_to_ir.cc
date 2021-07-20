@@ -321,7 +321,7 @@ FuncCallExp::translate() {
     // 然后生成传参中间代码
     i=0;
     for (Expression *exp : *params_) {
-      ADD_TRP(PARAM, nullptr, exp->get_var_addr(), IR::Addr::make_imm(i++));
+      ADD_BIN(PARAM, IR::Addr::make_param(i++), exp->get_var_addr());
     }
   }
 
@@ -1225,6 +1225,7 @@ IR::List
 FunctionDecl::translate() {
   IR::List ret;
 
+  IR::Addr::param_reset();
   int cnt = 0;
   if (this->params_) for (Variable *i: *(this->params_)) {
     i->param_no = cnt++;

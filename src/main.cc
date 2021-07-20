@@ -1,6 +1,7 @@
 #include "ast.h"
 #include "analyzer.hh"
 #include "ir_opt.h"
+#include "reg_allocate/reg_allocate.h"
 
 #include <vector>
 #include <fstream>
@@ -60,39 +61,34 @@ int main(int argc, char *argv[]) {
   yylineno = 1;
   yyparse();
 
-  std::list<IR::Ptr> ir_list;
+  std::list<IR::List> def_list;
+  std::list<IR::List> func_list;
+
   for (VarDeclStmt *stmt : vardecl) {
-    ir_list.splice(ir_list.end(), stmt->translate());
+    def_list.emplace_back(stmt->translate());
   }
   for (FunctionDecl *f : funcs) {
-    ir_list.splice(ir_list.end(), f->translate());
+    func_list.emplace_back(f->translate());
   }
 
-  remove_redunctant_label(ir_list);
+  for (auto &func: func_list)
+    remove_redunctant_label(func);
+  
+  for (auto &func: func_list)
+    register_allocate(func);
 
+  // outputs
   std::ofstream IRFile(ir_filename);
   auto old_cout_buf = std::cout.rdbuf(IRFile.rdbuf());
-  for (const auto &i: ir_list) i->internal_print();
+
+  for (auto &def: def_list)
+    for (auto ir: def)
+      ir->internal_print();
+
+  for (auto &func: func_list)
+    for (auto ir: func)
+      ir->internal_print();
+
   std::cout.rdbuf(old_cout_buf);
   IRFile.close();
-
-  // do some optimization for IR
-
-  // std::vector<std::string> asm_vector;
-  // for (const auto& ir: ir_list) {
-  //   auto code = ir->translate_arm();
-  //   asm_vector.insert(asm_vector.end(),
-  //                     std::move_iterator(code.begin()),
-  //                     std::move_iterator(code.end()));
-  // }
-
-  // do some optimization for ASM
-
-  // std::list<std::string> asm_content = translate_arm(ir_list);
-
-  // std::ofstream ASMFile(asm_filename);
-  // for (const auto& code: asm_content) {
-  //   ASMFile << code << std::endl;
-  // }
-  // ASMFile.close();
 }
