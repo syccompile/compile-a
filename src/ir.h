@@ -92,4 +92,6 @@ public:
   Addr::Ptr a0;
   Addr::Ptr a1;
   Addr::Ptr a2;
+
+  bool in_inner_loop;
 };
