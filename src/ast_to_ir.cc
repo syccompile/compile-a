@@ -1226,7 +1226,7 @@ FunctionDecl::translate() {
   IR::List ret;
 
   IR::Addr::param_reset();
-  int cnt = 0;
+  int cnt = 0; // cnt 函数参数个数
   if (this->params_) for (Variable *i: *(this->params_)) {
     i->param_no = cnt++;
     i->translate();

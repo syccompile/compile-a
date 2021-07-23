@@ -72,6 +72,9 @@ ir_parse(IR::List &ir_list) {
   for (auto ir : ir_list) {
     switch (ir->op_) {
 #define OP_CASE(op) case IR::Op::op:
+      OP_CASE(AND)
+      OP_CASE(OR)
+      OP_CASE(XOR)
       OP_CASE(ADD)
       OP_CASE(SUB)
       OP_CASE(MUL)
@@ -93,6 +96,7 @@ ir_parse(IR::List &ir_list) {
       OP_CASE(MOVGT)
       OP_CASE(MOVEQ)
       OP_CASE(MOVNE)
+      OP_CASE(MVN)
       OP_CASE(MOV) {
           ACCEPT_VAR(used, a1);
           ACCEPT_VAR(def, a0);

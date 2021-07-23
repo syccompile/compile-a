@@ -2,6 +2,7 @@
 
 #include <string>
 #include "../ir_addr.h"
+#include "../ir.h"
 
 class VirtualAllocator {
 public:

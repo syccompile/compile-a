@@ -626,6 +626,9 @@ public:
 
   string name() { return name_; }
   BType ret_type() { return ret_type_; }
+  Variable::List* get_param_list() {
+    return params_;
+  }
 
   // debug
   virtual void internal_print() override;
