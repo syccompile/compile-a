@@ -42,15 +42,23 @@ substitute_param(IR::List &l) {
     else                                return param_var_map[v];
   };
 
+  // 将寄存器中 PARAM类型变量 的使用转为对应的 VAR类型变量 的使用
   while (!(l.empty())) {
     auto ir = l.front();
     if (ir->a1->kind==IR::Addr::Kind::PARAM && ir->a1->val<4)
       ir->a1 = get_addr(ir->a1->val);
+    else if (ir->a1->kind==IR::Addr::RET)
+      ir->a1 = functab_ent->get_param_addr(0);
+
     if (ir->a2->kind==IR::Addr::Kind::PARAM && ir->a1->val<4)
       ir->a2 = get_addr(ir->a2->val);
+    else if (ir->a2->kind==IR::Addr::RET)
+      ir->a2 = functab_ent->get_param_addr(0);
+      
     new_l.splice(new_l.end(), l, l.begin());
   }
 
+  // 在函数头部加入MOV指令
   l.splice(l.end(), new_l, new_l.begin());
   for (int i=0 ; i<4 ; i++) {
     auto var_addr = get_addr(i);
@@ -58,8 +66,6 @@ substitute_param(IR::List &l) {
   }
   l.splice(l.end(), new_l);
 }
-
-}; // helper
 
 // 将一个未知类型的地址a移动到寄存器（VAR）地址中
 // 返回：[新地址, 需要向全局变量定义加入的IR，需要向函数定义加入的IR]
@@ -181,6 +187,8 @@ move_into_var(IR::Addr::Ptr a) {
   return std::make_tuple(ret, ret_def, ret_func);
 
 }
+
+}; // helper
 
 void
 ir_armify(IR::List &defs, IR::List &func) {
