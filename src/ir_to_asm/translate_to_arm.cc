@@ -220,6 +220,19 @@ translate(Stack_Alloc &stack, std::unordered_map<int, int> color_assign, IR::Ptr
     // 将a0存入分配到的地址中
     ret.splice(ret.end(), a0_arm);
   }
+  // 特殊处理MOV
+  else if (ir->op_ == IR::Op::MOV) {
+    if (ir->a0->get_color() == ir->a1->get_color()) goto end;
+    
+    auto [a1_reg, a1_arm] = move_to_reg(stack, color_assign, ir->a1, string("r10"));
+    auto [a0_reg, a0_arm] = store_from_reg(stack, color_assign, ir->a0, string("r10"));
+    // 将a1取入寄存器
+    ret.splice(ret.end(), a1_arm);
+    // 移动
+    ret.push_back(get_arm_opcode(ir->op_) + "\t" + a0_reg + ", " + a1_reg);
+    // 将a0存入相应位置
+    ret.splice(ret.end(), a0_arm);
+  }
   else if (ir->is_mov()) {
     auto [a1_reg, a1_arm] = move_to_reg(stack, color_assign, ir->a1, string("r10"));
     auto [a0_reg, a0_arm] = store_from_reg(stack, color_assign, ir->a0, string("r10"));
@@ -302,6 +315,8 @@ translate(Stack_Alloc &stack, std::unordered_map<int, int> color_assign, IR::Ptr
     // 还原a9
     if (a2_reg == string("a9")) ret.push_back(string("ldr\tr9, [sp, #-4]"));
   }
+
+  end: return ret;
 }
 
 };  // helper
