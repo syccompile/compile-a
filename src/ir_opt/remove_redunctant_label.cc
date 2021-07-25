@@ -15,6 +15,9 @@ void remove_redunctant_label(std::list<IR::Ptr> &l) {
     if (l.front()->op_ == IR::Op::LABEL && new_list.back()->op_ == IR::Op::LABEL) {
       label_alias[l.front()->a0] = new_list.back()->a0;
       l.front()->a0 = new_list.back()->a0;
+
+      l.pop_front();
+      continue;
     }
     new_list.splice(new_list.end(), l, l.begin());
   }
