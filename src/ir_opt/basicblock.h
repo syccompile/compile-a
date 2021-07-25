@@ -7,6 +7,7 @@
 #include <list>
 #include <map>
 #include <set>
+#include <stack>
 #include <string>
 #include <iostream>
 #include <algorithm>
@@ -72,6 +73,9 @@ class BasicBlock {
   std::list<IR::Addr> live_variable_OUT_;
   void calc_use_def();
 
+  std::list<int> dominate_IN_;  // 支配结点
+  std::list<int> dominate_OUT_;
+
   explicit BasicBlock(const std::list<IR::Ptr> &ir_list)
       : ir_list_(ir_list) {}
   std::list<std::string> translate_to_arm();  // 不确定是否需要
@@ -96,8 +100,10 @@ class Function {
   std::map<int, std::list<int>> kill_map_;  // 从lineno到kill的映射
   std::list<Exp> all_exp_list_;
   std::vector<bool> searched_; // _find_sources的辅助表，记录block_num是否被搜索过
+  std::map<int, BasicBlock::Ptr> blocknum_block_map_;  // 从blocknum到block的映射
 
   void _build_lineno_ir_map();  // 建立lineno到ir的映射表，并更新basic_block的block_num和first_lineno,last_lineno等信息
+  void _build_blocknum_block_map();
 
   void _build_gen_kill_map();
   void _add_to_gen_kill_help_map(const IR::Ptr &ir, int lineno);
@@ -117,6 +123,16 @@ class Function {
 
   void _calc_use_def();
   void _calc_live_variable_IN_OUT();
+
+  void _calc_dominate_IN_OUT();
+  using edge = std::pair<int, int>;
+  std::set<edge> back_edges_;
+  void _find_back_edges();
+  using loop = std::vector<int>;
+  loop _get_loop(const edge& e);
+  std::vector<loop> loops_;
+  void _get_all_loops();
+
  public:
   using Ptr = std::shared_ptr<Function>;
   using iterator = std::list<BasicBlock::Ptr>::iterator;
@@ -137,6 +153,7 @@ class Function {
   void local_copy_propagation();
   void global_copy_propagation();
   void remove_dead_code();
+  void loop_invariant_code_motion();
   iterator begin() { return basic_block_list_.begin(); }
   iterator end() { return basic_block_list_.end(); }
   std::list<IR::Ptr> merge();

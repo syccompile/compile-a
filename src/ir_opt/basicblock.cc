@@ -13,7 +13,8 @@ bool operator==(const IR::Addr &lhs, const IR::Addr &rhs) {
 }
 
 bool operator<(const IR::Addr &lhs, const IR::Addr &rhs) {
-  return lhs.kind < rhs.kind || lhs.val < rhs.val;
+  if (lhs.kind != rhs.kind) return lhs.kind < rhs.kind;
+  return lhs.val < rhs.val;
 }
 
 std::ostream &operator<<(std::ostream &os, IR::Addr a) {
@@ -91,6 +92,7 @@ inline int alloc_num() { return ++cur_num; }
 inline IR::Addr::Ptr alloc_var() { return std::make_shared<IR::Addr>(IR::Addr::Kind::VAR, alloc_num()); }
 inline IR::Addr::Ptr make_imm(int val) { return std::make_shared<IR::Addr>(IR::Addr::Kind::IMM, val); }
 inline IR::Addr::Ptr make_var(int val) { return std::make_shared<IR::Addr>(IR::Addr::Kind::VAR, val); }
+inline IR::Addr::Ptr make_param(int val) { return std::make_shared<IR::Addr>(IR::Addr::Kind::PARAM, val); }
 inline IR::Ptr make_tmp_assign_exp_ir(const Exp &exp) {
   return std::make_shared<IR>(exp.op_, alloc_var(), exp.a0_, exp.a1_);
 }
@@ -101,6 +103,21 @@ void testExp() {
   assert(exp1 == exp2);
   assert(!(exp1 < exp2));
   assert(!(exp2 < exp1));
+}
+
+void testIRADDR() {
+  auto p0 = make_param(0);
+  auto v0 = make_var(0);
+  auto v1 = make_var(1);
+  assert(!(*p0 < *v0));
+  assert(!(*p0 < *v1));
+  assert(*v0 < *v1);
+  std::list<IR::Addr> li;
+  li.emplace_back(IR::Addr::PARAM, 0);
+  li.emplace_back(IR::Addr::VAR, 1);
+  li.sort();
+  assert(li.front().kind == IR::Addr::VAR);
+  assert(li.back().kind == IR::Addr::PARAM);
 }
 
 std::ostream &operator<<(std::ostream &os, const Exp &exp) {
@@ -591,6 +608,7 @@ std::list<std::string> Function::translate_to_arm() {
   return std::list<std::string>();
 }
 void Function::debug() {
+  testIRADDR();
   std::cout << green << func_name_ << ": " << normal << std::endl;
   std::cout << "------------------------" << std::endl;
   constant_folding();
@@ -603,6 +621,7 @@ void Function::debug() {
   reach_define_analysis();
   available_expression_analysis();
   live_variable_analysis();
+  _get_all_loops();
   for (const auto &basic_block : basic_block_list_) {
     std::cout << red << "block " << basic_block->block_num_ << ":" << normal << std::endl;
     basic_block->debug();
@@ -610,32 +629,47 @@ void Function::debug() {
     PRINT_PRED_SUCC_BLOCKS(basic_block->predecessor_list_);
     std::cout << blue << "successor: " << normal;
     PRINT_PRED_SUCC_BLOCKS(basic_block->successor_list_);
-    std::cout << blue << "gen: " << normal << std::endl;
-    PRINT_ELEMENTS(basic_block->gen_);
-    std::cout << blue << "kill: " << normal << std::endl;
-    PRINT_ELEMENTS(basic_block->kill_);
-    std::cout << blue << "reach_define_IN: " << normal << std::endl;
-    PRINT_ELEMENTS(basic_block->reach_define_IN_);
-    std::cout << blue << "reach_define_OUT: " << normal << std::endl;
-    PRINT_ELEMENTS(basic_block->reach_define_OUT_);
-    std::cout << blue << "egen: " << normal << std::endl;
-    PRINT_ELEMENTS(basic_block->egen_);
-    std::cout << blue << "ekill: " << normal << std::endl;
-    PRINT_ELEMENTS(basic_block->ekill_);
-    std::cout << blue << "available_expression_IN_: " << normal << std::endl;
-    PRINT_ELEMENTS(basic_block->available_expression_IN_);
-    std::cout << blue << "available_expression_OUT_: " << normal << std::endl;
-    PRINT_ELEMENTS(basic_block->available_expression_OUT_);
-    std::cout << blue << "use: " << normal << std::endl;
-    PRINT_ELEMENTS(basic_block->use_);
-    std::cout << blue << "def: " << normal << std::endl;
-    PRINT_ELEMENTS(basic_block->def_);
-    std::cout << blue << "live_variable_IN_: " << normal << std::endl;
-    PRINT_ELEMENTS(basic_block->live_variable_IN_);
-    std::cout << blue << "live_variable_OUT_: " << normal << std::endl;
-    PRINT_ELEMENTS(basic_block->live_variable_OUT_);
-    std::cout << std::endl;
+//    std::cout << blue << "gen: " << normal << std::endl;
+//    PRINT_ELEMENTS(basic_block->gen_);
+//    std::cout << blue << "kill: " << normal << std::endl;
+//    PRINT_ELEMENTS(basic_block->kill_);
+//    std::cout << blue << "reach_define_IN: " << normal << std::endl;
+//    PRINT_ELEMENTS(basic_block->reach_define_IN_);
+//    std::cout << blue << "reach_define_OUT: " << normal << std::endl;
+//    PRINT_ELEMENTS(basic_block->reach_define_OUT_);
+//    std::cout << blue << "egen: " << normal << std::endl;
+//    PRINT_ELEMENTS(basic_block->egen_);
+//    std::cout << blue << "ekill: " << normal << std::endl;
+//    PRINT_ELEMENTS(basic_block->ekill_);
+//    std::cout << blue << "available_expression_IN_: " << normal << std::endl;
+//    PRINT_ELEMENTS(basic_block->available_expression_IN_);
+//    std::cout << blue << "available_expression_OUT_: " << normal << std::endl;
+//    PRINT_ELEMENTS(basic_block->available_expression_OUT_);
+//    std::cout << blue << "use: " << normal << std::endl;
+//    PRINT_ELEMENTS(basic_block->use_);
+//    std::cout << blue << "def: " << normal << std::endl;
+//    PRINT_ELEMENTS(basic_block->def_);
+//    std::cout << blue << "live_variable_IN_: " << normal << std::endl;
+//    PRINT_ELEMENTS(basic_block->live_variable_IN_);
+//    std::cout << blue << "live_variable_OUT_: " << normal << std::endl;
+//    PRINT_ELEMENTS(basic_block->live_variable_OUT_);
+//    std::cout << blue << "dominate_IN_: " << normal << std::endl;
+//    PRINT_ELEMENTS(basic_block->dominate_IN_);
+//    std::cout << blue << "dominate_OUT_: " << normal << std::endl;
+//    PRINT_ELEMENTS(basic_block->dominate_OUT_);
+//    std::cout << std::endl;
   }
+  std::cout << blue << "loops: " << normal << std::endl;
+  for (const auto &l : loops_) {
+    std::cout << "( ";
+    PRINT_ELEMENTS(l, "", " ", ")\n");
+  }
+  std::cout << '\n';
+//  std::cout << blue << "back_edges_: " << normal << std::endl;
+//  for (const auto &[first, second] : back_edges_) {
+//    std::cout << "(" << first << "->" << second << ") ";
+//  }
+//  std::cout << '\n';
 //  std::cout << "gen_map: " << std::endl;
 //  PRINT_MAP(gen_map_);
 //  std::cout << "kill_map: " << std::endl;
@@ -725,6 +759,9 @@ void Function::_calc_gen_kill() {
   }
 }
 void Function::_calc_reach_define_IN_OUT() {
+  for (auto &basic_block : basic_block_list_) {
+    basic_block->reach_define_OUT_.clear();
+  }
   bool change = true;
   while (change) {
     change = false;
@@ -842,6 +879,18 @@ void Function::_fill_all_exp_list() {
 }
 void Function::live_variable_analysis() {
   _calc_use_def();
+//  for (const auto &basic_block: basic_block_list_){
+//    std::cout << red << "block " << basic_block->block_num_ << ":" << normal << std::endl;
+//    basic_block->debug();
+//    std::cout << blue << "predecessor: " << normal;
+//    PRINT_PRED_SUCC_BLOCKS(basic_block->predecessor_list_);
+//    std::cout << blue << "successor: " << normal;
+//    PRINT_PRED_SUCC_BLOCKS(basic_block->successor_list_);
+//    std::cout << blue << "use: " << normal << std::endl;
+//    PRINT_ELEMENTS(basic_block->use_);
+//    std::cout << blue << "def: " << normal << std::endl;
+//    PRINT_ELEMENTS(basic_block->def_);
+//  }
   _calc_live_variable_IN_OUT();
 }
 void Function::_calc_use_def() {
@@ -850,6 +899,9 @@ void Function::_calc_use_def() {
   }
 }
 void Function::_calc_live_variable_IN_OUT() {
+  for (auto &basic_block : basic_block_list_) {
+    basic_block->live_variable_IN_.clear();
+  }
   bool change = true;
   while (change) {
     change = false;
@@ -859,7 +911,10 @@ void Function::_calc_live_variable_IN_OUT() {
         std::set_union(tmp_OUT.begin(), tmp_OUT.end(),
                        succ_block.lock()->live_variable_IN_.begin(),
                        succ_block.lock()->live_variable_IN_.end(),
-                       std::back_inserter(tmp));
+                       std::back_inserter(tmp), [](const auto &a, const auto &b) {
+          if (a.kind < b.kind) return true;
+          return a.val < b.val;
+        });
         tmp_OUT.swap(tmp);
         tmp.clear();
       }
@@ -981,12 +1036,101 @@ void Function::remove_dead_code() {
     basic_block->remove_dead_code();
   }
 }
+
+void Function::_calc_dominate_IN_OUT() {
+  std::list<int> all_block_list;
+  for (auto &basic_block : basic_block_list_) {
+    all_block_list.push_back(basic_block->block_num_);
+  }
+  for (auto &basic_block : basic_block_list_) {
+    basic_block->dominate_OUT_ = all_block_list;
+  }
+  bool change = true;
+  while (change) {
+    change = false;
+    for (auto &basic_block : basic_block_list_) {
+      std::list<int> tmp_IN = all_block_list, tmp, tmp_OUT;
+      for (const auto &pred_block: basic_block->predecessor_list_) {
+        std::set_intersection(tmp_IN.begin(), tmp_IN.end(),
+                              pred_block.lock()->dominate_OUT_.begin(),
+                              pred_block.lock()->dominate_OUT_.end(),
+                              std::back_inserter(tmp));
+        tmp_IN.swap(tmp);
+        tmp.clear();
+      }
+      if (basic_block->predecessor_list_.empty()) {
+        basic_block->dominate_IN_.clear();
+      } else {
+        basic_block->dominate_IN_.swap(tmp_IN);
+      }
+      tmp_OUT = basic_block->dominate_IN_;
+      if (std::find(tmp_OUT.begin(), tmp_OUT.end(),
+                    basic_block->block_num_) == tmp_OUT.end()) {
+        tmp_OUT.push_back(basic_block->block_num_);
+      }
+      if (basic_block->dominate_OUT_ != tmp_OUT) {
+        change = true;
+        basic_block->dominate_OUT_.swap(tmp_OUT);
+      }
+    }
+  }
+}
+
+void Function::loop_invariant_code_motion() {
+  // TODO?
+}
+
 std::list<IR::Ptr> Function::merge() {
   std::list<IR::Ptr> ret;
   for (auto &basic_block : basic_block_list_) {
     ret.splice(ret.end(), basic_block->ir_list_);
   }
   return ret;
+}
+void Function::_find_back_edges() {
+  back_edges_.clear();
+  _calc_dominate_IN_OUT();
+  for (const auto &basic_block : basic_block_list_) {
+    for (int dominate_block_num : basic_block->dominate_OUT_) {
+      for (const auto &succ_block : basic_block->successor_list_) {
+        if (succ_block.lock()->block_num_ == dominate_block_num) {
+          back_edges_.insert(std::make_pair(basic_block->block_num_, dominate_block_num));
+          break;
+        }
+      }
+    }
+  }
+}
+void Function::_build_blocknum_block_map() {
+  for (const auto &basic_block : basic_block_list_) {
+    blocknum_block_map_[basic_block->block_num_] = basic_block;
+  }
+}
+Function::loop Function::_get_loop(const Function::edge &e) {
+  loop ret;
+  ret.push_back(e.first);
+  ret.push_back(e.second);
+  std::stack<int> s;
+  s.push(e.first);
+  while (!s.empty()) {
+    int m = s.top();
+    s.pop();
+    for (const auto &pred_block : blocknum_block_map_[m]->predecessor_list_) {
+      int pred_num = pred_block.lock()->block_num_;
+      if (std::find(ret.begin(), ret.end(), pred_num) == ret.end()) {
+        ret.push_back(pred_num);  // add to loop
+        s.push(pred_num);
+      }
+    }
+  }
+  return ret;
+}
+void Function::_get_all_loops() {
+  _build_blocknum_block_map();
+  _find_back_edges();
+  for (const auto &e : back_edges_) {
+    loops_.push_back(_get_loop(e));
+  }
 }
 
 Module::Module(std::list<IR::Ptr> &ir_list) {

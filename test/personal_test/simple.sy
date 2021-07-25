@@ -1,11 +1,12 @@
-int func2 (int c, int d){
-  int a[3], b;
-  a[1] = 1;
-  b = a[2];
-  d = 4;
-  b = 3;
-  if (c == 3) {
-    return d;
+int func2 (int d){
+  int a, b;
+  a = 1;
+  while (a != 10) {
+    a = a + 1;
+    if (a == 3) {
+        d = d + 4;
+    }
+    a = a + 1;
   }
-  return b;
+  return b + d;
 }

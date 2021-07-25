@@ -73,7 +73,7 @@ int main(int argc, char *argv[]) {
   remove_redunctant_label(ir_list);
 
   Module m(ir_list);
-  m.optimize(optimize_level);
+//  m.optimize(optimize_level);
   m.debug();
   ir_list = m.merge();  // m不再可用
 
