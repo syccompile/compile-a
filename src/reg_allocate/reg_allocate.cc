@@ -1,5 +1,5 @@
 #include "liveness_analyze.h"
-
+#include "../context/context.h"
 #include <stdarg.h>
 #include <unordered_map>
 #include <assert.h>
@@ -22,12 +22,24 @@ using std::unordered_map;
 void
 register_allocate(IR::List &ir_list) {
   // vars 是得到的冲突图
-  auto [vars, params] = liveness_analyze(ir_list);
+  auto [vars, mov_related] = liveness_analyze(ir_list);
+
+  // 获取函数信息
+  string funcname = ir_list.front()->a0->name;
+  auto   functab_ent = context.functab->get(funcname);
 
   // 预着色
   color_allocate alloc;
-  for (auto param : params) {
+  int i = 0;
+  for (auto param : functab_ent->param_list) {
     param->colorize(alloc.get_new_color());
+    i++;
+    if (i>=4) break;
+  }
+
+  // 处理MOV
+  for (auto &i: mov_related) {
+    
   }
 
   // 图着色

@@ -39,6 +39,24 @@ void _colorize_node(color_node::ptr p, color_allocate& alloc) {
   }
 }
 
+// Briggs MOV节点合并判断
+// 如果合并后节点的高度数(>=K)邻接点个数少于K，则它们可以合并
+bool _briggs_mov(color_node::ptr fir, color_node::ptr sec) {
+  int high_deg = 0;
+
+  for (auto &ptr: fir->get_neighbors()) {
+    if (ptr->get_neighbors().size()>=6) high_deg++;
+    if (high_deg >= 6) return false;
+  }
+
+  for (auto &ptr: sec->get_neighbors()) {
+    if (ptr->get_neighbors().size()>=6) high_deg++;
+    if (high_deg >= 6) return false;
+  }
+
+  return high_deg < 6;
+}
+
 } // helper
 
 color none_color() { return 0; }
@@ -51,6 +69,27 @@ int color_allocate::alloc_num() { return allocated_num; }
 
 void color_allocate::reclaim_color() {
   allocated_num--;
+}
+
+void process_mov(std::pair<color_node::ptr, color_node::ptr> pnn, color_allocate & alloc) {
+  auto node1 = pnn.first,
+       node2 = pnn.second;
+
+  bool can_mov = _briggs_mov(node1, node2);
+
+  if (!can_mov) return;
+
+  if (node1->is_colored()) {
+    if (node2->is_colored()) return;
+    else node2->colorize(node1->get_color());
+  }
+  else {
+    if (node2->is_colored()) node1->colorize(node2->get_color());
+    else {
+      _colorize_node(node1, alloc);
+      node2->colorize(node1->get_color());
+    }
+  }
 }
 
 void colorize_nodes(color_node::nodes nodes) {

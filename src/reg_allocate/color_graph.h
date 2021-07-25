@@ -3,6 +3,7 @@
 #include <vector>
 #include <set>
 #include <memory>
+#include <utility>
 
 namespace color_graph{
 
@@ -51,6 +52,10 @@ public:
   color allocated_num = none_color();
 };
 
+// 判断并合并MOV相关节点
+// 若可以合并，就着相同的颜色
+// 若不行，就不着色
+void process_mov(std::pair<color_node::ptr, color_node::ptr> pnn, color_allocate & alloc);
 
 // 为一系列相邻的节点着色
 // pre-condition: 所有节点相邻的节点都在集合中
