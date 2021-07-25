@@ -321,7 +321,7 @@ FuncCallExp::translate() {
     // 然后生成传参中间代码
     i=0;
     for (Expression *exp : *params_) {
-      ADD_BIN(PARAM, IR::Addr::make_param(i++), exp->get_var_addr());
+      ADD_BIN(PARAM, context.functab->get_curtab()->get_param_addr(i++) , exp->get_var_addr());
     }
   }
 
@@ -1225,21 +1225,23 @@ IR::List
 FunctionDecl::translate() {
   IR::List ret;
 
-  IR::Addr::param_reset();
+  std::vector<IR::Addr::Ptr> param_list;
   int cnt = 0;
   if (this->params_) for (Variable *i: *(this->params_)) {
     i->param_no = cnt++;
     i->translate();
+
     auto i_ent = i->vartab_ent;
+    param_list.push_back(i_ent->addr);
+    
     this->body_->pre_defined.push_back(i_ent);
   }
+  context.functab->put(name(), param_list);
 
-  ADD_UNR(FUNCDEF, IR::Addr::make_imm(cnt));
+  ADD_BIN(FUNCDEF, IR::Addr::make_named_label(this->name_), IR::Addr::make_imm(cnt));
   ret.splice(ret.end(), this->body_->translate());
   ADD_NOP(FUNCEND);
-  std::list<Type> *list = new std::list<Type>();
-  // FIX: 空的参数表
-  context.functab->put(name(), *list);
+
 
   return ret;
 }

@@ -2,6 +2,8 @@
 #include "../context/context.h"
 #include <unordered_map>
 
+namespace { // helper
+
 // 将val循环左移n位
 uint32_t
 rol(uint32_t val, uint32_t n) {
@@ -21,6 +23,43 @@ is_arm_imm(uint32_t imm) {
   }
   return false;
 }
+
+// 将IR中所有使用的寄存器参数（前4个参数）都换成VAR
+void
+substitute_param(IR::List &l) {
+  IR::List new_l;
+
+  // get function name
+  new_l.splice(new_l.end(), l, l.begin());
+  std::string funcname = new_l.front()->a0->name;
+  auto functab_ent = context.functab->get(funcname);
+
+  std::vector<IR::Addr::Ptr> param_var_map(4);
+
+  auto get_addr = [&](int v) -> IR::Addr::Ptr {
+    if      (v>=4)                      return nullptr;
+    else if (param_var_map[v]==nullptr) return param_var_map[v] = context.allocator.allocate_addr();
+    else                                return param_var_map[v];
+  };
+
+  while (!(l.empty())) {
+    auto ir = l.front();
+    if (ir->a1->kind==IR::Addr::Kind::PARAM && ir->a1->val<4)
+      ir->a1 = get_addr(ir->a1->val);
+    if (ir->a2->kind==IR::Addr::Kind::PARAM && ir->a1->val<4)
+      ir->a2 = get_addr(ir->a2->val);
+    new_l.splice(new_l.end(), l, l.begin());
+  }
+
+  l.splice(l.end(), new_l, new_l.begin());
+  for (int i=0 ; i<4 ; i++) {
+    auto var_addr = get_addr(i);
+    if (var_addr!=nullptr) l.push_back(IR::make_binary(IR::Op::MOV, var_addr, functab_ent->get_param_addr(i)));
+  }
+  l.splice(l.end(), new_l);
+}
+
+}; // helper
 
 // 将一个未知类型的地址a移动到寄存器（VAR）地址中
 // 返回：[新地址, 需要向全局变量定义加入的IR，需要向函数定义加入的IR]
@@ -144,11 +183,14 @@ move_into_var(IR::Addr::Ptr a) {
 }
 
 void
-ir_armify(IR::List &defs, IR::List &funcs) {
-  IR::List new_funcs;
+ir_armify(IR::List &defs, IR::List &func) {
+  
+  substitute_param(func);
 
-  while (!(funcs.empty())) {
-    auto ir = funcs.front();
+  IR::List new_func;
+
+  while (!(func.empty())) {
+    auto ir = func.front();
 
     // ir为算术逻辑型，a0  = a1 op a2
     // 或者是cmp型     nil = a1 op a2
@@ -159,8 +201,8 @@ ir_armify(IR::List &defs, IR::List &funcs) {
       // 将需要加入的IR加入对应IR串中
       defs.splice(defs.end(), a1_def_app);
       defs.splice(defs.end(), a2_def_app);
-      new_funcs.splice(funcs.end(), a1_func_app);
-      new_funcs.splice(funcs.end(), a2_func_app);
+      new_func.splice(func.end(), a1_func_app);
+      new_func.splice(func.end(), a2_func_app);
       // 修改原IR
       ir->a1 = a1;
       ir->a2 = a2;
@@ -172,7 +214,7 @@ ir_armify(IR::List &defs, IR::List &funcs) {
       auto [a1, a1_def_app, a1_func_app] = move_into_var(ir->a1);
       // 将需要加入的IR加入对应IR串中
       defs.splice(defs.end(), a1_def_app);
-      new_funcs.splice(funcs.end(), a1_func_app);
+      new_func.splice(func.end(), a1_func_app);
       // 修改原IR
       ir->a1 = a1;
     }
@@ -187,7 +229,7 @@ ir_armify(IR::List &defs, IR::List &funcs) {
         auto [a1, a1_def_app, a1_func_app] = move_into_var(ir->a1);
         // 将需要加入的IR加入对应IR串中
         defs.splice(defs.end(), a1_def_app);
-        new_funcs.splice(funcs.end(), a1_func_app);
+        new_func.splice(func.end(), a1_func_app);
         // 修改原IR
         ir->a1 = a1;
       }
@@ -199,7 +241,7 @@ ir_armify(IR::List &defs, IR::List &funcs) {
       auto [a1, a1_def_app, a1_func_app] = move_into_var(ir->a1);
       // 将需要加入的IR加入对应IR串中
       defs.splice(defs.end(), a1_def_app);
-      new_funcs.splice(funcs.end(), a1_func_app);
+      new_func.splice(func.end(), a1_func_app);
       // 修改原ir
       ir->a1 = a1;
     }
@@ -210,7 +252,7 @@ ir_armify(IR::List &defs, IR::List &funcs) {
       auto [a0, a0_def_app, a0_func_app] = move_into_var(ir->a0);
       // 将需要加入的IR加入对应IR串中
       defs.splice(defs.end(), a0_def_app);
-      new_funcs.splice(funcs.end(), a0_func_app);
+      new_func.splice(func.end(), a0_func_app);
       // 修改原ir
       ir->a0 = a0;
 
@@ -218,14 +260,14 @@ ir_armify(IR::List &defs, IR::List &funcs) {
       auto [a2, a2_def_app, a2_func_app] = move_into_var(ir->a2);
       // 将需要加入的IR加入对应IR串中
       defs.splice(defs.end(), a2_def_app);
-      new_funcs.splice(funcs.end(), a2_func_app);
+      new_func.splice(func.end(), a2_func_app);
       // 修改原ir
       ir->a2 = a2;
     }
 
-    new_funcs.splice(new_funcs.end(), funcs, funcs.begin());
+    new_func.splice(new_func.end(), func, func.begin());
   }
 
-  funcs.splice(funcs.end(), new_funcs);
+  func.splice(func.end(), new_func);
 
 }
