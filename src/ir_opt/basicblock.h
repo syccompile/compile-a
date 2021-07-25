@@ -169,6 +169,7 @@ class Module {
   std::list<Function::Ptr> function_list_;
 
   explicit Module(std::list<IR::Ptr> &ir_list);
+  explicit Module(std::list<std::list<IR::Ptr>> &ir_lists);
   std::list<std::string> translate_to_arm();
   void reach_define_analysis();
   void live_variable_analysis();
@@ -185,7 +186,7 @@ class Module {
 //  const_iterator cbegin() const { return function_list_.cbegin(); }
 //  const_iterator cend() const { return function_list_.cend(); }
   void optimize(int optimize_level);
-  std::list<IR::Ptr> merge();
+  std::list<std::list<IR::Ptr>> merge();
   void debug();
 };
 

@@ -2,6 +2,7 @@
 #include "analyzer.hh"
 #include "ir_opt.h"
 #include "ir_opt/basicblock.h"
+#include "reg_allocate/reg_allocate.h"
 
 #include <vector>
 #include <fstream>
@@ -61,21 +62,44 @@ int main(int argc, char *argv[]) {
   yylineno = 1;
   yyparse();
 
-  std::list<IR::Ptr> ir_list;
+  std::list<IR::List> def_list;
+  std::list<IR::List> func_list;
+
   for (VarDeclStmt *stmt : vardecl) {
-    ir_list.splice(ir_list.end(), stmt->translate());
+    def_list.emplace_back(stmt->translate());
   }
   for (FunctionDecl *f : funcs) {
-    ir_list.splice(ir_list.end(), f->translate());
+    func_list.emplace_back(f->translate());
   }
 
   // do some optimization for IR
-  remove_redunctant_label(ir_list);
+  for (auto &func: func_list)
+    remove_redunctant_label(func);
 
-  Module m(ir_list);
+  // only need to handle func_list
+  Module m(func_list);
 //  m.optimize(optimize_level);
   m.debug();
-  ir_list = m.merge();  // m不再可用
+//  m.optimize(1);
+  func_list = m.merge();
+
+  for (auto &func: func_list)
+    register_allocate(func);
+
+  // outputs
+  std::ofstream IRFile(ir_filename);
+  auto old_cout_buf = std::cout.rdbuf(IRFile.rdbuf());
+
+  for (auto &def: def_list)
+    for (auto ir: def)
+      ir->internal_print();
+
+  for (auto &func: func_list)
+    for (auto ir: func)
+      ir->internal_print();
+
+  std::cout.rdbuf(old_cout_buf);
+  IRFile.close();
 
 //  std::ofstream IRFile(ir_filename);
 //  auto old_cout_buf = std::cout.rdbuf(IRFile.rdbuf());

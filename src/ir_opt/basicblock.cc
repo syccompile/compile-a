@@ -57,7 +57,7 @@ bool is_mov_op(IR::Op op) {
 }
 
 bool is_algo_op(IR::Op op) {
-  return op >= IR::Op::ADD && op <= IR::Op::MOD;
+  return op >= IR::Op::ADD && op <= IR::Op::XOR;
 }
 
 inline bool is_var_or_param(const IR::Addr::Ptr &a) {
@@ -517,8 +517,9 @@ void BasicBlock::remove_dead_code() {
 }
 
 Function::Function(std::list<IR::Ptr> &ir_list) {
-  func_name_ = ir_list.front()->a0->name;
-  arg_num_ = ir_list.front()->a1->val;
+//  func_name_ = ir_list.front()->a0->name;
+//  arg_num_ = ir_list.front()->a1->val;
+  arg_num_ = ir_list.front()->a0->val;
   ir_list.pop_front();  // pop FUNCDEF
 
   auto tmp_basic_block = make_empty_basic_block();  // 第一条指令是首指令
@@ -879,18 +880,18 @@ void Function::_fill_all_exp_list() {
 }
 void Function::live_variable_analysis() {
   _calc_use_def();
-//  for (const auto &basic_block: basic_block_list_){
-//    std::cout << red << "block " << basic_block->block_num_ << ":" << normal << std::endl;
-//    basic_block->debug();
-//    std::cout << blue << "predecessor: " << normal;
-//    PRINT_PRED_SUCC_BLOCKS(basic_block->predecessor_list_);
-//    std::cout << blue << "successor: " << normal;
-//    PRINT_PRED_SUCC_BLOCKS(basic_block->successor_list_);
-//    std::cout << blue << "use: " << normal << std::endl;
-//    PRINT_ELEMENTS(basic_block->use_);
-//    std::cout << blue << "def: " << normal << std::endl;
-//    PRINT_ELEMENTS(basic_block->def_);
-//  }
+  for (const auto &basic_block: basic_block_list_){
+    std::cout << red << "block " << basic_block->block_num_ << ":" << normal << std::endl;
+    basic_block->debug();
+    std::cout << blue << "predecessor: " << normal;
+    PRINT_PRED_SUCC_BLOCKS(basic_block->predecessor_list_);
+    std::cout << blue << "successor: " << normal;
+    PRINT_PRED_SUCC_BLOCKS(basic_block->successor_list_);
+    std::cout << blue << "use: " << normal << std::endl;
+    PRINT_ELEMENTS(basic_block->use_);
+    std::cout << blue << "def: " << normal << std::endl;
+    PRINT_ELEMENTS(basic_block->def_);
+  }
   _calc_live_variable_IN_OUT();
 }
 void Function::_calc_use_def() {
@@ -911,10 +912,7 @@ void Function::_calc_live_variable_IN_OUT() {
         std::set_union(tmp_OUT.begin(), tmp_OUT.end(),
                        succ_block.lock()->live_variable_IN_.begin(),
                        succ_block.lock()->live_variable_IN_.end(),
-                       std::back_inserter(tmp), [](const auto &a, const auto &b) {
-          if (a.kind < b.kind) return true;
-          return a.val < b.val;
-        });
+                       std::back_inserter(tmp));
         tmp_OUT.swap(tmp);
         tmp.clear();
       }
@@ -1150,6 +1148,13 @@ Module::Module(std::list<IR::Ptr> &ir_list) {
   }
 }
 
+Module::Module(list<std::list<IR::Ptr>> &ir_lists) {
+  for (auto &func_ir_list : ir_lists) {
+    func_ir_list.pop_back();  // POP FUNCEND
+    function_list_.push_back(make_function_block(func_ir_list));
+  }
+}
+
 std::list<std::string> Module::translate_to_arm() {
   std::list<std::string> ret;
   for (const auto &function : function_list_) {
@@ -1213,10 +1218,10 @@ void Module::remove_dead_code() {
     function->remove_dead_code();
   }
 }
-std::list<IR::Ptr> Module::merge() {
-  std::list<IR::Ptr> ret;
+std::list<std::list<IR::Ptr>> Module::merge() {
+  std::list<std::list<IR::Ptr>> ret;
   for (auto &function: function_list_) {
-    ret.splice(ret.end(), function->merge());
+    ret.push_back(function->merge());
   }
   return ret;
 }
@@ -1229,6 +1234,7 @@ void Module::optimize(int optimize_level) {
     delete_global_common_expression();
     local_copy_propagation();
     global_copy_propagation();
+    remove_dead_code();
     return;
   }
 }

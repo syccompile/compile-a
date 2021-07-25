@@ -357,8 +357,16 @@ void IR::Addr::internal_print() {
 break;
 
   switch(this->kind) {
-    CASE(VAR, '%');
-    CASE(PARAM, 'p');
+    case IR::Addr::Kind::VAR:
+      if (this->is_colored()) {
+        std::cout << "r" << this->get_color();
+      } else {
+        std::cout << "%" << this->val;
+      }
+      break;
+    case IR::Addr::Kind::PARAM:
+      std::cout << "r" << this->get_color();
+      break;
     CASE(IMM, '#');
     CASE(BRANCH_LABEL, ".L");
     CASE(NAMED_LABEL, "");

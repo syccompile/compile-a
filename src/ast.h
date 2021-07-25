@@ -25,9 +25,9 @@ class Variable;
 class Expression: public AST_base {
 public:
   using List = std::list<Expression*>;
-  enum Op: int {
+  enum Op{
     // logical operators
-    AND=0, //  '&&'
+    AND, //  '&&'
     OR,    //  '||'
     NOT,   //  '!'
 
@@ -66,6 +66,8 @@ public:
   bool translate_to_logical() const;
   bool cast_to_logical;
   bool cast_to_regular;
+  // 允许引用数组基址
+  bool allow_pass_base;
 
   // debug
   virtual void internal_print() = 0;
@@ -624,6 +626,9 @@ public:
 
   string name() { return name_; }
   BType ret_type() { return ret_type_; }
+  Variable::List* get_param_list() {
+    return params_;
+  }
 
   // debug
   virtual void internal_print() override;
