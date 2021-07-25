@@ -1234,7 +1234,7 @@ FunctionDecl::translate() {
     this->body_->pre_defined.push_back(i_ent);
   }
 
-  ADD_UNR(FUNCDEF, IR::Addr::make_imm(cnt));
+  ADD_BIN(FUNCDEF, IR::Addr::make_named_label(this->name_), IR::Addr::make_imm(cnt));
   ret.splice(ret.end(), this->body_->translate());
   ADD_NOP(FUNCEND);
   std::list<Type> *list = new std::list<Type>();
