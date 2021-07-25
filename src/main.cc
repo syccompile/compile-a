@@ -1,6 +1,7 @@
 #include "ast.h"
 #include "analyzer.hh"
 #include "ir_opt.h"
+#include "ir_opt/basicblock.h"
 #include "reg_allocate/reg_allocate.h"
 
 #include <vector>
@@ -40,7 +41,7 @@ int main(int argc, char *argv[]) {
         }
         break;
       default:
-        std::cerr << "usage: compiler <sysy_file> [-S] [-o <asm_file>] [-O <optimize_level>] [-r <ir_file>]" << std::endl;
+        std::cerr << "usage: compiler <sysy_file> [-S] [-o <asm_file>] [-O<optimize_level>] [-r <ir_file>]" << std::endl;
         exit(0);
     }
   }
@@ -71,9 +72,17 @@ int main(int argc, char *argv[]) {
     func_list.emplace_back(f->translate());
   }
 
+  // do some optimization for IR
   for (auto &func: func_list)
     remove_redunctant_label(func);
-  
+
+  // only need to handle func_list
+//  Module m(func_list);
+//  m.optimize(optimize_level);
+//  m.debug();
+//  m.optimize(1);
+//  func_list = m.merge();
+
   for (auto &func: func_list)
     register_allocate(func);
 
@@ -91,4 +100,26 @@ int main(int argc, char *argv[]) {
 
   std::cout.rdbuf(old_cout_buf);
   IRFile.close();
+
+//  std::ofstream IRFile(ir_filename);
+//  auto old_cout_buf = std::cout.rdbuf(IRFile.rdbuf());
+//  for (const auto &i: ir_list) i->internal_print();
+//  std::cout.rdbuf(old_cout_buf);
+//  IRFile.close();
+
+//  std::vector<std::string> asm_vector;
+//  for (const auto& ir: ir_list) {
+//    auto code = ir->translate_arm();
+//    asm_vector.insert(asm_vector.end(),
+//                      std::move_iterator(code.begin()),
+//                      std::move_iterator(code.end()));
+//  }
+//
+//  // do some optimization for ASM
+//
+//  std::ofstream ASMFile(asm_filename);
+//  for (const auto& code: asm_vector) {
+//    ASMFile << code << std::endl;
+//  }
+//  ASMFile.close();
 }
