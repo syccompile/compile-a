@@ -77,11 +77,11 @@ int main(int argc, char *argv[]) {
     remove_redunctant_label(func);
 
   // only need to handle func_list
-  Module m(func_list);
+//  Module m(func_list);
 //  m.optimize(optimize_level);
-  m.debug();
+//  m.debug();
 //  m.optimize(1);
-  func_list = m.merge();
+//  func_list = m.merge();
 
   for (auto &func: func_list)
     register_allocate(func);

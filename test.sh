@@ -1,9 +1,3 @@
-<<<<<<< HEAD
-if [ "$1" = "clean" ]; then
-  rm test/*output -rf
-else
-  cd ./cmake-build-debug
-=======
 if [[ $1 == "clean" ]]; then
   rm -rf cmake-build-debug*
   cd test
@@ -16,7 +10,6 @@ else
     mkdir ./cmake-build-debug
     cd ./cmake-build-debug
   fi
->>>>>>> 6a76acf1aeaee4d3422fd16346f235f6c477279a
   cmake ..
   cmake --build . --target ${1-"personal_test"}
   ./${1-"personal_test"}
