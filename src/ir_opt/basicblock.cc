@@ -57,7 +57,13 @@ bool is_mov_op(IR::Op op) {
 }
 
 bool is_algo_op(IR::Op op) {
+  if (op == IR::Op::NOT) return false;  // TODO: 会用到吗
   return op >= IR::Op::ADD && op <= IR::Op::XOR;
+}
+
+bool is_swappable_op(IR::Op op) {
+  return op == IR::Op::ADD || op == IR::Op::MUL ||
+      op == IR::Op::AND || op == IR::Op::OR || op == IR::Op::XOR;
 }
 
 inline bool is_var_or_param(const IR::Addr::Ptr &a) {
@@ -140,7 +146,7 @@ std::ostream &operator<<(std::ostream &os, const Exp &exp) {
 }
 bool Exp::operator<(const Exp &exp) const {
   if (op_ != exp.op_) return op_ < exp.op_;
-  if (op_ == IR::Op::ADD || op_ == IR::Op::MUL) { // 可交换
+  if (is_swappable_op(op_)) { // 可交换
     if (*a0_ < *a1_) {
       if (*exp.a0_ < *exp.a1_) return *a0_ < *exp.a0_ || *a1_ < *exp.a1_;
       else return *a0_ < *exp.a1_ || *a1_ < *exp.a1_;
@@ -154,7 +160,7 @@ bool Exp::operator<(const Exp &exp) const {
 }
 bool Exp::be_used_by(const IR::Ptr &ir) const {
   if (is_algo_op(ir->op_)) {  // 仅处理算术指令
-    if (op_ == IR::Op::ADD || op_ == IR::Op::MUL) { // 可交换
+    if (is_swappable_op(op_)) { // 可交换
       return op_ == ir->op_ &&
           ((*a0_ == *ir->a1 && *a1_ == *ir->a2) || (*a0_ == *ir->a2 && *a1_ == *ir->a1));
     } else {
@@ -171,7 +177,7 @@ bool Exp::related_to(const IR_Addr::Ptr &a) const {
   }
 }
 bool Exp::operator==(const Exp &rhs) const {
-  if (op_ == IR::Op::ADD || op_ == IR::Op::MUL) { // 可交换
+  if (is_swappable_op(op_)) { // 可交换
     return op_ == rhs.op_ &&
         ((*a0_ == *rhs.a0_ && *a1_ == *rhs.a1_) || (*a0_ == *rhs.a1_ && *a1_ == *rhs.a0_));
   } else {
@@ -412,6 +418,23 @@ void BasicBlock::algebraic_simplification() {
         ir->op_ = IR::Op::MOV;  // MOV a0 a1
         ir->a2 = nullptr;
       }
+    } else if (ir->op_ == IR::Op::MOD) {
+      // do nothing, DELETE
+    } else if (ir->op_ == IR::Op::AND) {
+      if (ir->a1->kind == IR::Addr::Kind::IMM && ir->a1->val == 0) {  // 0 &
+        ir->op_ = IR::Op::MOV;  // MOV a0 0
+        ir->a2 = nullptr;
+      } else if (ir->a2->kind == IR::Addr::Kind::IMM && ir->a2->val == 0) { // & 0
+        ir->op_ = IR::Op::MOV;  // MOV a0 0
+        ir->a1 = ir->a2;
+        ir->a2 = nullptr;
+      }
+    } else if (ir->op_ == IR::Op::OR) {
+      // do nothing, DELETE
+    } else if (ir->op_ == IR::Op::NOT) {
+      // do nothing, DELETE
+    } else if (ir->op_ == IR::Op::XOR) {
+      // do nothing, DELETE
     }
   }
 }
@@ -517,9 +540,9 @@ void BasicBlock::remove_dead_code() {
 }
 
 Function::Function(std::list<IR::Ptr> &ir_list) {
-//  func_name_ = ir_list.front()->a0->name;
-//  arg_num_ = ir_list.front()->a1->val;
-  arg_num_ = ir_list.front()->a0->val;
+  func_name_ = ir_list.front()->a0->name;
+  arg_num_ = ir_list.front()->a1->val;
+//  arg_num_ = ir_list.front()->a0->val;
   ir_list.pop_front();  // pop FUNCDEF
 
   auto tmp_basic_block = make_empty_basic_block();  // 第一条指令是首指令
@@ -609,16 +632,18 @@ std::list<std::string> Function::translate_to_arm() {
   return std::list<std::string>();
 }
 void Function::debug() {
-  testIRADDR();
+//  testIRADDR();
   std::cout << green << func_name_ << ": " << normal << std::endl;
   std::cout << "------------------------" << std::endl;
-  constant_folding();
-  algebraic_simplification();
-  delete_local_common_expression();
-  delete_global_common_expression();
-  local_copy_propagation();
-  global_copy_propagation();
-  remove_dead_code();
+  for (int i = 0; i < 2; ++i) {
+    constant_folding();
+    algebraic_simplification();
+    delete_local_common_expression();
+    delete_global_common_expression();
+    local_copy_propagation();
+    global_copy_propagation();
+    remove_dead_code();
+  }
   reach_define_analysis();
   available_expression_analysis();
   live_variable_analysis();
@@ -630,40 +655,42 @@ void Function::debug() {
     PRINT_PRED_SUCC_BLOCKS(basic_block->predecessor_list_);
     std::cout << blue << "successor: " << normal;
     PRINT_PRED_SUCC_BLOCKS(basic_block->successor_list_);
-//    std::cout << blue << "gen: " << normal << std::endl;
+//    std::cout << blue << "gen: " << normal;
 //    PRINT_ELEMENTS(basic_block->gen_);
-//    std::cout << blue << "kill: " << normal << std::endl;
+//    std::cout << blue << "kill: " << normal;
 //    PRINT_ELEMENTS(basic_block->kill_);
-//    std::cout << blue << "reach_define_IN: " << normal << std::endl;
-//    PRINT_ELEMENTS(basic_block->reach_define_IN_);
-//    std::cout << blue << "reach_define_OUT: " << normal << std::endl;
-//    PRINT_ELEMENTS(basic_block->reach_define_OUT_);
-//    std::cout << blue << "egen: " << normal << std::endl;
+    std::cout << blue << "reach_define_IN: " << normal;
+    PRINT_ELEMENTS(basic_block->reach_define_IN_);
+    std::cout << blue << "reach_define_OUT: " << normal;
+    PRINT_ELEMENTS(basic_block->reach_define_OUT_);
+//    std::cout << blue << "egen: " << normal;
 //    PRINT_ELEMENTS(basic_block->egen_);
-//    std::cout << blue << "ekill: " << normal << std::endl;
+//    std::cout << blue << "ekill: " << normal;
 //    PRINT_ELEMENTS(basic_block->ekill_);
-//    std::cout << blue << "available_expression_IN_: " << normal << std::endl;
-//    PRINT_ELEMENTS(basic_block->available_expression_IN_);
-//    std::cout << blue << "available_expression_OUT_: " << normal << std::endl;
-//    PRINT_ELEMENTS(basic_block->available_expression_OUT_);
-//    std::cout << blue << "use: " << normal << std::endl;
+    std::cout << blue << "available_expression_IN_: " << normal;
+    PRINT_ELEMENTS(basic_block->available_expression_IN_);
+    std::cout << blue << "available_expression_OUT_: " << normal;
+    PRINT_ELEMENTS(basic_block->available_expression_OUT_);
+//    std::cout << blue << "use: " << normal;
 //    PRINT_ELEMENTS(basic_block->use_);
-//    std::cout << blue << "def: " << normal << std::endl;
+//    std::cout << blue << "def: " << normal;
 //    PRINT_ELEMENTS(basic_block->def_);
-//    std::cout << blue << "live_variable_IN_: " << normal << std::endl;
+//    std::cout << blue << "live_variable_IN_: " << normal;
 //    PRINT_ELEMENTS(basic_block->live_variable_IN_);
-//    std::cout << blue << "live_variable_OUT_: " << normal << std::endl;
+//    std::cout << blue << "live_variable_OUT_: " << normal;
 //    PRINT_ELEMENTS(basic_block->live_variable_OUT_);
-//    std::cout << blue << "dominate_IN_: " << normal << std::endl;
+//    std::cout << blue << "dominate_IN_: " << normal;
 //    PRINT_ELEMENTS(basic_block->dominate_IN_);
-//    std::cout << blue << "dominate_OUT_: " << normal << std::endl;
+//    std::cout << blue << "dominate_OUT_: " << normal;
 //    PRINT_ELEMENTS(basic_block->dominate_OUT_);
-//    std::cout << std::endl;
+    std::cout << std::endl;
   }
-  std::cout << blue << "loops: " << normal << std::endl;
-  for (const auto &l : loops_) {
+  std::cout << blue << "loops: " << normal << '\n';
+  for (auto &l : loops_) {
+    auto loop_invariant_set = _mark_loop_invariant(l);
     std::cout << "( ";
-    PRINT_ELEMENTS(l, "", " ", ")\n");
+    PRINT_ELEMENTS(l, "", " ", "): ");
+    PRINT_ELEMENTS(loop_invariant_set);
   }
   std::cout << '\n';
 //  std::cout << blue << "back_edges_: " << normal << std::endl;
@@ -809,6 +836,7 @@ void Function::_build_lineno_ir_map() {
     }
     basic_block->last_lineno_ = lineno;
   }
+  ir_num_ = lineno;
 }
 void Function::available_expression_analysis() {
   _calc_egen_ekill();
@@ -880,18 +908,18 @@ void Function::_fill_all_exp_list() {
 }
 void Function::live_variable_analysis() {
   _calc_use_def();
-  for (const auto &basic_block: basic_block_list_){
-    std::cout << red << "block " << basic_block->block_num_ << ":" << normal << std::endl;
-    basic_block->debug();
-    std::cout << blue << "predecessor: " << normal;
-    PRINT_PRED_SUCC_BLOCKS(basic_block->predecessor_list_);
-    std::cout << blue << "successor: " << normal;
-    PRINT_PRED_SUCC_BLOCKS(basic_block->successor_list_);
-    std::cout << blue << "use: " << normal << std::endl;
-    PRINT_ELEMENTS(basic_block->use_);
-    std::cout << blue << "def: " << normal << std::endl;
-    PRINT_ELEMENTS(basic_block->def_);
-  }
+//  for (const auto &basic_block: basic_block_list_) {
+//    std::cout << red << "block " << basic_block->block_num_ << ":" << normal << std::endl;
+//    basic_block->debug();
+//    std::cout << blue << "predecessor: " << normal;
+//    PRINT_PRED_SUCC_BLOCKS(basic_block->predecessor_list_);
+//    std::cout << blue << "successor: " << normal;
+//    PRINT_PRED_SUCC_BLOCKS(basic_block->successor_list_);
+//    std::cout << blue << "use: " << normal << std::endl;
+//    PRINT_ELEMENTS(basic_block->use_);
+//    std::cout << blue << "def: " << normal << std::endl;
+//    PRINT_ELEMENTS(basic_block->def_);
+//  }
   _calc_live_variable_IN_OUT();
 }
 void Function::_calc_use_def() {
@@ -1130,6 +1158,119 @@ void Function::_get_all_loops() {
     loops_.push_back(_get_loop(e));
   }
 }
+std::set<int> Function::_mark_loop_invariant(Function::loop &l) {
+  std::set<int> ret;  // 所有的循环不变计算
+  std::sort(l.begin(), l.end());  // TODO: 不知道是否只排序一下就好了
+  inst_invariant_vec_.assign(ir_num_, false); // TODO: 需要先更新ir_num_
+  _build_lineno_rd_vec(); // TODO: 更新位置待定
+  bool change = true;
+
+  auto is_loop_constant = [](const IR::Addr::Ptr &a) -> bool {
+//    assert(a != nullptr);
+    return a->kind == IR::Addr::Kind::IMM;
+  };
+  auto lineno_in_loop = [&](int lineno) -> bool {
+    return std::any_of(l.begin(), l.end(), [&](int block_num) {
+      auto block = blocknum_block_map_[block_num];
+      if (lineno >= block->first_lineno_ && lineno <= block->last_lineno_) {
+        return true;
+      }
+      return false;
+    });
+  };
+  auto reach_define_out = [&](const BasicBlock::Ptr &block, const IR::Addr::Ptr &a) -> bool {
+    for (int in_lineno : block->reach_define_IN_) {
+      auto rd = lineno_rd_vec_[in_lineno];
+      if (rd && (*rd == *a)) {  // 是对a的定值
+        if (lineno_in_loop(in_lineno)) {
+          return false;
+        }
+      }
+    }
+    return true;  // 所有到达基本块block的对a的定值都位于循环之外
+  };
+  auto reach_define_in = [&](const BasicBlock::Ptr &block, const IR::Addr::Ptr &a, int cur_lineno) -> bool {
+    // a肯定不为立即数
+    std::vector<int> tmp;
+    for (int in_lineno : block->reach_define_IN_) {
+      auto rd = lineno_rd_vec_[in_lineno];
+      if (rd && (*rd == *a)) {  // 是对a的定值
+        if (lineno_in_loop(in_lineno)) {
+          if (!inst_invariant_vec_[in_lineno]) return false;  // 不是循环不变的
+          if (in_lineno > cur_lineno) return false; // 不在当前指令之前执行
+          tmp.push_back(in_lineno);
+        }
+      }
+    }
+    if (tmp.size() != 1) return false;
+    int lineno = block->first_lineno_;
+    auto cur_rd = *lineno_rd_vec_[cur_lineno];
+    for (const auto &ir : block->ir_list_) {
+      if (lineno >= cur_lineno) return true;
+      if (ir->a1 && *(ir->a1) == cur_rd) {
+        return false; // 存在对结果变量的使用
+      }
+      if (ir->a2 && *(ir->a2) == cur_rd) {
+        return false; // 存在对结果变量的使用
+      }
+    }
+    return true;  // unreachable!
+  };
+  while (change) {
+    change = false;
+    for (int block_num : l) {
+      auto cur_block = blocknum_block_map_[block_num];
+      auto cur_lineno = cur_block->first_lineno_;
+      for (const auto &ir : cur_block->ir_list_) {
+        if (is_algo_op(ir->op_)) {  // 两个源操作数的算术指令
+          if (!inst_invariant_vec_[cur_lineno]) { // 当前指令不是循环不变计算
+            bool a1_const = false, a2_const = false;
+            if (is_loop_constant(ir->a1) || reach_define_out(cur_block, ir->a1)
+                || reach_define_in(cur_block, ir->a1, cur_lineno)) {
+              a1_const = true;
+            }
+            if (is_loop_constant(ir->a2) || reach_define_out(cur_block, ir->a2)
+                || reach_define_in(cur_block, ir->a2, cur_lineno)) {
+              a2_const = true;
+            }
+            if (a1_const && a2_const) {  // 新增了循环不变计算
+              inst_invariant_vec_[cur_lineno] = true;
+              ret.insert(cur_lineno);
+              change = true;
+            }
+          }
+        } else if (is_mov_op(ir->op_)) {
+          if (!inst_invariant_vec_[cur_lineno]) { // 当前指令不是循环不变计算
+            bool a1_const = false;
+            if (is_loop_constant(ir->a1) || reach_define_out(cur_block, ir->a1)
+                || reach_define_in(cur_block, ir->a1, cur_lineno)) {
+              a1_const = true;
+            }
+            if (a1_const) {  // 新增了循环不变计算
+              inst_invariant_vec_[cur_lineno] = true;
+              ret.insert(cur_lineno);
+              change = true;
+            }
+          }
+        }
+        ++cur_lineno;
+      }
+    }
+  }
+  return ret;
+}
+void Function::_build_lineno_rd_vec() {
+  lineno_rd_vec_.assign(ir_num_, nullptr);
+  for (const auto &basic_block : basic_block_list_) {
+    auto cur_lineno = basic_block->first_lineno_;
+    for (const auto &ir : basic_block->ir_list_) {
+      if (is_algo_op(ir->op_) || is_mov_op(ir->op_)) {
+        lineno_rd_vec_[cur_lineno] = ir->a0;
+      }
+      ++cur_lineno;
+    }
+  }
+}
 
 Module::Module(std::list<IR::Ptr> &ir_list) {
   while (!ir_list.empty()) {
@@ -1228,13 +1369,15 @@ std::list<std::list<IR::Ptr>> Module::merge() {
 void Module::optimize(int optimize_level) {
   if (optimize_level == 0) return;  // no optimization
   if (optimize_level >= 1) {
-    constant_folding();
-    algebraic_simplification();
-    delete_local_common_expression();
-    delete_global_common_expression();
-    local_copy_propagation();
-    global_copy_propagation();
-    remove_dead_code();
+    for (int i = 0; i < 2; ++i) {
+      constant_folding();
+      algebraic_simplification();
+      delete_local_common_expression();
+      delete_global_common_expression();
+      local_copy_propagation();
+      global_copy_propagation();
+      remove_dead_code();
+    }
     return;
   }
 }

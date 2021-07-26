@@ -15,6 +15,7 @@
 
 bool is_mov_op(IR::Op op);
 bool is_algo_op(IR::Op op);
+bool is_swappable_op(IR::Op op);
 
 bool operator==(const IR::Addr &lhs, const IR::Addr &rhs);
 bool operator<(const IR::Addr &lhs, const IR::Addr &rhs);
@@ -101,9 +102,12 @@ class Function {
   std::list<Exp> all_exp_list_;
   std::vector<bool> searched_; // _find_sources的辅助表，记录block_num是否被搜索过
   std::map<int, BasicBlock::Ptr> blocknum_block_map_;  // 从blocknum到block的映射
+  std::vector<bool> inst_invariant_vec_;  // 从lineno到指令是否为循环不变量的映射
+  std::vector<IR::Addr::Ptr> lineno_rd_vec_;  // 从lineno到目的操作数的映射
 
   void _build_lineno_ir_map();  // 建立lineno到ir的映射表，并更新basic_block的block_num和first_lineno,last_lineno等信息
   void _build_blocknum_block_map();
+  void _build_lineno_rd_vec();
 
   void _build_gen_kill_map();
   void _add_to_gen_kill_help_map(const IR::Ptr &ir, int lineno);
@@ -129,9 +133,10 @@ class Function {
   std::set<edge> back_edges_;
   void _find_back_edges();
   using loop = std::vector<int>;
-  loop _get_loop(const edge& e);
+  loop _get_loop(const edge &e);
   std::vector<loop> loops_;
   void _get_all_loops();
+  std::set<int> _mark_loop_invariant(loop &l);
 
  public:
   using Ptr = std::shared_ptr<Function>;
@@ -140,6 +145,7 @@ class Function {
   std::list<BasicBlock::Ptr> basic_block_list_;
   std::string func_name_;
   int arg_num_;
+  int ir_num_;
 
   explicit Function(std::list<IR::Ptr> &ir_list);
   std::list<std::string> translate_to_arm();

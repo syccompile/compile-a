@@ -1,12 +1,11 @@
 int func2 (int d){
-  int a, b;
+  int a, b, c;
   a = 1;
-  while (a != 10) {
-    a = a + 1;
-    if (a == 3) {
-        d = d + 4;
-    }
-    a = a + 1;
+  b = d;
+  c = b;
+  while (b != 10) {
+    a = c;
+    b = b + 1;
   }
-  return b + d;
+  return a + b + d;
 }
