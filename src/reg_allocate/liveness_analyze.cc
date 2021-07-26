@@ -1,4 +1,5 @@
 #include "../ir.h"
+#include "../context/context.h"
 #include "flow_graph.h"
 
 #include <assert.h>
@@ -69,6 +70,8 @@ ir_parse(IR::List &ir_list) {
   set<color_node::ptr> vars;
   // 变量中函数的参数
   set<pair<color_node::ptr, color_node::ptr> > mov_related;
+  // 函数对应的符号表项
+  auto functab_ent = context.functab->get(ir_list.front()->a0->name);
 
   IR::Ptr prev_ir;
   for (auto ir : ir_list) {
@@ -137,10 +140,19 @@ ir_parse(IR::List &ir_list) {
         local_array[ir->a0->val] = true;
         break;
       }
+      OP_CASE(CALL) {
+        int param_num = std::min(size_t(4), functab_ent->param_list.size());
+        for (int i=0 ; i<param_num ; i++) {
+          auto addr = functab_ent->get_param_addr(i);
+          ir->def.insert(addr);
+          ir->used.insert(addr);
+          vars.insert(addr);
+        }
+        break;
+      }
       OP_CASE(LABEL)
       OP_CASE(FUNCDEF)
       OP_CASE(FUNCEND)
-      OP_CASE(CALL)
       OP_CASE(RET)
       OP_CASE(VARDEF)
       OP_CASE(DATA)
