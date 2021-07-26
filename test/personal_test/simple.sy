@@ -5,6 +5,7 @@ int func2 (int d){
   c = b;
   while (b != 10) {
     a = c;
+    d = a + 5;
     b = b + 1;
   }
   return a + b + d;

@@ -538,6 +538,34 @@ void BasicBlock::remove_dead_code() {
     }
   }
 }
+void BasicBlock::ir_specify_optimization() {
+  /*
+   * 将类似：ADD reg1, X, X
+   *        MOV reg2, reg1
+   * 的代码转换成： ADD reg2, X, X
+   * */
+  for (auto iter = ir_list_.begin(); iter != ir_list_.end();) {
+    auto cur_ir = *iter;
+    auto next_iter = std::next(iter);
+    if (next_iter == ir_list_.end()) break; // 没有下一条指令了
+    auto next_ir = *next_iter;
+    if (!is_algo_op(cur_ir->op_)) {
+      ++iter;
+      continue;  // 当前指令不是算术指令
+    }
+    if (next_ir->op_ != IR::Op::MOV) {
+      ++iter;
+      continue; // 只处理MOV,不处理MOVGE等
+    }
+    if (*(cur_ir->a0) == *(next_ir->a1)) {
+      cur_ir->a0 = next_ir->a0;
+      iter = ir_list_.erase(next_iter);
+      --iter; // 退回到算术指令
+    } else {
+      ++iter;
+    }
+  }
+}
 
 Function::Function(std::list<IR::Ptr> &ir_list) {
   func_name_ = ir_list.front()->a0->name;
@@ -642,6 +670,7 @@ void Function::debug() {
     delete_global_common_expression();
     local_copy_propagation();
     global_copy_propagation();
+    ir_specify_optimization();
     remove_dead_code();
   }
   reach_define_analysis();
@@ -1269,6 +1298,11 @@ void Function::_build_lineno_rd_vec() {
       }
       ++cur_lineno;
     }
+  }
+}
+void Function::ir_specify_optimization() {
+  for (auto &basic_block : basic_block_list_) {
+    basic_block->ir_specify_optimization();
   }
 }
 

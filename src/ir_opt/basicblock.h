@@ -85,6 +85,7 @@ class BasicBlock {
   void algebraic_simplification();
   void local_copy_propagation(std::set<Exp> &available_copy_exps);
   void remove_dead_code();
+  void ir_specify_optimization(); // 针对IR的特定优化
   iterator begin() { return ir_list_.begin(); }
   iterator end() { return ir_list_.end(); }
   reverse_iterator rbegin() { return ir_list_.rbegin(); }
@@ -160,6 +161,7 @@ class Function {
   void global_copy_propagation();
   void remove_dead_code();
   void loop_invariant_code_motion();
+  void ir_specify_optimization(); // 针对IR的特定优化
   iterator begin() { return basic_block_list_.begin(); }
   iterator end() { return basic_block_list_.end(); }
   std::list<IR::Ptr> merge();
