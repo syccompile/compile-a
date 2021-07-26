@@ -137,7 +137,7 @@ class Function {
   loop _get_loop(const edge &e);
   std::vector<loop> loops_;
   void _get_all_loops();
-  std::set<int> _mark_loop_invariant(loop &l);
+  std::set<std::pair<BasicBlock::Ptr, BasicBlock::iterator>> _mark_loop_invariant(loop &l);
 
  public:
   using Ptr = std::shared_ptr<Function>;
