@@ -104,12 +104,14 @@ ir_parse(IR::List &ir_list) {
       }
       // 单独处理 MOV
       OP_CASE(MOV) {
-          auto a0_cnode = static_pointer_cast<color_node>(ir->a0);
-          auto a1_cnode = static_pointer_cast<color_node>(ir->a1);
-          mov_related.insert(std::make_pair(a0_cnode, a1_cnode));
-
           ACCEPT_VAR(def, a0);
           ACCEPT_VAR(used, a1);
+          // 只有可着色节点才考虑mov消除
+          if (ir->def.size() && ir->used.size()) {
+            auto a0_cnode = static_pointer_cast<color_node>(ir->a0);
+            auto a1_cnode = static_pointer_cast<color_node>(ir->a1);
+            mov_related.insert(std::make_pair(a0_cnode, a1_cnode));
+          }
           break;
       }
       OP_CASE(JMP)
