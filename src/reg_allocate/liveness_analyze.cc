@@ -107,6 +107,9 @@ ir_parse(IR::List &ir_list) {
           auto a0_cnode = static_pointer_cast<color_node>(ir->a0);
           auto a1_cnode = static_pointer_cast<color_node>(ir->a1);
           mov_related.insert(std::make_pair(a0_cnode, a1_cnode));
+          vars.insert(a0_cnode);
+          vars.insert(a1_cnode);
+          break;
       }
       OP_CASE(JMP)
       OP_CASE(JLE)

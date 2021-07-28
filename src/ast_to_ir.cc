@@ -1049,8 +1049,12 @@ VarDeclStmt::translate() {
 
 IR::List
 ExpStmt::translate() {
+  // 如果是函数调用，则翻译
+  auto funcall = dynamic_cast<FuncCallExp*>(this->exp_);
+
   // 没有 ++等影响变量值的操作，不翻译
-  return IR::List();
+  if (funcall==nullptr) return IR::List();
+  else                  return funcall->translate();
 }
 
 IR::List

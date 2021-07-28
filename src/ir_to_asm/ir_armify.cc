@@ -45,15 +45,19 @@ substitute_param(IR::List &l) {
   // 将寄存器中 PARAM类型变量 的使用转为对应的 VAR类型变量 的使用
   while (!(l.empty())) {
     auto ir = l.front();
-    if (ir->a1->kind==IR::Addr::Kind::PARAM && ir->a1->val<4)
-      ir->a1 = get_addr(ir->a1->val);
-    else if (ir->a1->kind==IR::Addr::RET)
-      ir->a1 = functab_ent->get_param_addr(0);
+    if (ir->a1!=nullptr) {
+      if (ir->a1->kind==IR::Addr::Kind::PARAM && ir->a1->val<4)
+        ir->a1 = get_addr(ir->a1->val);
+      else if (ir->a1->kind==IR::Addr::RET)
+        ir->a1 = functab_ent->get_param_addr(0);
+    }
 
-    if (ir->a2->kind==IR::Addr::Kind::PARAM && ir->a1->val<4)
-      ir->a2 = get_addr(ir->a2->val);
-    else if (ir->a2->kind==IR::Addr::RET)
-      ir->a2 = functab_ent->get_param_addr(0);
+    if (ir->a2!=nullptr) {
+      if (ir->a2->kind==IR::Addr::Kind::PARAM && ir->a1->val<4)
+        ir->a2 = get_addr(ir->a2->val);
+      else if (ir->a2->kind==IR::Addr::RET)
+        ir->a2 = functab_ent->get_param_addr(0);
+    }
       
     new_l.splice(new_l.end(), l, l.begin());
   }
@@ -209,8 +213,8 @@ ir_armify(IR::List &defs, IR::List &func) {
       // 将需要加入的IR加入对应IR串中
       defs.splice(defs.end(), a1_def_app);
       defs.splice(defs.end(), a2_def_app);
-      new_func.splice(func.end(), a1_func_app);
-      new_func.splice(func.end(), a2_func_app);
+      new_func.splice(new_func.end(), a1_func_app);
+      new_func.splice(new_func.end(), a2_func_app);
       // 修改原IR
       ir->a1 = a1;
       ir->a2 = a2;
@@ -222,7 +226,7 @@ ir_armify(IR::List &defs, IR::List &func) {
       auto [a1, a1_def_app, a1_func_app] = move_into_var(ir->a1);
       // 将需要加入的IR加入对应IR串中
       defs.splice(defs.end(), a1_def_app);
-      new_func.splice(func.end(), a1_func_app);
+      new_func.splice(new_func.end(), a1_func_app);
       // 修改原IR
       ir->a1 = a1;
     }
@@ -232,12 +236,12 @@ ir_armify(IR::List &defs, IR::List &func) {
       // 若目的为寄存器（前4个参数）
       // 则无需多余寄存器
       // 反之，则需要先将目标保存在寄存器中
-      if (ir->a2->val>4) {
+      if (ir->a0->val>=4) {
         // 首先保证IR在VAR中
         auto [a1, a1_def_app, a1_func_app] = move_into_var(ir->a1);
         // 将需要加入的IR加入对应IR串中
         defs.splice(defs.end(), a1_def_app);
-        new_func.splice(func.end(), a1_func_app);
+        new_func.splice(new_func.end(), a1_func_app);
         // 修改原IR
         ir->a1 = a1;
       }
@@ -249,7 +253,7 @@ ir_armify(IR::List &defs, IR::List &func) {
       auto [a1, a1_def_app, a1_func_app] = move_into_var(ir->a1);
       // 将需要加入的IR加入对应IR串中
       defs.splice(defs.end(), a1_def_app);
-      new_func.splice(func.end(), a1_func_app);
+      new_func.splice(new_func.end(), a1_func_app);
       // 修改原ir
       ir->a1 = a1;
     }
@@ -260,7 +264,7 @@ ir_armify(IR::List &defs, IR::List &func) {
       auto [a0, a0_def_app, a0_func_app] = move_into_var(ir->a0);
       // 将需要加入的IR加入对应IR串中
       defs.splice(defs.end(), a0_def_app);
-      new_func.splice(func.end(), a0_func_app);
+      new_func.splice(new_func.end(), a0_func_app);
       // 修改原ir
       ir->a0 = a0;
 
@@ -268,7 +272,7 @@ ir_armify(IR::List &defs, IR::List &func) {
       auto [a2, a2_def_app, a2_func_app] = move_into_var(ir->a2);
       // 将需要加入的IR加入对应IR串中
       defs.splice(defs.end(), a2_def_app);
-      new_func.splice(func.end(), a2_func_app);
+      new_func.splice(new_func.end(), a2_func_app);
       // 修改原ir
       ir->a2 = a2;
     }

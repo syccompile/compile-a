@@ -2,6 +2,7 @@
 #include "analyzer.hh"
 #include "ir_opt.h"
 #include "reg_allocate/reg_allocate.h"
+#include "ir_to_asm/ir_armify.h"
 
 #include <vector>
 #include <fstream>
@@ -74,6 +75,11 @@ int main(int argc, char *argv[]) {
   for (auto &func: func_list)
     remove_redunctant_label(func);
   
+  for (auto &func: func_list) {
+    IR::List def;
+    ir_armify(def, func);
+  }
+
   for (auto &func: func_list)
     register_allocate(func);
 

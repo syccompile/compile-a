@@ -39,7 +39,7 @@ register_allocate(IR::List &ir_list) {
 
   // 处理MOV
   for (auto &i: mov_related) {
-    
+    process_mov(i, alloc);
   }
 
   // 图着色

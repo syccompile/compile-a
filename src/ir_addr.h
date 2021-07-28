@@ -21,7 +21,7 @@ public:
   virtual void internal_print() override;
   
   static Ptr make_var(int v)   { return std::make_shared<IR_Addr>(Kind::VAR, v); }
-  static Ptr make_param(int v) { return std::make_shared<IR::Addr>(Kind::PARAM, v); }
+  static Ptr make_param(int v) { return std::make_shared<IR_Addr>(Kind::PARAM, v); }
   static Ptr make_imm(int v)   { return std::make_shared<IR_Addr>(Kind::IMM, v); }
   static Ptr make_label(int v) { return std::make_shared<IR_Addr>(Kind::BRANCH_LABEL, v); }
   static Ptr make_named_label(std::string s) { return std::make_shared<IR_Addr>(Kind::NAMED_LABEL, s); }

@@ -1,4 +1,5 @@
 #include "color_graph.h"
+#include "flow_graph.h"
 #include <stack>
 #include <map>
 
@@ -77,7 +78,12 @@ void process_mov(std::pair<color_node::ptr, color_node::ptr> pnn, color_allocate
 
   bool can_mov = _briggs_mov(node1, node2);
 
-  if (!can_mov) return;
+  if (!can_mov) {
+    auto node1v = dynamic_pointer_cast<var>(node1),
+         node2v = dynamic_pointer_cast<var>(node2);
+    var::link(node1v, node2v);
+    return;
+  }
 
   if (node1->is_colored()) {
     if (node2->is_colored()) return;
