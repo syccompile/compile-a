@@ -2,7 +2,7 @@
 #include "analyzer.hh"
 #include "ir_opt.h"
 #include "reg_allocate/reg_allocate.h"
-#include "ir_to_asm/ir_armify.h"
+#include "reg_allocate/ir_armify.h"
 #include "ir_to_asm/translate_to_asm.h"
 
 #include <vector>
