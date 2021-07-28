@@ -17,7 +17,7 @@ class color_node {
 public:
   using ptr = std::shared_ptr<color_node>;
   using nodes = std::set<ptr>;
-  color_node() {}
+  color_node(): col(none_color()) {}
   // Check whether node has been colorized
   bool is_colored() { return col != none_color(); }
   // Colorize a node with color c

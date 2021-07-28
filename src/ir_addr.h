@@ -15,9 +15,9 @@ public:
   int val;
   std::string name;
 
-  IR_Addr(Kind kind) : kind(kind) {}
-  IR_Addr(Kind kind, int val): kind(kind), name(), val(val) { }
-  IR_Addr(Kind kind, std::string name): kind(kind), name(name), val(-1) { }
+  IR_Addr(Kind kind) : kind(kind), val(-1), name(), var() { }
+  IR_Addr(Kind kind, int val): kind(kind), name(), val(val), var() { }
+  IR_Addr(Kind kind, std::string name): kind(kind), name(name), val(-1), var() { }
   virtual void internal_print() override;
   
   static Ptr make_var(int v)   { return std::make_shared<IR_Addr>(Kind::VAR, v); }

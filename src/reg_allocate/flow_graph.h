@@ -11,6 +11,7 @@ using namespace std;
 class var : public color_node{
 public :
   //var(string n) : name(n) {}
+  var(): color_node() { }
 
   // 连接两个变量，表示两变量冲突
   static void link(shared_ptr<var> lhs, shared_ptr<var> rhs) {

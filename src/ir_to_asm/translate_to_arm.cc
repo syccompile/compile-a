@@ -38,6 +38,8 @@ public:
   int local_arr_offset() { return param_size; };
   int param_offset() { return 0; };
   int frame_offset() { return param_size + local_arr_size + spill_size + register_save_size; };
+
+  Stack_Alloc(): param_size(0), local_arr_size(0), spill_size(0), register_save_size(0) {}
 };
 
 std::string
@@ -87,7 +89,9 @@ calculate_stack(IR::List &l, std::unordered_map<int, int> &color_assign) {
   // 计算溢出颜色所需的空间和对应偏移
   auto normal_addr_proc = [&color_assign, &ret](IR::Addr::Ptr ir_addr) {
     if (ir_addr != nullptr && ir_addr->get_color() != color_graph::none_color()) {
-      if (color_assign.count(ir_addr->get_color())) ;
+      auto color = ir_addr->get_color();
+      if (color <= 4) ;
+      else if (color_assign.count(ir_addr->get_color())) ;
       else if (ret.spill.count(ir_addr->get_color())) ;
       else {
         ret.spill_size += 1;
@@ -154,10 +158,15 @@ move_to_reg(Stack_Alloc &stack, std::unordered_map<int, int> color_assign, IR::A
       ret.push_back(string("ldr\t") + tmp_regname + ", [sp, #" + to_string(param_offset));
     }
   }
-  // ir_armify保证全局变量一定是变量型的
+  // ir_armify保证全局变量一定是单一变量
   else if (ir_addr->kind == IR::Addr::Kind::NAMED_LABEL) {
     ret_reg = tmp_regname;
     ret.push_back(string("ldr\t") + tmp_regname + ", =" + ir_addr->name);
+  }
+  // 立即数
+  else if (ir_addr->kind == IR::Addr::Kind::IMM) {
+    ret_reg = tmp_regname;
+    ret.push_back(string("mov\t") + tmp_regname + ", " + std::to_string(ir_addr->val));
   }
 
   return std::make_pair(ret_reg, ret);
@@ -200,6 +209,11 @@ store_from_reg(Stack_Alloc &stack, std::unordered_map<int, int> color_assign, IR
     ret_reg = tmp_regname;
     ret.push_back(string("str\t") + tmp_regname + ", =" + ir_addr->name);
   }
+  // 立即数
+  else if (ir_addr->kind == IR::Addr::Kind::IMM) {
+    ret_reg = tmp_regname;
+    ret.push_back(string("mov\t") + tmp_regname + ", " + std::to_string(ir_addr->val));
+  }
 
   return std::make_pair(ret_reg, ret);
 }
@@ -216,13 +230,13 @@ translate(Stack_Alloc &stack, std::unordered_map<int, int> color_assign, IR::Ptr
     ret.splice(ret.end(), a1_arm);
     ret.splice(ret.end(), a2_arm);
     // 计算a0值
-    ret.push_back(get_arm_opcode(ir->op_) + "\t" + a0_reg + ", " + a1_reg + a2_reg);
+    ret.push_back(get_arm_opcode(ir->op_) + "\t" + a0_reg + ", " + a1_reg + ", " + a2_reg);
     // 将a0存入分配到的地址中
     ret.splice(ret.end(), a0_arm);
   }
   // 特殊处理MOV
   else if (ir->op_ == IR::Op::MOV) {
-    if (ir->a0->get_color() == ir->a1->get_color()) goto end;
+    if (ir->a0->get_color() == ir->a1->get_color() && ir->a0->get_color() != color_graph::none_color()) goto end;
     
     auto [a1_reg, a1_arm] = move_to_reg(stack, color_assign, ir->a1, string("r10"));
     auto [a0_reg, a0_arm] = store_from_reg(stack, color_assign, ir->a0, string("r10"));
@@ -252,7 +266,7 @@ translate(Stack_Alloc &stack, std::unordered_map<int, int> color_assign, IR::Ptr
     ret.push_back(string("cmp") + "\t" + a1_reg + a2_reg);
   }
   else if (ir->op_ == IR::Op::LABEL) {
-    ret.push_back(string(".L") + to_string(ir->a0->val));
+    ret.push_back(string(".L") + to_string(ir->a0->val) + ":");
   }
   else if (ir->is_jmp()) {
     ret.push_back(get_arm_opcode(ir->op_) + "\t.L" + to_string(ir->a0->val));
@@ -277,11 +291,11 @@ translate(Stack_Alloc &stack, std::unordered_map<int, int> color_assign, IR::Ptr
     ret.push_back(string("bl\t") + ir->a0->name);
   }
   else if (ir->op_ == IR::Op::RET) {
-    auto [a0_reg, a0_arm] = move_to_reg(stack, color_assign, ir->a1, string("r0"));
-    // 将a1取入寄存器
+    auto [a0_reg, a0_arm] = move_to_reg(stack, color_assign, ir->a0, string("r0"));
+    // 将a0取入寄存器
     ret.splice(ret.end(), a0_arm);
     // 移动
-    ret.push_back(string("mov\tr0") + a0_reg);
+    ret.push_back(string("mov\tr0, ") + a0_reg);
 
     // TODO 返回
     ret.push_back(string("pop\t"));
@@ -295,12 +309,12 @@ translate(Stack_Alloc &stack, std::unordered_map<int, int> color_assign, IR::Ptr
     ret.splice(ret.end(), a1_arm);
     ret.splice(ret.end(), a2_arm);
     // 执行变址取数
-    ret.push_back(string("ldr\t") + a0_reg + ", [" + a1_reg + ", " + a2_reg + ",lsl #2]");
+    ret.push_back(string("ldr\t") + a0_reg + ", [" + a1_reg + ", " + a2_reg + ", lsl #2]");
     // 存储a0
     ret.splice(ret.end(), a0_arm);
   }
   // STORE
-  else if (ir->op_ == IR::Op::LOAD) {
+  else if (ir->op_ == IR::Op::STORE) {
     auto [a0_reg, a0_arm] = move_to_reg(stack, color_assign, ir->a0, string("fp"));
     auto [a1_reg, a1_arm] = move_to_reg(stack, color_assign, ir->a1, string("r10"));
     auto [a2_reg, a2_arm] = store_from_reg(stack, color_assign, ir->a2, string("r9"));
@@ -311,7 +325,7 @@ translate(Stack_Alloc &stack, std::unordered_map<int, int> color_assign, IR::Ptr
     if (a2_reg == string("a9")) ret.push_back(string("str\tr9, [sp, #-4]"));
     ret.splice(ret.end(), a2_arm);
     // 执行变址存数
-    ret.push_back(string("str\t") + a2_reg + ", [" + a0_reg + ", " + a1_reg + ",lsl #2]");
+    ret.push_back(string("str\t") + a2_reg + ", [" + a0_reg + ", " + a1_reg + ", lsl #2]");
     // 还原a9
     if (a2_reg == string("a9")) ret.push_back(string("ldr\tr9, [sp, #-4]"));
   }
@@ -334,17 +348,19 @@ translate_function(IR::List &l) {
 
   // generate function ir code
   string name = l.front()->a0->name;
-  ret.push_back(string(".global\t") + name);
-  ret.push_back(string(".type\t") + name + ", %function");
-  ret.push_back(string(".arm"));
+  // ret.push_back(string(".global\t") + name);
+  // ret.push_back(string(".type\t") + name + ", %function");
+  // ret.push_back(string(".arm"));
   ret.push_back(name + ":");
 
   // pre-process
   string need_to_save = "r10, fp, lr, ";
-  if (color_assign.size() == 1) need_to_save += "r4";
-  else                          need_to_save += ("{r4-r" + to_string(3+color_assign.size()));
+  string need_to_restore = "r10, fp, pc, ";
+  if (color_assign.size() == 1) { need_to_save += "r4"; need_to_restore += "r4"; }
+  else                          { need_to_save += ("r4-r" + to_string(3+color_assign.size()));
+                                  need_to_restore += ("r4-r" + to_string(3+color_assign.size())); }
 
-  ret.push_back(string("push\t") + need_to_save);
+  ret.push_back(string("push\t{") + need_to_save + "}");
   ret.push_back(string("sub\tsp, sp, #") + to_string(stack.frame_offset() - stack.register_save_size));
 
   // actual translate
@@ -353,7 +369,7 @@ translate_function(IR::List &l) {
 
   // post-process
   ret.push_back(string("add\tsp, sp, #") + to_string(stack.frame_offset() - stack.register_save_size));
-  ret.push_back(string("pop\t") + need_to_save);
+  ret.push_back(string("pop\t{") + need_to_restore + "}\n");
 
   return ret;
 }
