@@ -19,7 +19,9 @@ public:
   // 参数表
   std::vector<IR::Addr::Ptr> param_list;
 
-  FuncTabEntry(std::string _name, std::vector<IR::Addr::Ptr> _param_list) : name(_name), param_list(_param_list) {}
+  FuncTabEntry(std::string _name, std::vector<IR::Addr::Ptr> _param_list) : name(_name), param_list(_param_list) {
+    label = IR_Addr::make_named_label(_name);
+  }
   IR::Addr::Ptr get_param_addr(int v);
 };
 

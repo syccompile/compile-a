@@ -29,6 +29,8 @@ register_assign(IR::List &l) {
   };
 
   for (auto it=l.begin() ; it!=l.end() ; ++it) {
+    if ((*it)->a0==nullptr) continue;
+
     if ((*it)->a0->kind == IR::Addr::BRANCH_LABEL) {
       label_map[(*it)->a0->val] = it;
     }
@@ -52,6 +54,8 @@ register_assign(IR::List &l) {
 
   // 前kMax_Use_Reg位获得寄存器资格
   std::unordered_map<int, int> ret;
-  int in_reg = std::max(color_prior.size(), size_t(kMax_Use_Reg));
+  int in_reg = std::min(color_prior.size(), size_t(kMax_Use_Reg));
   for (int i=0 ; i<in_reg ; i++) ret[color_prior_vec[i].first] = 4+i;
+
+  return ret;
 }
