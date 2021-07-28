@@ -3,6 +3,7 @@
 #include "ir_opt.h"
 #include "reg_allocate/reg_allocate.h"
 #include "ir_to_asm/ir_armify.h"
+#include "ir_to_asm/translate_to_asm.h"
 
 #include <vector>
 #include <fstream>
@@ -97,4 +98,17 @@ int main(int argc, char *argv[]) {
 
   std::cout.rdbuf(old_cout_buf);
   IRFile.close();
+
+  std::ofstream ASMFile(asm_filename);
+  old_cout_buf = std::cout.rdbuf(ASMFile.rdbuf());
+
+  for (auto &func: func_list) {
+    auto asm_list = translate_function(func);
+    for (auto &asm_line: asm_list) {
+      std::cout << asm_line << std::endl;
+    }
+  }
+
+  std::cout.rdbuf(old_cout_buf);
+  ASMFile.close();
 }
