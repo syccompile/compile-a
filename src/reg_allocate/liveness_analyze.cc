@@ -227,17 +227,21 @@ liveness_analyze(IR::List &ir_list) {
   while (true) {
     int immut_time = 0;
     for (varUse::ptr n : nodes) {
-      set<shared_ptr<var>> in = n->in, out = n->out;
-      // in[n] = use[n] U (out[n] - def[n])
-      n->in = set_union(n->used, set_sub(n->out, n->def));
+      // in out 用于记录未更新前的值
+      auto orig_in_size  = n->in.size(),
+           orig_out_size = n->out.size();
 
       // out[n] = U in[s] ; s in succ[n]
       n->out.clear();
       for (varUse::ptr succ : n->succ) {
         n->out = set_union(n->out, succ->in);
       }
+
+      // in[n] = use[n] U (out[n] - def[n])
+      n->in = set_union(n->used, set_sub(n->out, n->def));
+
       // 判断结束条件
-      if (n->in.size() == in.size() && n->out.size() == out.size()) {
+      if (n->in.size() == orig_in_size && n->out.size() == orig_out_size) {
         immut_time ++;
       }
     }
