@@ -29,7 +29,7 @@ void
 substitute_param(IR::List &l) {
   IR::List new_l;
 
-  // get function name
+  // 获取函数信息
   new_l.splice(new_l.end(), l, l.begin());
   std::string funcname = new_l.front()->a0->name;
   auto functab_ent = context.functab->get(funcname);
@@ -199,12 +199,46 @@ ir_armify(IR::List &defs, IR::List &func) {
   
   substitute_param(func);
 
+  // 获取函数信息
+  std::string funcname = func.front()->a0->name;
+  auto functab_ent = context.functab->get(funcname);
+
   IR::List new_func;
 
   while (!(func.empty())) {
     auto ir = func.front();
 
-    // ir为算术逻辑型，a0  = a1 op a2
+    // ir为除法
+    if (ir->op_==IR::Op::DIV) {
+      auto param_divident = IR::make_binary(IR::Op::PARAM, functab_ent->get_param_addr(0), ir->a1);
+      auto param_divisor  = IR::make_binary(IR::Op::PARAM, functab_ent->get_param_addr(1), ir->a2);
+      auto call           = IR::make_unary (IR::Op::CALL,  IR::Addr::make_named_label("__aeabi_idiv"));
+      auto move_into_var  = IR::make_binary(IR::Op::MOV,   ir->a0, functab_ent->get_param_addr(0));
+
+      func.push_back(param_divident);
+      func.push_back(param_divisor);
+      func.push_back(call);
+      func.push_back(move_into_var);
+      
+      continue;
+    }
+
+    // ir为取模
+    else if (ir->op_==IR::Op::MOD) {
+      auto param_divident = IR::make_binary(IR::Op::PARAM, functab_ent->get_param_addr(0), ir->a1);
+      auto param_divisor  = IR::make_binary(IR::Op::PARAM, functab_ent->get_param_addr(1), ir->a2);
+      auto call           = IR::make_unary (IR::Op::CALL,  IR::Addr::make_named_label("__aeabi_idivmod"));
+      auto move_into_var  = IR::make_binary(IR::Op::MOV,   ir->a0, functab_ent->get_param_addr(0));
+
+      func.push_back(param_divident);
+      func.push_back(param_divisor);
+      func.push_back(call);
+      func.push_back(move_into_var);
+      
+      continue;
+    }
+
+    // ir为除法、取模外的算术逻辑型，a0  = a1 op a2
     // 或者是cmp型     nil = a1 op a2
     if (ir->is_al() || ir->op_==IR::Op::CMP) {
       // 首先保证a1、a2在VAR中
