@@ -53,7 +53,7 @@ substitute_param(IR::List &l) {
     }
 
     if (ir->a2!=nullptr) {
-      if (ir->a2->kind==IR::Addr::Kind::PARAM && ir->a1->val<4)
+      if (ir->a2->kind==IR::Addr::Kind::PARAM && ir->a2->val<4)
         ir->a2 = get_addr(ir->a2->val);
       else if (ir->a2->kind==IR::Addr::RET)
         ir->a2 = functab_ent->get_param_addr(0);
