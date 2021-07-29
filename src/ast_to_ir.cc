@@ -986,6 +986,9 @@ Array::_translate_global() {
     if (exp==nullptr) continue;
     assert(exp->is_evaluable());
   }
+
+  // 初值
+  std::vector<int> init_val;
   
   // 生成中间代码
   ADD_UNR(VARDEF, addr);
@@ -994,6 +997,7 @@ Array::_translate_global() {
   if (flattened_container.size()==0) {
     int total_size = multiply(shape);
     ADD_UNR(ZERO, IR::Addr::make_imm(total_size));
+    init_val = std::vector(0, total_size);
   }
   // 已经指定初值
   else {
@@ -1004,14 +1008,17 @@ Array::_translate_global() {
     
       if (val==0) {
         z_num++;
+        init_val.push_back(0);
       }
       else {
         if (z_num!=0) ADD_UNR(ZERO, IR::Addr::make_imm(z_num));
         z_num = 0;
         ADD_UNR(DATA, IR::Addr::make_imm(val));
+        init_val.push_back(val);
       }
     }
     if (z_num!=0) ADD_UNR(ZERO, IR::Addr::make_imm(z_num));
+    for (int i=0 ; i<z_num ; i++) init_val.push_back(0);
   }
   ADD_NOP(VAREND);
 
@@ -1019,7 +1026,7 @@ Array::_translate_global() {
     this->name_,
     shape,
     addr,
-    std::vector<int>(),
+    init_val,
     this->immutable_
   ));
 
