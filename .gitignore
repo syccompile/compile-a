@@ -1,7 +1,4 @@
 .idea
 .vscode
-make-build-debug/analyzer.cc
-make-build-debug/analyzer.hh
-make-build-debug/flex.cc
-
-
+cmake-build-debug*
+test/*output
