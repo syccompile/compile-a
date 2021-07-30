@@ -1175,7 +1175,7 @@ ReturnStmt::translate() {
   else                retexp_addr = IR::Addr::make_imm(0);
 
   if (this->ret_exp_) ret.splice(ret.end(), ret_exp_->translate());
-  ADD_UNR(RET, retexp_addr);
+  ADD_BIN(RET, nullptr, retexp_addr);
 
   return ret;
 }

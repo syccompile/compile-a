@@ -232,11 +232,11 @@ translate(FrameInfo &frame, IR::Ptr ir) {
     ret.push_back(string("\tbl\t") + ir->a0->name);
   }
   else if (ir->op_ == IR::Op::RET) {
-    auto [a0_reg, a0_arm] = move_to_reg(frame, ir->a0, string("r0"));
-    // 将a0取入寄存器
-    ret.splice(ret.end(), a0_arm);
+    auto [a1_reg, a1_arm] = move_to_reg(frame, ir->a1, string("r0"));
+    // 将a1取入寄存器
+    ret.splice(ret.end(), a1_arm);
     // 移动
-    ret.push_back(string("\tmov\tr0, ") + a0_reg);
+    ret.push_back(string("\tmov\tr0, ") + a1_reg);
 
     // 返回
     ret.splice(ret.end(), frame.ret_statements());
