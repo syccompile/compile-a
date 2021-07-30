@@ -8,7 +8,6 @@ const std::string yellow = "\033[0;33m";
 const std::string blue = "\033[0;34m";
 const std::string white = "\033[0;37m";
 
-
 /* 打印一个map<int, vector<int>> */
 void PRINT_MAP(const std::map<int, std::list<int>> &m) {
   for (const auto &val : m) {
@@ -281,14 +280,14 @@ void Function::_calc_gen_kill() {
     list<int> gen_list, kill_list, tmp_gen_list, tmp_kill_list, tmp_difference_list;
     for (int cur_lineno = basic_block->last_lineno_; cur_lineno >= basic_block->first_lineno_; --cur_lineno) {
       set_difference(gen_map_[cur_lineno].begin(), gen_map_[cur_lineno].end(),
-                          kill_list.begin(), kill_list.end(),
-                          back_inserter(tmp_difference_list));
+                     kill_list.begin(), kill_list.end(),
+                     back_inserter(tmp_difference_list));
       set_union(gen_list.begin(), gen_list.end(),
-                     tmp_difference_list.begin(), tmp_difference_list.end(),
-                     back_inserter(tmp_gen_list));
+                tmp_difference_list.begin(), tmp_difference_list.end(),
+                back_inserter(tmp_gen_list));
       set_union(kill_list.begin(), kill_list.end(),
-                     kill_map_[cur_lineno].begin(), kill_map_[cur_lineno].end(),
-                     back_inserter(tmp_kill_list));
+                kill_map_[cur_lineno].begin(), kill_map_[cur_lineno].end(),
+                back_inserter(tmp_kill_list));
       gen_list.swap(tmp_gen_list);
       kill_list.swap(tmp_kill_list);
       tmp_gen_list.clear();
@@ -310,20 +309,20 @@ void Function::_calc_reach_define_IN_OUT() {
       list<int> tmp_IN, tmp, tmp_OUT, tmp_difference_list;
       for (const auto &pred_block: basic_block->predecessor_list_) {
         set_union(tmp_IN.begin(), tmp_IN.end(),
-                       pred_block.lock()->reach_define_OUT_.begin(),
-                       pred_block.lock()->reach_define_OUT_.end(),
-                       back_inserter(tmp));
+                  pred_block.lock()->reach_define_OUT_.begin(),
+                  pred_block.lock()->reach_define_OUT_.end(),
+                  back_inserter(tmp));
         tmp_IN.swap(tmp);
         tmp.clear();
       }
       basic_block->reach_define_IN_.swap(tmp_IN);
       set_difference(basic_block->reach_define_IN_.begin(),
-                          basic_block->reach_define_IN_.end(),
-                          basic_block->kill_.begin(), basic_block->kill_.end(),
-                          back_inserter(tmp_difference_list));
+                     basic_block->reach_define_IN_.end(),
+                     basic_block->kill_.begin(), basic_block->kill_.end(),
+                     back_inserter(tmp_difference_list));
       set_union(basic_block->gen_.begin(), basic_block->gen_.end(),
-                     tmp_difference_list.begin(), tmp_difference_list.end(),
-                     back_inserter(tmp_OUT));
+                tmp_difference_list.begin(), tmp_difference_list.end(),
+                back_inserter(tmp_OUT));
       if (basic_block->reach_define_OUT_ != tmp_OUT) {
         change = true;
         basic_block->reach_define_OUT_.swap(tmp_OUT);
@@ -372,9 +371,9 @@ void Function::_calc_available_expression_IN_OUT() {
       list<Exp> tmp_IN = all_exp_list_, tmp, tmp_OUT, tmp_difference_list;
       for (const auto &pred_block: basic_block->predecessor_list_) {
         set_intersection(tmp_IN.begin(), tmp_IN.end(),
-                              pred_block.lock()->available_expression_OUT_.begin(),
-                              pred_block.lock()->available_expression_OUT_.end(),
-                              back_inserter(tmp));
+                         pred_block.lock()->available_expression_OUT_.begin(),
+                         pred_block.lock()->available_expression_OUT_.end(),
+                         back_inserter(tmp));
         tmp_IN.swap(tmp);
         tmp.clear();
       }
@@ -384,12 +383,12 @@ void Function::_calc_available_expression_IN_OUT() {
         basic_block->available_expression_IN_.swap(tmp_IN);
       }
       set_difference(basic_block->available_expression_IN_.begin(),
-                          basic_block->available_expression_IN_.end(),
-                          basic_block->ekill_.begin(), basic_block->ekill_.end(),
-                          back_inserter(tmp_difference_list));
+                     basic_block->available_expression_IN_.end(),
+                     basic_block->ekill_.begin(), basic_block->ekill_.end(),
+                     back_inserter(tmp_difference_list));
       set_union(basic_block->egen_.begin(), basic_block->egen_.end(),
-                     tmp_difference_list.begin(), tmp_difference_list.end(),
-                     back_inserter(tmp_OUT));
+                tmp_difference_list.begin(), tmp_difference_list.end(),
+                back_inserter(tmp_OUT));
       if (basic_block->available_expression_OUT_ != tmp_OUT) {
         change = true;
         basic_block->available_expression_OUT_.swap(tmp_OUT);
@@ -451,20 +450,20 @@ void Function::_calc_live_variable_IN_OUT() {
       list<IR::Addr> tmp_IN, tmp, tmp_OUT, tmp_difference_list;
       for (const auto &succ_block: basic_block->successor_list_) {
         set_union(tmp_OUT.begin(), tmp_OUT.end(),
-                       succ_block.lock()->live_variable_IN_.begin(),
-                       succ_block.lock()->live_variable_IN_.end(),
-                       back_inserter(tmp));
+                  succ_block.lock()->live_variable_IN_.begin(),
+                  succ_block.lock()->live_variable_IN_.end(),
+                  back_inserter(tmp));
         tmp_OUT.swap(tmp);
         tmp.clear();
       }
       basic_block->live_variable_OUT_.swap(tmp_OUT);
       set_difference(basic_block->live_variable_OUT_.begin(),
-                          basic_block->live_variable_OUT_.end(),
-                          basic_block->def_.begin(), basic_block->def_.end(),
-                          back_inserter(tmp_difference_list));
+                     basic_block->live_variable_OUT_.end(),
+                     basic_block->def_.begin(), basic_block->def_.end(),
+                     back_inserter(tmp_difference_list));
       set_union(basic_block->use_.begin(), basic_block->use_.end(),
-                     tmp_difference_list.begin(), tmp_difference_list.end(),
-                     back_inserter(tmp_IN));
+                tmp_difference_list.begin(), tmp_difference_list.end(),
+                back_inserter(tmp_IN));
       if (basic_block->live_variable_IN_ != tmp_IN) {
         change = true;
         basic_block->live_variable_IN_.swap(tmp_IN);
@@ -589,9 +588,9 @@ void Function::_calc_dominate_IN_OUT() {
       list<int> tmp_IN = all_block_list, tmp, tmp_OUT;
       for (const auto &pred_block: basic_block->predecessor_list_) {
         set_intersection(tmp_IN.begin(), tmp_IN.end(),
-                              pred_block.lock()->dominate_OUT_.begin(),
-                              pred_block.lock()->dominate_OUT_.end(),
-                              back_inserter(tmp));
+                         pred_block.lock()->dominate_OUT_.begin(),
+                         pred_block.lock()->dominate_OUT_.end(),
+                         back_inserter(tmp));
         tmp_IN.swap(tmp);
         tmp.clear();
       }
@@ -885,4 +884,56 @@ void Function::_update_blocknum() {
     block->block_num_ = cur_blocknum;
     ++cur_blocknum;
   }
+}
+
+void Function::_explore(const BasicBlock::Ptr &block) {
+  for (const auto &succ_block_weak : block->successor_list_) {
+    auto succ_block = succ_block_weak.lock();
+    if (!reachable_[succ_block->block_num_]) {
+      reachable_[succ_block->block_num_] = true;
+      _explore(succ_block);
+    }
+  }
+}
+
+void Function::delete_unreachable_code() {
+  bool again = true;
+  reachable_.assign(basic_block_vector_.size(), false);
+  reachable_[0] = true;
+  _explore(basic_block_vector_[0]);
+  int delete_num = 0, sz = basic_block_vector_.size();
+  for (int i = 0; i < sz; ++i) {
+    if (!reachable_[i]) {
+      _delete_block(i - delete_num);
+      ++delete_num;
+    }
+  }
+}
+
+void Function::_delete_block(int i) {
+  auto delete_iter = basic_block_vector_.begin() + i;
+  auto delete_block = *delete_iter;
+  for (auto &succ_block_weak : delete_block->successor_list_) {
+    auto succ_block = succ_block_weak.lock();
+    auto iter = std::find_if(succ_block->predecessor_list_.begin(),
+                             succ_block->predecessor_list_.end(),
+                             [&](const BasicBlock::Ptr_weak &succ_pred_block) {
+                               return succ_pred_block.lock()->block_num_ == delete_block->block_num_;
+                             });
+    if (iter != succ_block->predecessor_list_.end()) {
+      succ_block->predecessor_list_.erase(iter);
+    }
+  }
+  for (auto &pred_block_weak : delete_block->predecessor_list_) {
+    auto pred_block = pred_block_weak.lock();
+    auto iter = std::find_if(pred_block->successor_list_.begin(),
+                             pred_block->successor_list_.end(),
+                             [&](const BasicBlock::Ptr_weak &pred_succ_block) {
+                               return pred_succ_block.lock()->block_num_ == delete_block->block_num_;
+                             });
+    if (iter != pred_block->predecessor_list_.end()) {
+      pred_block->predecessor_list_.erase(iter);
+    }
+  }
+  basic_block_vector_.erase(delete_iter);
 }

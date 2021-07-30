@@ -14,6 +14,7 @@ class Function {
   vector<bool> searched_; // _find_sources的辅助表，记录block_num是否被搜索过
   vector<bool> inst_invariant_vec_;  // 从lineno到指令是否为循环不变量的映射
   vector<IR_Addr::Ptr> lineno_rd_vec_;  // 从lineno到目的操作数的映射
+  std::vector<bool> reachable_;  // blocknum到reachable的映射
 
   void _build_lineno_ir_map();  // 建立lineno到ir的映射表，并更新basic_block的block_num和first_lineno,last_lineno等信息，同时更新ir_num_
   void _update_blocknum();
@@ -56,6 +57,9 @@ class Function {
   static loop _get_loop(const edge &e);
   vector<pair<BasicBlock::Ptr, BasicBlock::iterator>> _mark_loop_invariant(loop &l);
 
+  void _explore(const BasicBlock::Ptr &block);
+  void _delete_block(int i);
+
  public:
   using Ptr = shared_ptr<Function>;
   using iterator = vector<BasicBlock::Ptr>::iterator;
@@ -78,7 +82,8 @@ class Function {
   void global_copy_propagation();
   void remove_dead_code();
   void loop_invariant_code_motion();
-  void ir_specify_optimization(); // 针对IR的特定优化
+  void ir_specify_optimization(); // 针对IR的特定优化, TODO: 有bug, 待修复
+  void delete_unreachable_code();
   iterator begin() { return basic_block_vector_.begin(); }
   iterator end() { return basic_block_vector_.end(); }
   list<IR::Ptr> merge();
