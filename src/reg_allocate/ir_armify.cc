@@ -215,6 +215,7 @@ ir_armify(IR::List &defs, IR::List &func) {
       auto call           = IR::make_unary (IR::Op::CALL,  IR::Addr::make_named_label("__aeabi_idiv"));
       auto move_into_var  = IR::make_binary(IR::Op::MOV,   ir->a0, functab_ent->get_param_addr(0));
 
+      func.pop_front();
       func.push_back(param_divident);
       func.push_back(param_divisor);
       func.push_back(call);
@@ -230,6 +231,7 @@ ir_armify(IR::List &defs, IR::List &func) {
       auto call           = IR::make_unary (IR::Op::CALL,  IR::Addr::make_named_label("__aeabi_idivmod"));
       auto move_into_var  = IR::make_binary(IR::Op::MOV,   ir->a0, functab_ent->get_param_addr(0));
 
+      func.pop_front();
       func.push_back(param_divident);
       func.push_back(param_divisor);
       func.push_back(call);
