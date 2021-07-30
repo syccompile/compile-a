@@ -102,6 +102,8 @@ int main(int argc, char *argv[]) {
   std::ofstream ASMFile(asm_filename);
   old_cout_buf = std::cout.rdbuf(ASMFile.rdbuf());
 
+  std::cout << ".arch armv7a" << std::endl;
+
   for (auto &func: func_list) {
     auto asm_list = translate_function(func);
     for (auto &asm_line: asm_list) {

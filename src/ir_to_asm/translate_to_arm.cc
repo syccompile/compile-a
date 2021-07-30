@@ -295,9 +295,10 @@ translate_function(IR::List &l) {
 
   // generate function ir code
   string name = l.front()->a0->name;
-  // ret.push_back(string(".global\t") + name);
-  // ret.push_back(string(".type\t") + name + ", %function");
-  // ret.push_back(string(".arm"));
+  ret.push_back(string(".text"));
+  ret.push_back(string(".global\t") + name);
+  ret.push_back(string(".type\t") + name + ", %function");
+  ret.push_back(string(".arm"));
   ret.push_back(name + ":");
 
   ret.splice(ret.end(), frame.init_statements());
