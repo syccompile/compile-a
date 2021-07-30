@@ -18,28 +18,28 @@ get_arm_opcode(IR::Op op) {
 #define CASE(IR_OP, ARM_OP) case IR::Op:: IR_OP : return string(ARM_OP)
 
   switch(op) {
-    CASE(ADD, "add");
-    CASE(SUB, "sub");
-    CASE(MUL, "mul");
-    CASE(DIV, "div");
-    CASE(AND, "and");
-    CASE(OR,  "orr");
-    CASE(XOR, "eor");
-    CASE(MOV, "mov");
-    CASE(MVN, "mvn");
-    CASE(MOVLE, "movle");
-    CASE(MOVLT, "movlt");
-    CASE(MOVGE, "movge");
-    CASE(MOVGT, "movgt");
-    CASE(MOVEQ, "moveq");
-    CASE(MOVNE, "movne");
-    CASE(JMP, "b");
-    CASE(JLE, "ble");
-    CASE(JLT, "blt");
-    CASE(JGE, "bge");
-    CASE(JGT, "bgt");
-    CASE(JE,  "beq");
-    CASE(JNE, "bne");
+    CASE(ADD, "\tadd");
+    CASE(SUB, "\tsub");
+    CASE(MUL, "\tmul");
+    CASE(DIV, "\tdiv");
+    CASE(AND, "\tand");
+    CASE(OR,  "\torr");
+    CASE(XOR, "\teor");
+    CASE(MOV, "\tmov");
+    CASE(MVN, "\tmvn");
+    CASE(MOVLE, "\tmovle");
+    CASE(MOVLT, "\tmovlt");
+    CASE(MOVGE, "\tmovge");
+    CASE(MOVGT, "\tmovgt");
+    CASE(MOVEQ, "\tmoveq");
+    CASE(MOVNE, "\tmovne");
+    CASE(JMP, "\tb");
+    CASE(JLE, "\tble");
+    CASE(JLT, "\tblt");
+    CASE(JGE, "\tbge");
+    CASE(JGT, "\tbgt");
+    CASE(JE,  "\tbeq");
+    CASE(JNE, "\tbne");
     default: return string("");
   }
 
@@ -66,14 +66,14 @@ move_to_reg(FrameInfo &frame, IR::Addr::Ptr ir_addr, std::string tmp_regname) {
     // 如果属于溢出颜色
     else if (frame.spill.count(addr_color)) {
       ret_reg = tmp_regname;
-      ret.push_back(string("ldr\t") + tmp_regname + ", [sp, #" + to_string(4*(frame.spill_offset()+frame.spill[addr_color])) + "]");
+      ret.push_back(string("\tldr\t") + tmp_regname + ", [sp, #" + to_string(4*(frame.spill_offset()+frame.spill[addr_color])) + "]");
     }
     // 如果属于局部数组
     // 那么就将局部数组地址存入count
     else if (frame.local_arr.count(addr_val)) {
       ret_reg = tmp_regname;
       int arr_offset = 4 * (frame.local_arr_offset() + frame.local_arr[addr_val]);
-      ret.push_back(string("add\t") + tmp_regname + ", sp, #" + to_string(arr_offset));
+      ret.push_back(string("\tadd\t") + tmp_regname + ", sp, #" + to_string(arr_offset));
     }
   }
   else if (ir_addr->kind == IR::Addr::Kind::PARAM) {
@@ -85,18 +85,18 @@ move_to_reg(FrameInfo &frame, IR::Addr::Ptr ir_addr, std::string tmp_regname) {
     else {
       ret_reg = tmp_regname;
       int param_offset = 4 * (frame.frame_offset() + addr_val - 4);
-      ret.push_back(string("ldr\t") + tmp_regname + ", [sp, #" + to_string(param_offset));
+      ret.push_back(string("\tldr\t") + tmp_regname + ", [sp, #" + to_string(param_offset));
     }
   }
   // ir_armify保证全局变量一定是单一变量
   else if (ir_addr->kind == IR::Addr::Kind::NAMED_LABEL) {
     ret_reg = tmp_regname;
-    ret.push_back(string("ldr\t") + tmp_regname + ", =" + ir_addr->name);
+    ret.push_back(string("\tldr\t") + tmp_regname + ", =" + ir_addr->name);
   }
   // 立即数
   else if (ir_addr->kind == IR::Addr::Kind::IMM) {
     ret_reg = tmp_regname;
-    ret.push_back(string("mov\t") + tmp_regname + ", #" + std::to_string(ir_addr->val));
+    ret.push_back(string("\tmov\t") + tmp_regname + ", #" + std::to_string(ir_addr->val));
   }
 
   return std::make_pair(ret_reg, ret);
@@ -121,12 +121,12 @@ store_from_reg(FrameInfo &frame, IR::Addr::Ptr ir_addr, std::string tmp_regname)
     // 如果属于溢出颜色
     else if (frame.spill.count(addr_color)) {
       ret_reg = tmp_regname;
-      ret.push_back(string("str\t") + tmp_regname + ", [sp, #" + to_string(4*(frame.spill_offset()+frame.spill[addr_color])) + "]");
+      ret.push_back(string("\tstr\t") + tmp_regname + ", [sp, #" + to_string(4*(frame.spill_offset()+frame.spill[addr_color])) + "]");
     }
     // 如果属于局部数组
     else if (frame.local_arr.count(addr_val)) {
       ret_reg = tmp_regname;
-      ret.push_back(string("add\t") + tmp_regname + "sp, #" + to_string(4*(frame.local_arr_offset() + frame.local_arr[addr_val])));
+      ret.push_back(string("\tadd\t") + tmp_regname + "sp, #" + to_string(4*(frame.local_arr_offset() + frame.local_arr[addr_val])));
     }
   }
   else if (ir_addr->kind == IR::Addr::Kind::PARAM) {
@@ -138,18 +138,18 @@ store_from_reg(FrameInfo &frame, IR::Addr::Ptr ir_addr, std::string tmp_regname)
     else {
       ret_reg = tmp_regname;
       int param_offset = 4 * (frame.frame_offset() + addr_val - 4);
-      ret.push_back(string("str\t") + tmp_regname + ", [sp, #" + to_string(param_offset));
+      ret.push_back(string("\tstr\t") + tmp_regname + ", [sp, #" + to_string(param_offset));
     }
   }
   // ir_armify保证全局变量一定是变量型的
   else if (ir_addr->kind == IR::Addr::Kind::NAMED_LABEL) {
     ret_reg = tmp_regname;
-    ret.push_back(string("str\t") + tmp_regname + ", =" + ir_addr->name);
+    ret.push_back(string("\tstr\t") + tmp_regname + ", =" + ir_addr->name);
   }
   // 立即数
   else if (ir_addr->kind == IR::Addr::Kind::IMM) {
     ret_reg = tmp_regname;
-    ret.push_back(string("mov\t") + tmp_regname + ", #" + std::to_string(ir_addr->val));
+    ret.push_back(string("\tmov\t") + tmp_regname + ", #" + std::to_string(ir_addr->val));
   }
 
   return std::make_pair(ret_reg, ret);
@@ -204,7 +204,7 @@ translate(FrameInfo &frame, IR::Ptr ir) {
     // 将a1与a2取入寄存器
     ret.splice(ret.end(), a1_arm);
     ret.splice(ret.end(), a2_arm);
-    ret.push_back(string("cmp") + "\t" + a1_reg + ", " + a2_reg);
+    ret.push_back(string("\tcmp") + "\t" + a1_reg + ", " + a2_reg);
   }
   else if (ir->op_ == IR::Op::LABEL) {
     ret.push_back(string(".L") + to_string(ir->a0->val) + ":");
@@ -219,24 +219,24 @@ translate(FrameInfo &frame, IR::Ptr ir) {
       // 将a1取入寄存器
       ret.splice(ret.end(), a1_arm);
       // 移动
-      ret.push_back(string("mov\t") + "r" + to_string(ir->a0->get_color()-1) + ", " + a1_reg);
+      ret.push_back(string("\tmov\t") + "r" + to_string(ir->a0->get_color()-1) + ", " + a1_reg);
     }
     // 后面的参数：压栈
     else {
       auto [a1_reg, a1_arm] = move_to_reg(frame, ir->a1, string("r10"));
       int offset = 4*(ir->a0->val-4);
-      ret.push_back(string("str\t") + a1_reg + ", [sp, #" + to_string(offset) + "]");
+      ret.push_back(string("\tstr\t") + a1_reg + ", [sp, #" + to_string(offset) + "]");
     }
   }
   else if (ir->op_ == IR::Op::CALL) {
-    ret.push_back(string("bl\t") + ir->a0->name);
+    ret.push_back(string("\tbl\t") + ir->a0->name);
   }
   else if (ir->op_ == IR::Op::RET) {
     auto [a0_reg, a0_arm] = move_to_reg(frame, ir->a0, string("r0"));
     // 将a0取入寄存器
     ret.splice(ret.end(), a0_arm);
     // 移动
-    ret.push_back(string("mov\tr0, ") + a0_reg);
+    ret.push_back(string("\tmov\tr0, ") + a0_reg);
 
     // 返回
     ret.splice(ret.end(), frame.ret_statements());
@@ -253,7 +253,7 @@ translate(FrameInfo &frame, IR::Ptr ir) {
     ret.splice(ret.end(), a1_arm);
     ret.splice(ret.end(), a2_arm);
     // 执行变址取数
-    ret.push_back(string("ldr\t") + a0_reg + ", [" + a1_reg + ", " + a2_reg + ", lsl #2]");
+    ret.push_back(string("\tldr\t") + a0_reg + ", [" + a1_reg + ", " + a2_reg + ", lsl #2]");
     // 存储a0
     ret.splice(ret.end(), a0_arm);
   }
@@ -266,12 +266,12 @@ translate(FrameInfo &frame, IR::Ptr ir) {
     ret.splice(ret.end(), a0_arm);
     ret.splice(ret.end(), a1_arm);
     // 将a2取入寄存器，并检查是否需要a9
-    if (a2_reg == string("r9")) ret.push_back(string("str\tr9, [sp, #-4]"));
+    if (a2_reg == string("r9")) ret.push_back(string("\tstr\tr9, [sp, #-4]"));
     ret.splice(ret.end(), a2_arm);
     // 执行变址存数
-    ret.push_back(string("str\t") + a2_reg + ", [" + a0_reg + ", " + a1_reg + ", lsl #2]");
+    ret.push_back(string("\tstr\t") + a2_reg + ", [" + a0_reg + ", " + a1_reg + ", lsl #2]");
     // 还原a9
-    if (a2_reg == string("r9")) ret.push_back(string("ldr\tr9, [sp, #-4]"));
+    if (a2_reg == string("r9")) ret.push_back(string("\tldr\tr9, [sp, #-4]"));
   }
 
   end:
@@ -306,7 +306,6 @@ translate_function(IR::List &l) {
   // actual translate
   for (auto ir: l) {
     ret.splice(ret.end(), translate(frame, ir));
-    ret.push_back(string(""));
   }
 
   return ret;

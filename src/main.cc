@@ -103,12 +103,17 @@ int main(int argc, char *argv[]) {
   old_cout_buf = std::cout.rdbuf(ASMFile.rdbuf());
 
   std::cout << ".arch armv7a" << std::endl;
+  
+  for (auto &def: def_list) {
+    auto asm_list = translate_var(def);
+    for (auto &asm_line: asm_list)
+      std::cout << asm_line << std::endl;
+  }
 
   for (auto &func: func_list) {
     auto asm_list = translate_function(func);
-    for (auto &asm_line: asm_list) {
+    for (auto &asm_line: asm_list)
       std::cout << asm_line << std::endl;
-    }
   }
 
   std::cout.rdbuf(old_cout_buf);

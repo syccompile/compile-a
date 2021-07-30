@@ -78,11 +78,11 @@ FrameInfo::init_statements() {
   if (reg_assign.size() == 1) need_to_save = string("r4") + ", " + need_to_save;
   else if (reg_assign.size()) need_to_save = std::string("r4-r") + std::to_string(3 + reg_assign.size()) + ", " + need_to_save;
   
-  ret.push_back(std::string("push\t{") + need_to_save + "}");
+  ret.push_back(std::string("\tpush\t{") + need_to_save + "}");
 
   // 分配栈帧
   
-  ret.push_back(string("sub\tsp, sp, #") + to_string(4*(frame_offset()-register_save_size)));
+  ret.push_back(string("\tsub\tsp, sp, #") + to_string(4*(frame_offset()-register_save_size)));
   
   return ret;
 }
@@ -95,7 +95,7 @@ FrameInfo::ret_statements() {
 
   // 还原栈帧
 
-  ret.push_back(string("sub\tsp, sp, #") + to_string(4*(frame_offset()-register_save_size)));
+  ret.push_back(string("\tsub\tsp, sp, #") + to_string(4*(frame_offset()-register_save_size)));
 
   // 恢复寄存器
 
@@ -103,7 +103,7 @@ FrameInfo::ret_statements() {
   if (reg_assign.size() == 1) need_to_restore = string("r4") + ", " + need_to_restore;
   else if (reg_assign.size()) need_to_restore = std::string("r4-r") + std::to_string(3 + reg_assign.size()) + ", " + need_to_restore;
 
-  ret.push_back(std::string("pop\t{") + need_to_restore + "}");
+  ret.push_back(std::string("\tpop\t{") + need_to_restore + "}");
 
   return ret_stmt_buf = ret;
 }
