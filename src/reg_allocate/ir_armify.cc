@@ -216,11 +216,11 @@ ir_armify(IR::List &defs, IR::List &func) {
       auto move_into_var  = IR::make_binary(IR::Op::MOV,   ir->a0, functab_ent->get_param_addr(0));
 
       func.pop_front();
-      func.push_back(param_divident);
-      func.push_back(param_divisor);
-      func.push_back(call);
-      func.push_back(move_into_var);
-      
+      func.push_front(move_into_var);
+      func.push_front(call);
+      func.push_front(param_divident);
+      func.push_front(param_divisor);
+
       continue;
     }
 
@@ -232,10 +232,10 @@ ir_armify(IR::List &defs, IR::List &func) {
       auto move_into_var  = IR::make_binary(IR::Op::MOV,   ir->a0, functab_ent->get_param_addr(0));
 
       func.pop_front();
-      func.push_back(param_divident);
-      func.push_back(param_divisor);
-      func.push_back(call);
-      func.push_back(move_into_var);
+      func.push_front(move_into_var);
+      func.push_front(call);
+      func.push_front(param_divident);
+      func.push_front(param_divisor);
       
       continue;
     }
