@@ -1,13 +1,12 @@
 #include "ast.h"
 #include "analyzer.hh"
 #include "ir_opt.h"
-#include "ir_opt/basicblock.h"
+#include "ir_opt/module.h"
 #include "reg_allocate/reg_allocate.h"
 
 #include <vector>
 #include <fstream>
 #include <iostream>
-#include <iterator>
 #include <unistd.h>
 #include <filesystem>
 
@@ -77,11 +76,11 @@ int main(int argc, char *argv[]) {
     remove_redunctant_label(func);
 
   // only need to handle func_list
-//  Module m(func_list);
-////  m.optimize(optimize_level);
-//  m.debug();
-////  m.optimize(1);
-//  func_list = m.merge();
+  Module m(func_list);
+//  m.optimize(optimize_level);
+  m.debug();
+//  m.optimize(1);
+  func_list = m.merge();
 
   for (auto &func: func_list)
     register_allocate(func);
