@@ -106,10 +106,10 @@ int main(int argc, char *argv[]) {
   std::ofstream ASMFile(asm_filename);
   old_cout_buf = std::cout.rdbuf(ASMFile.rdbuf());
 
-  std::cout << ".arch armv7a\n"
+  std::cout << ".arch armv7\n"
             << ".macro mov32, reg, val\n"
-            << "movw \\reg, #:lower16:\\val\n"
-            << "movt \\reg, #:upper16:\\val\n"
+            << "\tmovw \\reg, #:lower16:\\val\n"
+            << "\tmovt \\reg, #:upper16:\\val\n"
             << ".endm" << std::endl;
   
   for (auto &def: def_list) {

@@ -391,7 +391,10 @@ translate_function(IR::List &l) {
   ret.push_back(string(".text"));
   ret.push_back(string(".global\t") + name);
   ret.push_back(string(".type\t") + name + ", %function");
-  ret.push_back(string(".arm"));
+  ret.push_back(string(".syntax unified\t"));
+  ret.push_back(string(".thumb"));
+  ret.push_back(string(".thumb_func"));
+
   ret.push_back(name + ":");
 
   ret.splice(ret.end(), frame.init_statements());
