@@ -95,7 +95,7 @@ FrameInfo::ret_statements() {
 
   // 还原栈帧
 
-  ret.push_back(string("\tsub\tsp, sp, #") + to_string(4*(frame_offset()-register_save_size)));
+  ret.push_back(string("\tadd\tsp, sp, #") + to_string(4*(frame_offset()-register_save_size)));
 
   // 恢复寄存器
 

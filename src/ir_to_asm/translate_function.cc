@@ -391,7 +391,7 @@ translate_function(IR::List &l) {
   ret.push_back(string(".text"));
   ret.push_back(string(".global\t") + name);
   ret.push_back(string(".type\t") + name + ", %function");
-  ret.push_back(string(".syntax unified\t"));
+  ret.push_back(string(".syntax unified"));
   ret.push_back(string(".thumb"));
   ret.push_back(string(".thumb_func"));
 

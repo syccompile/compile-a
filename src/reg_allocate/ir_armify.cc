@@ -45,6 +45,14 @@ substitute_param(IR::List &l) {
   // 将寄存器中 PARAM类型变量 的使用转为对应的 VAR类型变量 的使用
   while (!(l.empty())) {
     auto ir = l.front();
+
+    if (ir->a0!=nullptr && ir->op_!=IR::Op::PARAM) {
+      if (ir->a0->kind==IR::Addr::Kind::PARAM && ir->a1->val<4)
+        ir->a0 = get_addr(ir->a0->val);
+      else if (ir->a0->kind==IR::Addr::RET)
+        ir->a0 = functab_ent->get_param_addr(0);
+    }
+
     if (ir->a1!=nullptr) {
       if (ir->a1->kind==IR::Addr::Kind::PARAM && ir->a1->val<4)
         ir->a1 = get_addr(ir->a1->val);
@@ -229,7 +237,7 @@ ir_armify(std::list<IR::List> &defs, IR::List &func) {
       auto param_divident = IR::make_binary(IR::Op::PARAM, functab_ent->get_param_addr(0), ir->a1);
       auto param_divisor  = IR::make_binary(IR::Op::PARAM, functab_ent->get_param_addr(1), ir->a2);
       auto call           = IR::make_unary (IR::Op::CALL,  IR::Addr::make_named_label("__aeabi_idivmod"));
-      auto move_into_var  = IR::make_binary(IR::Op::MOV,   ir->a0, functab_ent->get_param_addr(0));
+      auto move_into_var  = IR::make_binary(IR::Op::MOV,   ir->a0, functab_ent->get_param_addr(1));
 
       func.pop_front();
       func.push_front(move_into_var);
