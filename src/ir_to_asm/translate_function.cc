@@ -157,7 +157,7 @@ move_to_reg(FrameInfo &frame, IR::Addr::Ptr ir_addr, std::string tmp_regname) {
     // 先获取全局变量信息
     auto vartab_ent = context.vartab_cur->get(ir_addr->name);
     // 先移动地址
-    ret.push_back(string("\tldr\t") + tmp_regname + ", =" + ir_addr->name);
+    ret.push_back(string("\tmov32\t") + tmp_regname + ", " + ir_addr->name);
     // 如果是全局变量，则需要移动值
     if (vartab_ent==nullptr || !(vartab_ent->is_array())) 
       ret.push_back(string("\tldr\t") + tmp_regname + ", [" + tmp_regname + "]");
@@ -236,7 +236,7 @@ store_from_reg(FrameInfo &frame, IR::Addr::Ptr ir_addr, std::string result_regna
   // ir_armify保证全局变量一定是变量型的
   else if (ir_addr->kind == IR::Addr::Kind::NAMED_LABEL) {
     ret_reg = result_regname;
-    ret.push_back(string("\tldr\t") + idle_regname + ", =" + ir_addr->name);
+    ret.push_back(string("\tmov32\t") + idle_regname + ", " + ir_addr->name);
     ret.push_back(string("\tstr\t") + result_regname + ", [" + idle_regname + "]");
   }
   // 立即数

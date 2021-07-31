@@ -77,7 +77,7 @@ std::tuple<IR::Addr::Ptr, IR::List, IR::List>
 move_into_var(IR::Addr::Ptr a) {
 
   // 存储无法被ARM指令表示的立即数之内存地址
-  static std::unordered_map<int, IR::Addr::Ptr> imm_map;
+  static std::unordered_map<uint32_t, IR::Addr::Ptr> imm_map;
   // 存储全局数组标号地址
   static std::unordered_map<std::string, IR::Addr::Ptr> glob_var_map;
 
@@ -115,9 +115,9 @@ move_into_var(IR::Addr::Ptr a) {
 
         // 先查找是否已经有该数的全局变量
         // 若无
-        if (imm_map.count(a->val) == 0) {
+        if (imm_map.count((uint32_t)(a->val)) == 0) {
           // 建立地址
-          imm_globl_addr = IR::Addr::make_named_label(std::string(".imm_") + std::to_string(a->val));
+          imm_globl_addr = IR::Addr::make_named_label(std::string(".imm_") + std::to_string((uint32_t)(a->val)));
           // 创建新全局变量
           ret_def.push_back(IR::make_unary(IR::Op::VARDEF, imm_globl_addr));
           ret_def.push_back(IR::make_unary(IR::Op::DATA, IR::Addr::make_imm(a->val)));
