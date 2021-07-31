@@ -269,18 +269,12 @@ ir_armify(std::list<IR::List> &defs, IR::List &func) {
 
     // ir为传参型
     else if (ir->op_==IR::Op::PARAM) {
-      // 若目的为寄存器（前4个参数）
-      // 则无需多余寄存器
-      // 反之，则需要先将目标保存在寄存器中
-      if (ir->a0->val>=4) {
-        // 首先保证IR在VAR中
-        auto [a1, a1_def_app, a1_func_app] = move_into_var(ir->a1);
-        // 将需要加入的IR加入对应IR串中
-        if (!(a1_def_app.empty())) defs.push_back(a1_def_app);
-        new_func.splice(new_func.end(), a1_func_app);
-        // 修改原IR
-        ir->a1 = a1;
-      }
+      // 首先保证a1在VAR中
+      auto [a1, a1_def_app, a1_func_app] = move_into_var(ir->a1);
+      if (!(a1_def_app.empty())) defs.push_back(a1_def_app);
+      new_func.splice(new_func.end(), a1_func_app);
+      // 修改原IR
+      ir->a1 = a1;
     }
 
     // 数组变址取数
