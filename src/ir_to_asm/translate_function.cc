@@ -13,7 +13,46 @@ namespace {  // helper
 using std::string;
 using std::to_string;
 
-std::string
+// 将val循环左移n位
+uint32_t
+rol(uint32_t val, uint32_t n) {
+  n %= 32u;
+  uint32_t ret;
+  ret  = val << n;
+  ret |= (val & (0xffffffffu << (32-n))) >> (32-n);
+  return ret;
+}
+
+// 判断是否为arm立即数
+bool
+is_arm_imm(uint32_t imm) {
+  for (int j=0 ; j<8 ; j++) {
+    uint32_t rol_result = rol(imm, j*2);
+    if (rol_result <= 0x000000ffu) return true;
+  }
+  return false;
+}
+
+// 将一个立即数拆分为arm立即数之和
+std::list<uint32_t>
+split_to_arm_imm(uint32_t imm) {
+  std::list<int> ret;
+  
+  if (is_arm_imm(imm)) {
+    ret.push_back(imm);
+  }
+  else {
+    std::array<uint32_t> tmp({0xffu, 0xff00u, 0xff0000u, 0xff000000u});
+    for (auto &i: tmp) {
+      auto result = imm & i;
+      if (result!=0u) ret.push_back(result);
+    }
+  }
+
+  return ret;
+}
+
+string
 get_arm_opcode(IR::Op op) {
 
 #define CASE(IR_OP, ARM_OP) case IR::Op:: IR_OP : return string(ARM_OP)
@@ -67,14 +106,28 @@ move_to_reg(FrameInfo &frame, IR::Addr::Ptr ir_addr, std::string tmp_regname) {
     // 如果属于溢出颜色
     else if (frame.spill.count(addr_color)) {
       ret_reg = tmp_regname;
-      ret.push_back(string("\tldr\t") + tmp_regname + ", [sp, #" + to_string(4*(frame.spill_offset()+frame.spill[addr_color])) + "]");
+      // 防止爆立即数
+      auto spill_offsets = split_to_arm_imm(4 * (frame.spill_offset() + frame.spill[addr_color]));
+      if (spill_offsets.size() == 1)
+        ret.push_back(string("\tldr\t") + tmp_regname + ", [sp, #" + to_string(spill_offsets.front()) + "]");
+      else {
+        ret.push_back(string("\tadd\t") + tmp_regname + ", sp, #" + to_string(spill_offsets.front()));
+        spill_offsets.pop_front();
+        for (auto &i: spill_offsets)
+          ret.push_back(string("\tadd\t") + tmp_regname + ", " + tmp_regname + ", #" + to_string(i));
+        ret.push_back(string("\tldr\t") + tmp_regname + ", [" + tmp_regname + "]");
+      }
     }
     // 如果属于局部数组
     // 那么就将局部数组地址存入count
     else if (frame.local_arr.count(addr_val)) {
       ret_reg = tmp_regname;
-      int arr_offset = 4 * (frame.local_arr_offset() + frame.local_arr[addr_val]);
-      ret.push_back(string("\tadd\t") + tmp_regname + ", sp, #" + to_string(arr_offset));
+      // 防止爆立即数
+      auto arr_offsets = split_to_arm_imm(4 * (frame.local_arr_offset() + frame.local_arr[addr_val]));
+      ret.push_back(string("\tadd\t") + tmp_regname + ", sp, #" + to_string(spill_offsets.front()));
+      arr_offsets.pop_front();
+      for (auto &i: arr_offsets)
+        ret.push_back(string("\tadd\t") + tmp_regname + ", " + tmp_regname + ", #" + to_string(i));
     }
   }
   else if (ir_addr->kind == IR::Addr::Kind::PARAM) {
@@ -85,8 +138,17 @@ move_to_reg(FrameInfo &frame, IR::Addr::Ptr ir_addr, std::string tmp_regname) {
     // 如果属于栈传递的参数
     else {
       ret_reg = tmp_regname;
-      int param_offset = 4 * (frame.frame_offset() + addr_val - 4);
-      ret.push_back(string("\tldr\t") + tmp_regname + ", [sp, #" + to_string(param_offset) + "]");
+      // 防止爆立即数
+      auto param_offsets = spilt_to_arm_imm(4 * (frame.frame_offset() + addr_val - 4));
+      if (spill_offsets.size() == 1)
+        ret.push_back(string("\tldr\t") + tmp_regname + ", [sp, #" + to_string(param_offsets.front()) + "]");
+      else {
+        ret.push_back(string("\tadd\t") + tmp_regname + ", sp, #" + to_string(param_offsets.front()));
+        param_offsets.pop_front();
+        for (auto &i: param_offsets)
+          ret.push_back(string("\tadd\t") + tmp_regname + ", " + tmp_regname + ", #" + to_string(i));
+        ret.push_back(string("\tldr\t") + tmp_regname + ", [" + tmp_regname + "]");
+      }
     }
   }
   // ir_armify保证全局变量一定是单一变量
@@ -128,10 +190,23 @@ store_from_reg(FrameInfo &frame, IR::Addr::Ptr ir_addr, std::string result_regna
     // 如果属于溢出颜色
     else if (frame.spill.count(addr_color)) {
       ret_reg = result_regname;
+      // 防止爆立即数
+      auto spill_offsets = split_to_arm_imm(4 * (frame.spill_offset() + frame.spill[addr_color]));
+      if (spill_offsets.size() == 1)
+        ret.push_back(string("\tstr\t") + result_regname + ", [sp, #" + to_string(spill_offsets.front()) + "]");
+      else {
+        ret.push_back(string("\tadd\t") + idle_regname + ", sp, #" + to_string(spill_offsets.front()));
+        spill_offsets.pop_front();
+        for (auto &i: spill_offsets)
+          ret.push_back(string("\tadd\t") + idle_regname + ", " + idle_regname + ", #" + to_string(i));
+        ret.push_back(string("\tstr\t") + result_regname + ", [" + idle_regname + "]");
+      }
+
       ret.push_back(string("\tstr\t") + result_regname + ", [sp, #" + to_string(4*(frame.spill_offset()+frame.spill[addr_color])) + "]");
     }
     // 如果属于局部数组
     else if (frame.local_arr.count(addr_val)) {
+      assert(false);
       ret_reg = result_regname;
       ret.push_back(string("\tadd\t") + result_regname + ", sp, #" + to_string(4*(frame.local_arr_offset() + frame.local_arr[addr_val])));
     }
@@ -144,8 +219,19 @@ store_from_reg(FrameInfo &frame, IR::Addr::Ptr ir_addr, std::string result_regna
     // 如果属于栈传递的参数
     else {
       ret_reg = result_regname;
-      int param_offset = 4 * (frame.frame_offset() + addr_val - 4);
-      ret.push_back(string("\tstr\t") + result_regname + ", [sp, #" + to_string(param_offset));
+      int param_offsets = 4 * (frame.frame_offset() + addr_val - 4);
+
+      // 防止爆立即数
+      auto param_offsets = spilt_to_arm_imm(4 * (frame.frame_offset() + addr_val - 4));
+      if (spill_offsets.size() == 1)
+        ret.push_back(string("\tstr\t") + result_regname + ", [sp, #" + to_string(param_offsets.front()) + "]");
+      else {
+        ret.push_back(string("\tadd\t") + idle_regname + ", sp, #" + to_string(param_offsets.front()));
+        param_offsets.pop_front();
+        for (auto &i: param_offsets)
+          ret.push_back(string("\tadd\t") + idle_regname + ", " + idle_regname + ", #" + to_string(i));
+        ret.push_back(string("\tstr\t") + result_regname + ", [" + idle_regname + "]");
+      }
     }
   }
   // ir_armify保证全局变量一定是变量型的
