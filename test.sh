@@ -11,7 +11,7 @@ else
     cd ./cmake-build-debug
   fi
   cmake ..
-  cmake --build . --target ${1-"personal_test"}
+  cmake --build . --target ${1-"personal_test"} -j8
   ./${1-"personal_test"}
   cd ..
 fi
