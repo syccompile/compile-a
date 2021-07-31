@@ -141,6 +141,7 @@ ir_parse(IR::List &ir_list) {
       OP_CASE(PARAM) {
         ACCEPT_VAR(def, a0);
         ACCEPT_VAR(used, a1);
+        break;
       }
       OP_CASE(ALLOC_IN_STACK) {
         local_array[ir->a0->val] = true;
