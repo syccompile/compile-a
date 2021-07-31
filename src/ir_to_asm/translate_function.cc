@@ -36,13 +36,13 @@ is_arm_imm(uint32_t imm) {
 // 将一个立即数拆分为arm立即数之和
 std::list<uint32_t>
 split_to_arm_imm(uint32_t imm) {
-  std::list<int> ret;
+  std::list<uint32_t> ret;
   
   if (is_arm_imm(imm)) {
     ret.push_back(imm);
   }
   else {
-    std::array<uint32_t> tmp({0xffu, 0xff00u, 0xff0000u, 0xff000000u});
+    std::vector<uint32_t> tmp{0xffu, 0xff00u, 0xff0000u, 0xff000000u};
     for (auto &i: tmp) {
       auto result = imm & i;
       if (result!=0u) ret.push_back(result);
@@ -124,7 +124,7 @@ move_to_reg(FrameInfo &frame, IR::Addr::Ptr ir_addr, std::string tmp_regname) {
       ret_reg = tmp_regname;
       // 防止爆立即数
       auto arr_offsets = split_to_arm_imm(4 * (frame.local_arr_offset() + frame.local_arr[addr_val]));
-      ret.push_back(string("\tadd\t") + tmp_regname + ", sp, #" + to_string(spill_offsets.front()));
+      ret.push_back(string("\tadd\t") + tmp_regname + ", sp, #" + to_string((arr_offsets.front())));
       arr_offsets.pop_front();
       for (auto &i: arr_offsets)
         ret.push_back(string("\tadd\t") + tmp_regname + ", " + tmp_regname + ", #" + to_string(i));
@@ -139,8 +139,8 @@ move_to_reg(FrameInfo &frame, IR::Addr::Ptr ir_addr, std::string tmp_regname) {
     else {
       ret_reg = tmp_regname;
       // 防止爆立即数
-      auto param_offsets = spilt_to_arm_imm(4 * (frame.frame_offset() + addr_val - 4));
-      if (spill_offsets.size() == 1)
+      auto param_offsets = split_to_arm_imm(4 * (frame.frame_offset() + addr_val - 4));
+      if (param_offsets.size() == 1)
         ret.push_back(string("\tldr\t") + tmp_regname + ", [sp, #" + to_string(param_offsets.front()) + "]");
       else {
         ret.push_back(string("\tadd\t") + tmp_regname + ", sp, #" + to_string(param_offsets.front()));
@@ -219,11 +219,10 @@ store_from_reg(FrameInfo &frame, IR::Addr::Ptr ir_addr, std::string result_regna
     // 如果属于栈传递的参数
     else {
       ret_reg = result_regname;
-      int param_offsets = 4 * (frame.frame_offset() + addr_val - 4);
 
       // 防止爆立即数
-      auto param_offsets = spilt_to_arm_imm(4 * (frame.frame_offset() + addr_val - 4));
-      if (spill_offsets.size() == 1)
+      auto param_offsets = split_to_arm_imm(4 * (frame.frame_offset() + addr_val - 4));
+      if (param_offsets.size() == 1)
         ret.push_back(string("\tstr\t") + result_regname + ", [sp, #" + to_string(param_offsets.front()) + "]");
       else {
         ret.push_back(string("\tadd\t") + idle_regname + ", sp, #" + to_string(param_offsets.front()));
