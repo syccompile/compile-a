@@ -1,5 +1,6 @@
 #include "../ir.h"
 #include "../reg_allocate/reg_allocate.h"
+#include "../context/context.h"
 #include "frame_info.h"
 #include "reg_assign.h"
 #include <list>
@@ -85,13 +86,19 @@ move_to_reg(FrameInfo &frame, IR::Addr::Ptr ir_addr, std::string tmp_regname) {
     else {
       ret_reg = tmp_regname;
       int param_offset = 4 * (frame.frame_offset() + addr_val - 4);
-      ret.push_back(string("\tldr\t") + tmp_regname + ", [sp, #" + to_string(param_offset));
+      ret.push_back(string("\tldr\t") + tmp_regname + ", [sp, #" + to_string(param_offset) + "]");
     }
   }
   // ir_armify保证全局变量一定是单一变量
   else if (ir_addr->kind == IR::Addr::Kind::NAMED_LABEL) {
     ret_reg = tmp_regname;
+    // 先获取全局变量信息
+    auto vartab_ent = context.vartab_cur->get(ir_addr->name);
+    // 先移动地址
     ret.push_back(string("\tldr\t") + tmp_regname + ", =" + ir_addr->name);
+    // 如果是全局变量，则需要移动值
+    if (vartab_ent==nullptr || !(vartab_ent->is_array())) 
+      ret.push_back(string("\tldr\t") + tmp_regname + ", [" + tmp_regname + "]");
   }
   // 立即数
   else if (ir_addr->kind == IR::Addr::Kind::IMM) {
@@ -104,7 +111,7 @@ move_to_reg(FrameInfo &frame, IR::Addr::Ptr ir_addr, std::string tmp_regname) {
 
 // 生成将寄存器内容移动到VAR型变量的语句
 std::pair<string, std::list<string> >
-store_from_reg(FrameInfo &frame, IR::Addr::Ptr ir_addr, std::string tmp_regname) {
+store_from_reg(FrameInfo &frame, IR::Addr::Ptr ir_addr, std::string result_regname, std::string idle_regname) {
 
   auto & reg_assign = frame.reg_assign;
 
@@ -120,13 +127,13 @@ store_from_reg(FrameInfo &frame, IR::Addr::Ptr ir_addr, std::string tmp_regname)
     else if (reg_assign.count(addr_color)) ret_reg = std::string("r") + to_string(reg_assign[addr_color]);
     // 如果属于溢出颜色
     else if (frame.spill.count(addr_color)) {
-      ret_reg = tmp_regname;
-      ret.push_back(string("\tstr\t") + tmp_regname + ", [sp, #" + to_string(4*(frame.spill_offset()+frame.spill[addr_color])) + "]");
+      ret_reg = result_regname;
+      ret.push_back(string("\tstr\t") + result_regname + ", [sp, #" + to_string(4*(frame.spill_offset()+frame.spill[addr_color])) + "]");
     }
     // 如果属于局部数组
     else if (frame.local_arr.count(addr_val)) {
-      ret_reg = tmp_regname;
-      ret.push_back(string("\tadd\t") + tmp_regname + "sp, #" + to_string(4*(frame.local_arr_offset() + frame.local_arr[addr_val])));
+      ret_reg = result_regname;
+      ret.push_back(string("\tadd\t") + result_regname + ", sp, #" + to_string(4*(frame.local_arr_offset() + frame.local_arr[addr_val])));
     }
   }
   else if (ir_addr->kind == IR::Addr::Kind::PARAM) {
@@ -136,20 +143,21 @@ store_from_reg(FrameInfo &frame, IR::Addr::Ptr ir_addr, std::string tmp_regname)
     }
     // 如果属于栈传递的参数
     else {
-      ret_reg = tmp_regname;
+      ret_reg = result_regname;
       int param_offset = 4 * (frame.frame_offset() + addr_val - 4);
-      ret.push_back(string("\tstr\t") + tmp_regname + ", [sp, #" + to_string(param_offset));
+      ret.push_back(string("\tstr\t") + result_regname + ", [sp, #" + to_string(param_offset));
     }
   }
   // ir_armify保证全局变量一定是变量型的
   else if (ir_addr->kind == IR::Addr::Kind::NAMED_LABEL) {
-    ret_reg = tmp_regname;
-    ret.push_back(string("\tstr\t") + tmp_regname + ", =" + ir_addr->name);
+    ret_reg = result_regname;
+    ret.push_back(string("\tldr\t") + idle_regname + ", =" + ir_addr->name);
+    ret.push_back(string("\tstr\t") + result_regname + ", [" + idle_regname + "]");
   }
   // 立即数
   else if (ir_addr->kind == IR::Addr::Kind::IMM) {
-    ret_reg = tmp_regname;
-    ret.push_back(string("\tmov\t") + tmp_regname + ", #" + std::to_string(ir_addr->val));
+    ret_reg = result_regname;
+    ret.push_back(string("\tmov\t") + result_regname + ", #" + std::to_string(ir_addr->val));
   }
 
   return std::make_pair(ret_reg, ret);
@@ -166,7 +174,7 @@ translate(FrameInfo &frame, IR::Ptr ir) {
   if (ir->is_al()) {
     auto [a1_reg, a1_arm] = move_to_reg(frame, ir->a1, string("r10"));
     auto [a2_reg, a2_arm] = move_to_reg(frame, ir->a2, string("fp"));
-    auto [a0_reg, a0_arm] = store_from_reg(frame, ir->a0, string("fp"));
+    auto [a0_reg, a0_arm] = store_from_reg(frame, ir->a0, string("fp"), string("r10"));
     // 将a1与a2取入寄存器
     ret.splice(ret.end(), a1_arm);
     ret.splice(ret.end(), a2_arm);
@@ -180,7 +188,7 @@ translate(FrameInfo &frame, IR::Ptr ir) {
     if (ir->a0->get_color() == ir->a1->get_color() && ir->a0->get_color() != color_graph::none_color()) goto end;
     
     auto [a1_reg, a1_arm] = move_to_reg(frame, ir->a1, string("r10"));
-    auto [a0_reg, a0_arm] = store_from_reg(frame, ir->a0, string("r10"));
+    auto [a0_reg, a0_arm] = store_from_reg(frame, ir->a0, string("r10"), string("fp"));
     // 将a1取入寄存器
     ret.splice(ret.end(), a1_arm);
     // 移动
@@ -190,7 +198,7 @@ translate(FrameInfo &frame, IR::Ptr ir) {
   }
   else if (ir->is_mov()) {
     auto [a1_reg, a1_arm] = move_to_reg(frame, ir->a1, string("r10"));
-    auto [a0_reg, a0_arm] = store_from_reg(frame, ir->a0, string("r10"));
+    auto [a0_reg, a0_arm] = store_from_reg(frame, ir->a0, string("r10"), string("fp"));
     // 将a1取入寄存器
     ret.splice(ret.end(), a1_arm);
     // 移动
@@ -248,7 +256,7 @@ translate(FrameInfo &frame, IR::Ptr ir) {
   else if (ir->op_ == IR::Op::LOAD) {
     auto [a1_reg, a1_arm] = move_to_reg(frame, ir->a1, string("fp"));
     auto [a2_reg, a2_arm] = move_to_reg(frame, ir->a2, string("r10"));
-    auto [a0_reg, a0_arm] = store_from_reg(frame, ir->a0, string("r10"));
+    auto [a0_reg, a0_arm] = store_from_reg(frame, ir->a0, string("r10"), string("fp"));
     // 将a1与a2取入寄存器
     ret.splice(ret.end(), a1_arm);
     ret.splice(ret.end(), a2_arm);
@@ -261,17 +269,17 @@ translate(FrameInfo &frame, IR::Ptr ir) {
   else if (ir->op_ == IR::Op::STORE) {
     auto [a0_reg, a0_arm] = move_to_reg(frame, ir->a0, string("fp"));
     auto [a1_reg, a1_arm] = move_to_reg(frame, ir->a1, string("r10"));
-    auto [a2_reg, a2_arm] = store_from_reg(frame, ir->a2, string("r9"));
+    // a2一定是VAR类型变量，不会用到fp
+    auto [a2_reg, a2_arm] = store_from_reg(frame, ir->a2, string("r10"), string("fp"));
     // 将a0与a1取入寄存器
     ret.splice(ret.end(), a0_arm);
     ret.splice(ret.end(), a1_arm);
+    // 计算变址
+    ret.push_back(string("\tadd\t") + a0_reg + ", " + a0_reg + ", " + a1_reg + ", lsl #2");
     // 将a2取入寄存器，并检查是否需要a9
-    if (a2_reg == string("r9")) ret.push_back(string("\tstr\tr9, [sp, #-4]"));
     ret.splice(ret.end(), a2_arm);
     // 执行变址存数
-    ret.push_back(string("\tstr\t") + a2_reg + ", [" + a0_reg + ", " + a1_reg + ", lsl #2]");
-    // 还原a9
-    if (a2_reg == string("r9")) ret.push_back(string("\tldr\tr9, [sp, #-4]"));
+    ret.push_back(string("\tstr\t") + a2_reg + ", [" + a0_reg + "]");
   }
 
   end:

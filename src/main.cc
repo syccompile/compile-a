@@ -77,8 +77,7 @@ int main(int argc, char *argv[]) {
     remove_redunctant_label(func);
   
   for (auto &func: func_list) {
-    IR::List def;
-    ir_armify(def, func);
+    ir_armify(def_list, func);
   }
 
   for (auto &func: func_list)
