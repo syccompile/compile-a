@@ -75,7 +75,7 @@ void test(const fs::path &testFile, const fs::path &outputDir) {
     }
     exit_code = std::system(run_command.c_str());
     std::ofstream ofs(outputResultFile, std::ios::app);
-    ofs << std::endl << exit_code << std::endl;
+    ofs << std::endl << (exit_code>>8) << std::endl;
     ofs.close();
 
     /* check */
