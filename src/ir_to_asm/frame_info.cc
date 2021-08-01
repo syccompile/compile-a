@@ -31,8 +31,8 @@ FrameInfo::cal_frameinfo(IR::List &l, std::unordered_map<int, int> reg_assign) {
   // 计算局部数组与函数传参所需空间与偏移
   for (auto &ir: l) {
     if (ir->op_ == IR::Op::ALLOC_IN_STACK) {
+      ret.local_arr[ir->a0->val] = ret.local_arr_size;
       ret.local_arr_size += ir->a1->val;
-      ret.local_arr[ir->a0->val] = ret.local_arr_size - 1;
     }
     else if (ir->op_ == IR::Op::PARAM) {
       ret.param_size = std::max(ret.param_size, ir->a0->val-3);

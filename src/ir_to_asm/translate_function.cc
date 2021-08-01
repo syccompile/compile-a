@@ -354,17 +354,16 @@ translate(FrameInfo &frame, IR::Ptr ir) {
   else if (ir->op_ == IR::Op::STORE) {
     auto [a0_reg, a0_arm] = move_to_reg(frame, ir->a0, string("fp"));
     auto [a1_reg, a1_arm] = move_to_reg(frame, ir->a1, string("r10"));
-    // a2一定是VAR类型变量，不会用到fp
     auto [a2_reg, a2_arm] = store_from_reg(frame, ir->a2, string("r10"), string("fp"));
     // 将a0与a1取入寄存器
     ret.splice(ret.end(), a0_arm);
     ret.splice(ret.end(), a1_arm);
     // 计算变址
-    ret.push_back(string("\tadd\t") + a0_reg + ", " + a0_reg + ", " + a1_reg + ", lsl #2");
-    // 将a2取入寄存器，并检查是否需要a9
+    ret.push_back(string("\tadd\t") + "fp, " + a0_reg + ", " + a1_reg + ", lsl #2");
+    // 将a2取入寄存器
     ret.splice(ret.end(), a2_arm);
     // 执行变址存数
-    ret.push_back(string("\tstr\t") + a2_reg + ", [" + a0_reg + "]");
+    ret.push_back(string("\tstr\t") + a2_reg + ", [fp]");
   }
 
   end:
