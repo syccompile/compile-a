@@ -299,7 +299,7 @@ FuncCallExp::eval() {
 
 IR::Addr::Ptr
 FuncCallExp::get_var_addr() {
-  return this->addr_ = IR::Addr::make_ret();
+  return Expression::get_var_addr();
 }
 
 IR::List
@@ -328,10 +328,14 @@ FuncCallExp::translate() {
   // 生成函数调用的代码
   // TODO 未定义函数，参数类型不一致
   auto func_ent = context.functab->get(this->name_);
-  if (func_ent != nullptr)
+  if (func_ent != nullptr) {
     ADD_UNR(CALL, func_ent->label);
-  else
+    ADD_BIN(MOV,  this->get_var_addr(), IR::Addr::make_ret());
+  }
+  else {
     ADD_UNR(CALL, IR::Addr::make_named_label(this->name_));
+    ADD_BIN(MOV,  this->get_var_addr(), IR::Addr::make_ret());
+  }
 
   return ret;
 }
