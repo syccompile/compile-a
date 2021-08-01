@@ -11,6 +11,7 @@ using namespace std;
 class var : public color_node{
 public :
   //var(string n) : name(n) {}
+  var(): color_node() { }
 
   // 连接两个变量，表示两变量冲突
   static void link(shared_ptr<var> lhs, shared_ptr<var> rhs) {
@@ -44,6 +45,9 @@ public :
   
   // 存储冲突的变量
   vector<shared_ptr<var>> neighbors;
+  int num;   // 变量标号
+  int degree; // 代表变量的度
+  bool is_del; // 是否被删除标志
   // 变量名称
   // string name;
 };
