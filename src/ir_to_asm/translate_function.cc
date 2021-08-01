@@ -318,6 +318,9 @@ translate(FrameInfo &frame, IR::Ptr ir) {
     else {
       auto [a1_reg, a1_arm] = move_to_reg(frame, ir->a1, string("r10"));
       int offset = 4*(ir->a0->val-4);
+      // 将a1取入寄存器
+      ret.splice(ret.end(), a1_arm);
+      // 压栈
       ret.push_back(string("\tstr\t") + a1_reg + ", [sp, #" + to_string(offset) + "]");
     }
   }
