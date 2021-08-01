@@ -170,7 +170,7 @@ move_into_var(IR::Addr::Ptr a) {
           label_addr = IR::Addr::make_named_label(std::string(".var_ptr_") + a->name);
           // 创建新全局变量
           ret_def.push_back(IR::make_unary(IR::Op::VARDEF, label_addr));
-          ret_def.push_back(IR::make_unary(IR::Op::DATA, IR::Addr::make_imm(a->val)));
+          ret_def.push_back(IR::make_unary(IR::Op::DATA, a));
           ret_def.push_back(IR::make_no_operand(IR::Op::VAREND));
           // 加入表中
           glob_var_map[a->name] = label_addr;

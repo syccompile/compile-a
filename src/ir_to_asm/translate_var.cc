@@ -19,7 +19,9 @@ translate_var(IR::List &l) {
 
   while (!(l.empty())) {
     auto ir = l.front();
-    if (ir->op_==IR::Op::DATA)      ret.push_back(string("\t.word\t") + to_string(ir->a0->val));
+    if (ir->op_==IR::Op::DATA) ret.push_back(string("\t.word\t") +
+      ((ir->a0->kind == IR::Addr::Kind::NAMED_LABEL) ? ir->a0->name : to_string(ir->a0->val))
+    );
     else if (ir->op_==IR::Op::ZERO) ret.push_back(string("\t.space\t") + to_string(4*(ir->a0->val)));
     processed.splice(processed.end(), l, l.begin());
   }
