@@ -146,7 +146,7 @@ void Function::debug() {
     delete_global_common_expression();
     local_copy_propagation();
     global_copy_propagation();
-    ir_specify_optimization();
+//    ir_specify_optimization();
     loop_invariant_code_motion();
     remove_dead_code();
   }
@@ -936,4 +936,38 @@ void Function::_delete_block(int i) {
     }
   }
   basic_block_vector_.erase(delete_iter);
+}
+void Function::staighten() {
+  bool change = true;
+  while (change) {
+    change = false;
+    for (auto &basic_block : basic_block_vector_) {
+      assert(!basic_block->ir_list_.empty()); // DELETE: need to avoid
+      auto last_ir = basic_block->ir_list_.back();
+      if (!is_jmp_op(last_ir->op_)) continue;
+      if (len_of_list(basic_block->successor_list_) == 1) {
+        auto succ_block = basic_block->successor_list_.front().lock();
+        // DECIDE: 是否检查succ_block的第一句为label
+        if (len_of_list(succ_block->predecessor_list_) == 1) {
+          auto succ_pred_block = succ_block->predecessor_list_.front().lock();
+          assert(succ_pred_block->block_num_ == basic_block->block_num_); // DELETE: 理论上必然成立
+          _merge_block(basic_block, succ_block);
+          change = true;
+          break;  // 修改了容器，如果再循环可能会出问题
+        }
+      }
+    }
+  }
+}
+
+void Function::_merge_block(const BasicBlock::Ptr &block1, const BasicBlock::Ptr &block2) {
+  block1->ir_list_.pop_back();  // pop jmp op (JMP-JNE)
+  block2->ir_list_.pop_front(); // pop label
+  block1->ir_list_.splice(block1->ir_list_.end(),
+                          block2->ir_list_,
+                          block2->ir_list_.begin(), block2->ir_list_.end());
+  block1->successor_list_ = block2->successor_list_;
+  auto block2_iter = basic_block_vector_.begin() + block2->block_num_;
+  basic_block_vector_.erase(block2_iter);
+  _build_lineno_ir_map();
 }

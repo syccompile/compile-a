@@ -1,9 +1,9 @@
 int func2 (int d){
   int a, b, c, e;
   a = 1;
-  b = d;
+  b = 5;
   c = b;
-  while (b != 10) {
+  if (b < 10) {
     e = a;
     a = c;
     d = a + 5;

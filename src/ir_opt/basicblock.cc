@@ -29,6 +29,10 @@ bool is_swappable_op(IR::Op op) {
       op == IR::Op::AND || op == IR::Op::OR || op == IR::Op::XOR;
 }
 
+bool is_jmp_op(IR::Op op) {
+  return op >= IR::Op::JMP && op <= IR::Op::JNE;
+}
+
 inline bool is_var_or_param(const IR::Addr::Ptr &a) {
   if (a == nullptr) return false;
   return a->kind == IR::Addr::Kind::VAR || a->kind == IR::Addr::Kind::PARAM;
@@ -295,15 +299,15 @@ void BasicBlock::constant_folding() {
   for (auto &ir: ir_list_) {
     if (is_algo_op(ir->op_) && ir->a1->kind == IR::Addr::Kind::IMM && ir->a2->kind == IR::Addr::Kind::IMM) {
       switch (ir->op_) {
-        case IR::Op::ADD: ir->a1->val = (ir->a1->val + ir->a2->val);
+        case IR::Op::ADD: ir->a1 = make_imm(ir->a1->val + ir->a2->val);
           break;
-        case IR::Op::SUB: ir->a1->val = (ir->a1->val - ir->a2->val);
+        case IR::Op::SUB: ir->a1 = make_imm(ir->a1->val - ir->a2->val);
           break;
-        case IR::Op::MUL: ir->a1->val = (ir->a1->val * ir->a2->val);
+        case IR::Op::MUL: ir->a1 = make_imm(ir->a1->val * ir->a2->val);
           break;
-        case IR::Op::DIV: ir->a1->val = (ir->a1->val / ir->a2->val);
+        case IR::Op::DIV: ir->a1 = make_imm(ir->a1->val / ir->a2->val);
           break;
-        case IR::Op::MOD: ir->a1->val = (ir->a1->val % ir->a2->val);
+        case IR::Op::MOD: ir->a1 = make_imm(ir->a1->val % ir->a2->val);
           break;
         default: break; // unreachable!
       }

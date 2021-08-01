@@ -17,6 +17,7 @@
 bool is_mov_op(IR::Op op);
 bool is_algo_op(IR::Op op);
 bool is_swappable_op(IR::Op op);
+bool is_jmp_op(IR::Op op);
 
 bool operator==(const IR::Addr &lhs, const IR::Addr &rhs);
 bool operator<(const IR::Addr &lhs, const IR::Addr &rhs);

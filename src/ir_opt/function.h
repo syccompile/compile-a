@@ -60,6 +60,8 @@ class Function {
   void _explore(const BasicBlock::Ptr &block);
   void _delete_block(int i);
 
+  void _merge_block(const BasicBlock::Ptr &block1, const BasicBlock::Ptr &block2);
+
  public:
   using Ptr = shared_ptr<Function>;
   using iterator = vector<BasicBlock::Ptr>::iterator;
@@ -84,6 +86,7 @@ class Function {
   void loop_invariant_code_motion();
   void ir_specify_optimization(); // 针对IR的特定优化, TODO: 有bug, 待修复
   void delete_unreachable_code();
+  void staighten();
   iterator begin() { return basic_block_vector_.begin(); }
   iterator end() { return basic_block_vector_.end(); }
   list<IR::Ptr> merge();
@@ -94,6 +97,11 @@ class Function {
 inline std::shared_ptr<Function>
 make_function_block(std::list<IR::Ptr> &ir_list) {
   return std::make_shared<Function>(ir_list);
+}
+
+template<typename T>
+inline auto len_of_list(const std::list<T> &l) {
+  return std::distance(l.begin(), l.end());
 }
 
 #endif //COMPILER_SRC_IR_OPT_FUNCTION_HPP_
