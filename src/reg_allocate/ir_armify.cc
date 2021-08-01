@@ -47,7 +47,7 @@ substitute_param(IR::List &l) {
     auto ir = l.front();
 
     if (ir->a0!=nullptr && ir->op_!=IR::Op::PARAM) {
-      if (ir->a0->kind==IR::Addr::Kind::PARAM && ir->a1->val<4)
+      if (ir->a0->kind==IR::Addr::Kind::PARAM && ir->a0->val<4)
         ir->a0 = get_addr(ir->a0->val);
       else if (ir->a0->kind==IR::Addr::RET)
         ir->a0 = functab_ent->get_param_addr(0);

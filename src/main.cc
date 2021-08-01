@@ -14,6 +14,25 @@
 
 extern int yylineno;
 
+namespace {
+
+std::list<IR::List>
+split_vars(IR::List &vars) {
+  std::list<IR::List> ret;
+  IR::List lst;
+
+  while (!(vars.empty())) {
+    lst.splice(lst.end(), vars, vars.begin());
+    if (lst.back()->op_ == IR::Op::VAREND) {
+      ret.push_back(lst);
+      lst.clear();
+    }
+  }
+  return ret;
+}
+
+};
+
 /** 全局变量声明  **/
 std::vector<VarDeclStmt *> vardecl;
 /** 函数声明  **/
@@ -68,7 +87,8 @@ int main(int argc, char *argv[]) {
 
   // 将AST翻译为IR
   for (VarDeclStmt *stmt : vardecl) {
-    def_list.emplace_back(stmt->translate());
+    auto vars = stmt->translate();
+    def_list.splice(def_list.end(), split_vars(vars));
   }
   for (FunctionDecl *f : funcs) {
     func_list.emplace_back(f->translate());
