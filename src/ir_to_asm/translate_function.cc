@@ -201,8 +201,6 @@ store_from_reg(FrameInfo &frame, IR::Addr::Ptr ir_addr, std::string result_regna
           ret.push_back(string("\tadd\t") + idle_regname + ", " + idle_regname + ", #" + to_string(i));
         ret.push_back(string("\tstr\t") + result_regname + ", [" + idle_regname + "]");
       }
-
-      ret.push_back(string("\tstr\t") + result_regname + ", [sp, #" + to_string(4*(frame.spill_offset()+frame.spill[addr_color])) + "]");
     }
     // 如果属于局部数组
     else if (frame.local_arr.count(addr_val)) {
@@ -357,7 +355,7 @@ translate(FrameInfo &frame, IR::Ptr ir) {
   else if (ir->op_ == IR::Op::STORE) {
     auto [a0_reg, a0_arm] = move_to_reg(frame, ir->a0, string("fp"));
     auto [a1_reg, a1_arm] = move_to_reg(frame, ir->a1, string("r10"));
-    auto [a2_reg, a2_arm] = store_from_reg(frame, ir->a2, string("r10"), string("fp"));
+    auto [a2_reg, a2_arm] = move_to_reg(frame, ir->a2, string("r10"));
     // 将a0与a1取入寄存器
     ret.splice(ret.end(), a0_arm);
     ret.splice(ret.end(), a1_arm);

@@ -251,7 +251,7 @@ VarExp::translate() {
   // 翻译模式：生成临时表达式 (this==0)
   if (this->translate_to_logical()) {
     // 生成 (this==0)临时表达式
-    BinaryExp *tmp = new BinaryExp(Op::EQ, this, new NumberExp(0));
+    BinaryExp *tmp = new BinaryExp(Op::NEQ, this, new NumberExp(0));
     // 要求这个临时表达式转为逻辑表达式，并赋予本表达式的失败标号
     tmp->cast_to_logical = true;
     tmp->cast_to_regular = false;
