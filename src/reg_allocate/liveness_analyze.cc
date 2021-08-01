@@ -157,10 +157,13 @@ ir_parse(IR::List &ir_list) {
         }
         break;
       }
+      OP_CASE(RET) {
+        ACCEPT_VAR(used, a1);
+        break;
+      }
       OP_CASE(LABEL)
       OP_CASE(FUNCDEF)
       OP_CASE(FUNCEND)
-      OP_CASE(RET)
       OP_CASE(VARDEF)
       OP_CASE(DATA)
       OP_CASE(ZERO)
