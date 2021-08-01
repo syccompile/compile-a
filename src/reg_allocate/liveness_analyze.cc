@@ -215,28 +215,18 @@ make_conflict_graph(vector<varUse::ptr> var_uses, set<color_node::ptr> nodes) {
 } // namespace
 
 // 更新mov_related，因为只有不冲突的Mov相关变量，才可能合并
-set<pair<color_node::ptr, color_node::ptr> >
-update_move_related(set<color_node::ptr> vars, set<pair<color_node::ptr, color_node::ptr> > mov_related){
-    for(auto it_mov = mov_related.begin(); it_mov != mov_related.end();){
-        // auto Addr_first = dynamic_pointer_cast<IR_Addr>((*it_mov).first);
-        auto var_second = dynamic_pointer_cast<var>((*it_mov).second);  // 变量second
-        auto var_first = vars.find((*it_mov).first);
-        auto Addr_first = dynamic_pointer_cast<IR_Addr>(*var_first);  // 变量first的地址
-        int flag = 0;   // 是否删除一条mov_related的标志
-        // 遍历变量first的邻居，如果邻居有second，则删除这条mov_related
-        for(int i=0; i< Addr_first->neighbors.size(); i++){
-            if(Addr_first->neighbors[i] == var_second){
-                // 删除该条mov
-                it_mov = mov_related.erase(it_mov);
-                flag = 1;
-                break;
-            }
-        }
-        if(!flag){
-            it_mov++;
-        }
+void
+update_move_related(set<pair<color_node::ptr, color_node::ptr> > &mov_related){
+  for(auto it = mov_related.begin() ; it!=mov_related.end() ;) {
+    auto first_cnode  = dynamic_pointer_cast<IR_Addr>((*it).first);  // 变量first的地址
+    auto second_cnode = dynamic_pointer_cast<IR_Addr>((*it).second);  // 变量second的地址
+
+    if (first_cnode->is_neighbored(second_cnode)) {
+      it = mov_related.erase(it);
+    } else {
+      ++it;
     }
-    return mov_related;
+  }
 }
 
 // 活跃分析
@@ -279,6 +269,6 @@ liveness_analyze(IR::List &ir_list) {
 
   // 构造冲突图
   make_conflict_graph(nodes, vars);
-  mov_related = update_move_related(vars, mov_related);
+  update_move_related(mov_related);
   return make_tuple(vars, mov_related);
 }
