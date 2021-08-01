@@ -125,7 +125,13 @@ move_into_var(IR::Addr::Ptr a) {
         // 若无
         if (imm_map.count((uint32_t)(a->val)) == 0) {
           // 建立地址
-          imm_globl_addr = IR::Addr::make_named_label(std::string(".imm_") + std::to_string((uint32_t)(a->val)));
+          if ((uint32_t)(a->val) < 0) {
+            imm_globl_addr = IR::Addr::make_named_label(
+                std::string(".imm_") + std::to_string((uint32_t)(a->val)));
+          }else {
+            imm_globl_addr = IR::Addr::make_named_label(
+                std::string(".imm_n") + std::to_string((uint32_t)(-a->val)));
+          }
           // 创建新全局变量
           ret_def.push_back(IR::make_unary(IR::Op::VARDEF, imm_globl_addr));
           ret_def.push_back(IR::make_unary(IR::Op::DATA, IR::Addr::make_imm(a->val)));
