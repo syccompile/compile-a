@@ -23,6 +23,7 @@ bool operator==(const IR::Addr &lhs, const IR::Addr &rhs);
 bool operator<(const IR::Addr &lhs, const IR::Addr &rhs);
 std::ostream &operator<<(std::ostream &os, IR::Addr a);
 inline bool is_var_or_param(const IR::Addr::Ptr &a);
+inline bool is_imm(const IR::Addr::Ptr &a);
 
 // 用于可用表达式分析的“表达式”类
 class Exp {
@@ -102,6 +103,7 @@ class BasicBlock {
   void local_copy_propagation(std::set<Exp> &available_copy_exps);
   void remove_dead_code();
   void ir_specify_optimization(); // 针对IR的特定优化
+  void if_simplify();
   iterator begin() { return ir_list_.begin(); }
   iterator end() { return ir_list_.end(); }
   reverse_iterator rbegin() { return ir_list_.rbegin(); }

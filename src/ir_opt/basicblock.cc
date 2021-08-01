@@ -38,6 +38,10 @@ inline bool is_var_or_param(const IR::Addr::Ptr &a) {
   return a->kind == IR::Addr::Kind::VAR || a->kind == IR::Addr::Kind::PARAM;
 }
 
+inline bool is_imm(const IR::Addr::Ptr &a) {
+  return a->kind == IR::Addr::Kind::IMM;
+}
+
 void testExp() {
   auto exp1 = Exp(IR::Op::SUB, make_var(1), make_imm(9));
   auto exp2 = Exp(IR::Op::SUB, make_var(1), make_imm(9));
@@ -496,6 +500,72 @@ void BasicBlock::ir_specify_optimization() {
       cur_ir->a0 = next_ir->a0;
       iter = ir_list_.erase(next_iter);
       --iter; // 退回到算术指令
+    } else {
+      ++iter;
+    }
+  }
+}
+
+void BasicBlock::if_simplify() {
+  auto mov_successfully = [](IR::Op op, int left, int right) -> bool {
+    assert(op != IR::Op::MOV && op != IR::Op::MVN);  // 不能是MOV
+    if ((op == IR::Op::MOVLE && left <= right) ||
+        (op == IR::Op::MOVLT && left < right) ||
+        (op == IR::Op::MOVGE && left >= right) ||
+        (op == IR::Op::MOVGT && left > right) ||
+        (op == IR::Op::MOVEQ && left == right) ||
+        (op == IR::Op::MOVNE && left != right)) {
+      return true;
+    }
+    return false;
+  };
+  auto jmp_successfully = [](IR::Op op, int left, int right) -> bool {
+    assert(op != IR::Op::JMP);  // 不能是JMP
+    if ((op == IR::Op::JLE && left <= right) ||
+        (op == IR::Op::JLT && left < right) ||
+        (op == IR::Op::JGE && left >= right) ||
+        (op == IR::Op::JGT && left > right) ||
+        (op == IR::Op::JE && left == right) ||
+        (op == IR::Op::JNE && left != right)) {
+      return true;
+    }
+    return false;
+  };
+  for (auto iter = ir_list_.begin(); iter != ir_list_.end();) {
+    auto cur_ir = *iter;
+    if (cur_ir->op_ == IR::Op::CMP && is_imm(cur_ir->a1) && is_imm(cur_ir->a2)) {
+      auto left = cur_ir->a1->val, right = cur_ir->a2->val;
+      auto next_iter = std::next(iter);
+      auto next_ir = *next_iter;
+      ir_list_.erase(iter); // 删除CMP指令
+      IR::Op next_ir_op = next_ir->op_;
+      if (is_mov_op(next_ir_op)) {  // 可能修改多条指令
+        assert(next_ir_op != IR::Op::MOV && next_ir_op != IR::Op::MVN);  // DELETE: 理论上不会是MOV
+        while (true) {
+          if (mov_successfully(next_ir_op, left, right)) {
+            next_ir->op_ = IR::Op::MOV; // 变为无条件赋值
+            ++next_iter;  // 跳转到下一条指令
+          } else {  // 直接删除
+            next_iter = ir_list_.erase(next_iter);
+          }
+          if (next_iter == ir_list_.end()) break;
+          next_ir = *next_iter;
+          next_ir_op = next_ir->op_;
+          if (!is_mov_op(next_ir_op) || next_ir_op == IR::Op::MOV || next_ir_op == IR::Op::MVN) {
+            break;
+          }
+        }
+      } else if (is_jmp_op(next_ir_op)) { // 最多修改一条指令
+        if (jmp_successfully(next_ir_op, left, right)) {
+          next_ir->op_ = IR::Op::JMP;  // 变成无条件跳转
+          ++next_iter;
+        } else {
+          next_iter = ir_list_.erase(next_iter);  // 直接删除
+        }
+      } else {
+        assert(false);  // DELETE: 理论上不会到达这个分支
+      }
+      iter = next_iter;
     } else {
       ++iter;
     }

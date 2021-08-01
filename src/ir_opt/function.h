@@ -62,6 +62,9 @@ class Function {
 
   void _merge_block(const BasicBlock::Ptr &block1, const BasicBlock::Ptr &block2);
 
+  void _divide_basic_block(list<IR::Ptr> &ir_list);
+  void _link_basic_block();
+  void _rebuild_basic_block();
  public:
   using Ptr = shared_ptr<Function>;
   using iterator = vector<BasicBlock::Ptr>::iterator;
@@ -87,6 +90,8 @@ class Function {
   void ir_specify_optimization(); // 针对IR的特定优化, TODO: 有bug, 待修复
   void delete_unreachable_code();
   void staighten();
+  void if_simplify();
+  void optimize(int optimize_level);
   iterator begin() { return basic_block_vector_.begin(); }
   iterator end() { return basic_block_vector_.end(); }
   list<IR::Ptr> merge();

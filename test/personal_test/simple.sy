@@ -3,7 +3,7 @@ int func2 (int d){
   a = 1;
   b = 5;
   c = b;
-  if (b < 10) {
+  if (b > 10) {
     e = a;
     a = c;
     d = a + 5;

@@ -44,12 +44,8 @@ void PRINT_LOOP(const std::vector<BasicBlock::Ptr> &l) {
   }
 }
 
-Function::Function(list<IR::Ptr> &ir_list) {
-  func_name_ = ir_list.front()->a0->name;
-  arg_num_ = ir_list.front()->a1->val;
-//  arg_num_ = ir_list.front()->a0->val;
-  ir_list.pop_front();  // pop FUNCDEF
-
+void Function::_divide_basic_block(list<IR::Ptr> &ir_list) {
+  basic_block_vector_.clear();
   auto tmp_basic_block = make_empty_basic_block();  // 第一条指令是首指令
   while (!(ir_list.empty())) {
     auto front = ir_list.front();
@@ -72,13 +68,9 @@ Function::Function(list<IR::Ptr> &ir_list) {
   if (!(tmp_basic_block->ir_list_.empty())) {
     basic_block_vector_.push_back(tmp_basic_block);
   }
+}
 
-  int block_num = -1;
-  for (const auto &basic_block : basic_block_vector_) {
-    ++block_num;
-    basic_block->block_num_ = block_num;
-  }
-
+void Function::_link_basic_block() {
   // 计算前驱节点和后继节点
   auto find_label = [&](int label_num) {
     for (const auto &basic_block : basic_block_vector_) {
@@ -132,6 +124,17 @@ Function::Function(list<IR::Ptr> &ir_list) {
     }
   }
 }
+
+Function::Function(list<IR::Ptr> &ir_list) {
+  func_name_ = ir_list.front()->a0->name;
+  arg_num_ = ir_list.front()->a1->val;
+  ir_list.pop_front();  // pop FUNCDEF
+
+  _divide_basic_block(ir_list);
+  _build_lineno_ir_map();
+  _link_basic_block();
+}
+
 list<string> Function::translate_to_arm() {
   return list<string>();
 }
@@ -147,6 +150,9 @@ void Function::debug() {
     local_copy_propagation();
     global_copy_propagation();
 //    ir_specify_optimization();
+    if_simplify();
+    staighten();
+    delete_unreachable_code();
     loop_invariant_code_motion();
     remove_dead_code();
   }
@@ -958,6 +964,7 @@ void Function::staighten() {
       }
     }
   }
+  // DECIDE: delete_unreachable_code here
 }
 
 void Function::_merge_block(const BasicBlock::Ptr &block1, const BasicBlock::Ptr &block2) {
@@ -971,3 +978,22 @@ void Function::_merge_block(const BasicBlock::Ptr &block1, const BasicBlock::Ptr
   basic_block_vector_.erase(block2_iter);
   _build_lineno_ir_map();
 }
+
+void Function::if_simplify() {
+  for (auto &basic_block : basic_block_vector_) {
+    basic_block->if_simplify();
+  }
+  _rebuild_basic_block();
+}
+
+void Function::_rebuild_basic_block() {
+  auto ir_list = merge();
+  _divide_basic_block(ir_list);
+  _build_lineno_ir_map();
+  _link_basic_block();
+}
+
+void Function::optimize(int optimize_level) {
+  // TODO
+}
+
