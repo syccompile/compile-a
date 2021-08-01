@@ -96,7 +96,7 @@ void process_mov(std::pair<color_node::ptr, color_node::ptr> pnn, color_allocate
        node2 = pnn.second;
 
   //bool can_mov = _briggs_mov(node1, node2);
-  bool can_mov = Geogre_mov(node1, node2)  || Geogre_mov(node2, node1);
+  bool can_mov = false; // Geogre_mov(node1, node2)  || Geogre_mov(node2, node1);
 
   if (!can_mov) {
     auto node1v = dynamic_pointer_cast<var>(node1),
