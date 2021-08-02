@@ -1,7 +1,7 @@
 #include "basicblock.h"
 #include "function.h"
 
-bool operator==(const IR::Addr &lhs, const IR::Addr &rhs) {
+bool operator==(const IR::Addr &lhs, const IR::Addr &rhs) { // 不适用于比较name字段
   return lhs.kind == rhs.kind && lhs.val == rhs.val;
 }
 
@@ -440,7 +440,10 @@ void BasicBlock::remove_dead_code() {
       live_variables.push_back(*a);
     }
   };
-  for (auto iter = std::prev(ir_list_.end()); iter != std::prev(ir_list_.begin()); --iter) {
+  int tmp = -1;
+  for (auto iter = std::prev(ir_list_.end()); tmp == 0; --iter) {
+    if (iter == ir_list_.begin()) tmp = 1;
+    --tmp;
     auto cur_ir = *iter;
     // bool removed = false;
     if (is_mov_op(cur_ir->op_)) { // 赋值操作

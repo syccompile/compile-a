@@ -91,6 +91,9 @@ class Function {
   void delete_unreachable_code();
   void staighten();
   void if_simplify();
+  void tail_merging();
+  void strength_reduction();
+  void induction_variable_elimination();
   void optimize(int optimize_level);
   iterator begin() { return basic_block_vector_.begin(); }
   iterator end() { return basic_block_vector_.end(); }
@@ -107,6 +110,17 @@ make_function_block(std::list<IR::Ptr> &ir_list) {
 template<typename T>
 inline auto len_of_list(const std::list<T> &l) {
   return std::distance(l.begin(), l.end());
+}
+
+inline bool erase_pred_succ_list(std::list<BasicBlock::Ptr_weak> &l, const BasicBlock::Ptr &block) {
+  auto result = std::find_if(l.begin(), l.end(), [&block](const BasicBlock::Ptr_weak &b) {
+    return b.lock()->block_num_ == block->block_num_;
+  });
+  if (result != l.end()) {
+    l.erase(result);
+    return true;
+  }
+  return false;
 }
 
 #endif //COMPILER_SRC_IR_OPT_FUNCTION_HPP_

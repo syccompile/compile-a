@@ -59,6 +59,14 @@ inline IR::Addr::Ptr make_param(int val) { return std::make_shared<IR::Addr>(IR:
 inline IR::Ptr make_tmp_assign_exp_ir(const Exp &exp) {
   return std::make_shared<IR>(exp.op_, alloc_var(), exp.a0_, exp.a1_);
 }
+static int cur_label_num = 100;
+inline IR::Addr::Ptr alloc_label() { return IR::Addr::make_label(++cur_label_num); }
+inline IR::Ptr make_label_ir(const IR::Addr::Ptr &label) {
+  return IR::make_unary(IR::Op::LABEL, label);
+}
+inline IR::Ptr make_jmp_ir(const IR::Addr::Ptr &label) {
+  return IR::make_unary(IR::Op::JMP, label);
+}
 
 class BasicBlock {
  private:
