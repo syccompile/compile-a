@@ -1,3 +1,4 @@
+#include <ir_opt.h>
 #include "function.h"
 
 const std::string normal = "\033[0m";
@@ -142,22 +143,22 @@ void Function::debug() {
 //  testIRADDR();
   cout << green << func_name_ << ": " << normal << endl;
   cout << "------------------------" << endl;
-  ir_specify_optimization();
-  tail_merging();
-//  for (int i = 0; i < 2; ++i) {
-//    constant_folding();
-//    algebraic_simplification();
-//    delete_local_common_expression();
-//    delete_global_common_expression();
-//    local_copy_propagation();
-//    global_copy_propagation();
-////    ir_specify_optimization();
-//    if_simplify();
-//    staighten();
-//    delete_unreachable_code();
-//    loop_invariant_code_motion();
-//    remove_dead_code();
-//  }
+  for (int i = 0; i < 2; ++i) {
+    ir_specify_optimization();
+    tail_merging();
+    label_simplify();
+    constant_folding();
+    algebraic_simplification();
+    delete_local_common_expression();
+    delete_global_common_expression();
+    local_copy_propagation();
+    global_copy_propagation();
+    if_simplify();
+    staighten();
+    delete_unreachable_code();
+    loop_invariant_code_motion();
+    remove_dead_code();
+  }
   reach_define_analysis();
   available_expression_analysis();
   live_variable_analysis();
@@ -1082,6 +1083,16 @@ void Function::tail_merging() { // TODO: ir_specify_optimization
       }
     }
   }
+}
+
+void Function::label_simplify() {
+  auto ir_list = merge();
+  remove_redunctant_label(ir_list);
+  remove_unnecessary_jmp(ir_list);
+  remove_unnecessary_cmp(ir_list);
+  _divide_basic_block(ir_list);
+  _build_lineno_ir_map();
+  _link_basic_block();
 }
 
 void Function::strength_reduction() {

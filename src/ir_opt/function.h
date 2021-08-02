@@ -92,6 +92,7 @@ class Function {
   void staighten();
   void if_simplify();
   void tail_merging();
+  void label_simplify();
   void strength_reduction();
   void induction_variable_elimination();
   void optimize(int optimize_level);
@@ -121,6 +122,37 @@ inline bool erase_pred_succ_list(std::list<BasicBlock::Ptr_weak> &l, const Basic
     return true;
   }
   return false;
+}
+
+inline void remove_unnecessary_jmp(std::list<IR::Ptr> &ir_list) {
+  for (auto iter = ir_list.begin(); iter != ir_list.end(); ++iter) {
+    auto next_iter = std::next(iter);
+    if (next_iter == ir_list.end()) break;
+    auto cur_ir = *iter;
+    auto next_ir = *next_iter;
+    if (is_jmp_op(cur_ir->op_) && is_jmp_op(next_ir->op_)) {
+      assert(next_ir->op_ == IR::Op::JMP);  // 可能会断言失败
+      if (*cur_ir->a0 == *next_ir->a0) {  // 要跳转到相同的标号
+        iter = ir_list.erase(iter);
+      }
+    }
+  }
+}
+
+inline void remove_unnecessary_cmp(std::list<IR::Ptr> &ir_list) {
+  // TODO: 优化不一定正确，以下代码建立在CMP之后必须马上使用条件跳转或者条件传送的基础上
+  for (auto iter = ir_list.begin(); iter != ir_list.end(); ++iter) {
+    auto next_iter = std::next(iter);
+    if (next_iter == ir_list.end()) break;
+    auto cur_ir = *iter;
+    auto next_ir = *next_iter;
+    if (cur_ir->op_ == IR::Op::CMP) {
+      if (!is_mov_op(next_ir->op_) || next_ir->op_ == IR::Op::MOV ||
+          !is_jmp_op(next_ir->op_) || next_ir->op_ == IR::Op::JMP) {
+        iter = ir_list.erase(iter);
+      }
+    }
+  }
 }
 
 #endif //COMPILER_SRC_IR_OPT_FUNCTION_HPP_
