@@ -142,6 +142,7 @@ void Function::debug() {
 //  testIRADDR();
   cout << green << func_name_ << ": " << normal << endl;
   cout << "------------------------" << endl;
+  ir_specify_optimization();
 //  for (int i = 0; i < 2; ++i) {
 //    constant_folding();
 //    algebraic_simplification();
@@ -880,6 +881,7 @@ void Function::_build_lineno_rd_vec() {
   }
 }
 void Function::ir_specify_optimization() {
+  live_variable_analysis();
   for (auto &basic_block : basic_block_vector_) {
     basic_block->ir_specify_optimization();
   }
@@ -993,7 +995,7 @@ void Function::_rebuild_basic_block() {
   _link_basic_block();
 }
 
-void Function::tail_merging() { // TODO: ignore jmp, ir_specify_optimization
+void Function::tail_merging() { // TODO: ir_specify_optimization
   auto equal_of_ir_addr_ptr = [](const IR::Addr::Ptr &a, const IR::Addr::Ptr &b) {
     if (a == nullptr) return b == nullptr;
     if (b == nullptr) return a == nullptr;

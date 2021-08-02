@@ -440,10 +440,7 @@ void BasicBlock::remove_dead_code() {
       live_variables.push_back(*a);
     }
   };
-  int tmp = -1;
-  for (auto iter = std::prev(ir_list_.end()); tmp == 0; --iter) {
-    if (iter == ir_list_.begin()) tmp = 1;
-    --tmp;
+  for (auto iter = std::prev(ir_list_.end()); true; --iter) {
     auto cur_ir = *iter;
     // bool removed = false;
     if (is_mov_op(cur_ir->op_)) { // 赋值操作
@@ -478,6 +475,7 @@ void BasicBlock::remove_dead_code() {
     } else if (cur_ir->op_ == IR::Op::RET) {
       add_live(cur_ir->a0);
     }
+    if (iter == ir_list_.begin()) break;
   }
 }
 void BasicBlock::ir_specify_optimization() {
@@ -486,25 +484,62 @@ void BasicBlock::ir_specify_optimization() {
    *        MOV reg2, reg1
    * 的代码转换成： ADD reg2, X, X
    * */
-  for (auto iter = ir_list_.begin(); iter != ir_list_.end();) {
+  auto live_variables = live_variable_OUT_;
+  auto is_live = [&](const IR::Addr::Ptr &a) {
+    assert(is_var_or_param(a));
+    if (std::find(live_variables.begin(), live_variables.end(), *a) ==
+        live_variables.end()) { // 没找到
+      return false;
+    }
+    return true;
+  };
+  auto add_live = [&](const IR::Addr::Ptr &a) {
+    if (a == nullptr) return;
+    if (!is_var_or_param(a)) return;
+    if (!is_live(a)) {
+      live_variables.push_back(*a);
+    }
+  };
+  for (auto iter = std::prev(ir_list_.end()); true; --iter) {
     auto cur_ir = *iter;
-    auto next_iter = std::next(iter);
-    if (next_iter == ir_list_.end()) break; // 没有下一条指令了
-    auto next_ir = *next_iter;
-    if (!is_algo_op(cur_ir->op_)) {
-      ++iter;
-      continue;  // 当前指令不是算术指令
-    }
-    if (next_ir->op_ != IR::Op::MOV) {
-      ++iter;
-      continue; // 只处理MOV,不处理MOVGE等
-    }
-    if (*(cur_ir->a0) == *(next_ir->a1)) {
-      cur_ir->a0 = next_ir->a0;
-      iter = ir_list_.erase(next_iter);
-      --iter; // 退回到算术指令
-    } else {
-      ++iter;
+
+    if (iter == ir_list_.begin()) break;
+    auto pre_ir = *(std::prev(iter));
+    if (cur_ir->op_ != IR::Op::MOV) goto update_live;
+    if (!is_algo_op(pre_ir->op_)) goto update_live; // TODO: 对于LOAD指令也许也可以使用
+    if (!(*(cur_ir->a1) == *(pre_ir->a0))) goto update_live;;
+    if (is_live(cur_ir->a1)) goto update_live;
+    pre_ir->a0 = cur_ir->a0;
+    iter = ir_list_.erase(iter);  // 删除MOV指令
+    --iter;
+    if (iter == ir_list_.begin()) break;
+
+update_live:
+    if (is_mov_op(cur_ir->op_)) { // 赋值操作
+      if (is_live(cur_ir->a0)) {
+        add_live(cur_ir->a1);
+      } // ignore else
+    } else if (is_algo_op(cur_ir->op_)) { // 算术操作
+      if (is_live(cur_ir->a0)) {
+        add_live(cur_ir->a1);
+        add_live(cur_ir->a2);
+      } // ignore else
+    } else if (cur_ir->op_ == IR::Op::CMP) {  // 比较操作
+      add_live(cur_ir->a1);
+      add_live(cur_ir->a2);
+    } else if (cur_ir->op_ == IR::Op::LOAD) {
+      if (is_live(cur_ir->a0)) {
+        add_live(cur_ir->a1);
+        add_live(cur_ir->a2);
+      } // ignore else
+    } else if (cur_ir->op_ == IR::Op::STORE) {
+      add_live(cur_ir->a0);
+      add_live(cur_ir->a1);
+      add_live(cur_ir->a2);
+    } else if (cur_ir->op_ == IR::Op::PARAM) {
+      add_live(cur_ir->a1);
+    } else if (cur_ir->op_ == IR::Op::RET) {
+      add_live(cur_ir->a0);
     }
   }
 }
