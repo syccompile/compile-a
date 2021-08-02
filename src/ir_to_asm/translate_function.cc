@@ -62,6 +62,8 @@ get_arm_opcode(IR::Op op) {
     CASE(SUB, "\tsub");
     CASE(MUL, "\tmul");
     CASE(DIV, "\tdiv");
+    CASE(SHL, "\tlsl");
+    CASE(SHR, "\tasr");
     CASE(AND, "\tand");
     CASE(OR,  "\torr");
     CASE(XOR, "\teor");
