@@ -87,7 +87,7 @@ class Function {
   void global_copy_propagation();
   void remove_dead_code();
   void loop_invariant_code_motion();
-  void ir_specify_optimization(); // 针对IR的特定优化, TODO: 有bug, 待修复
+  void ir_specify_optimization(); // 针对IR的特定优化
   void delete_unreachable_code();
   void staighten();
   void if_simplify();

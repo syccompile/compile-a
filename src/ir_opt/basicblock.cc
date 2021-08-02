@@ -1,5 +1,4 @@
 #include "basicblock.h"
-#include "function.h"
 
 bool operator==(const IR::Addr &lhs, const IR::Addr &rhs) { // 不适用于比较name字段
   return lhs.kind == rhs.kind && lhs.val == rhs.val;

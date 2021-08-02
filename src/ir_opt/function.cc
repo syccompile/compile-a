@@ -968,7 +968,6 @@ void Function::staighten() {
       }
     }
   }
-  // DECIDE: delete_unreachable_code here
 }
 
 void Function::_merge_block(const BasicBlock::Ptr &block1, const BasicBlock::Ptr &block2) {
@@ -997,7 +996,7 @@ void Function::_rebuild_basic_block() {
   _link_basic_block();
 }
 
-void Function::tail_merging() { // TODO: ir_specify_optimization
+void Function::tail_merging() {
   auto equal_of_ir_addr_ptr = [](const IR::Addr::Ptr &a, const IR::Addr::Ptr &b) {
     if (a == nullptr) return b == nullptr;
     if (b == nullptr) return a == nullptr;
