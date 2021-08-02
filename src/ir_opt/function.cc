@@ -1104,5 +1104,21 @@ void Function::induction_variable_elimination() {
 }
 
 void Function::optimize(int optimize_level) {
-  // TODO
+  if (optimize_level == 0) return;
+  for (int i = 0; i < 2; ++i) {
+    ir_specify_optimization();
+    tail_merging();
+    label_simplify();
+    constant_folding();
+    algebraic_simplification();
+    delete_local_common_expression();
+    delete_global_common_expression();
+    local_copy_propagation();
+    global_copy_propagation();
+    if_simplify();
+    staighten();
+    delete_unreachable_code();
+    loop_invariant_code_motion();
+    remove_dead_code();
+  }
 }
