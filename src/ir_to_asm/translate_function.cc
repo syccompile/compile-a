@@ -67,12 +67,12 @@ get_arm_opcode(IR::Op op) {
     CASE(XOR, "\teor");
     CASE(MOV, "\tmov");
     CASE(MVN, "\tmvn");
-    CASE(MOVLE, "\tmovle");
-    CASE(MOVLT, "\tmovlt");
-    CASE(MOVGE, "\tmovge");
-    CASE(MOVGT, "\tmovgt");
-    CASE(MOVEQ, "\tmoveq");
-    CASE(MOVNE, "\tmovne");
+    CASE(MOVLE, "\tIT\tLE\n\tmovle");
+    CASE(MOVLT, "\tIT\tLT\n\tmovlt");
+    CASE(MOVGE, "\tIT\tGE\n\tmovge");
+    CASE(MOVGT, "\tIT\tGT\n\tmovgt");
+    CASE(MOVEQ, "\tIT\tEQ\n\tmoveq");
+    CASE(MOVNE, "\tIT\tNE\n\tmovne");
     CASE(JMP, "\tb");
     CASE(JLE, "\tble");
     CASE(JLT, "\tblt");
