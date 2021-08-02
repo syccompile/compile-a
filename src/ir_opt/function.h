@@ -124,6 +124,20 @@ inline bool erase_pred_succ_list(std::list<BasicBlock::Ptr_weak> &l, const Basic
   return false;
 }
 
+inline void remove_useless_label(std::list<IR::Ptr> &ir_list) {
+  // TODO: 不确保正确性，建立在所有相同label的地址相同
+  for (auto iter = ir_list.begin(); iter != ir_list.end(); ++iter) {
+    auto next_iter = std::next(iter);
+    if (next_iter == ir_list.end()) break;
+    auto cur_ir = *iter;
+    auto next_ir = *next_iter;
+    if (cur_ir->op_ == IR::Op::LABEL && next_ir->op_ == IR::Op::LABEL) {
+      *(cur_ir->a0) = *(next_ir->a0);
+      iter = ir_list.erase(iter);
+    }
+  }
+}
+
 inline void remove_unnecessary_jmp(std::list<IR::Ptr> &ir_list) {
   for (auto iter = ir_list.begin(); iter != ir_list.end(); ++iter) {
     auto next_iter = std::next(iter);
@@ -147,10 +161,11 @@ inline void remove_unnecessary_cmp(std::list<IR::Ptr> &ir_list) {
     auto cur_ir = *iter;
     auto next_ir = *next_iter;
     if (cur_ir->op_ == IR::Op::CMP) {
-      if (!is_mov_op(next_ir->op_) || next_ir->op_ == IR::Op::MOV ||
-          !is_jmp_op(next_ir->op_) || next_ir->op_ == IR::Op::JMP) {
-        iter = ir_list.erase(iter);
+      if ((is_mov_op(next_ir->op_) && next_ir->op_ != IR::Op::MOV) ||
+          (is_jmp_op(next_ir->op_) && next_ir->op_ != IR::Op::JMP)) {
+        continue;
       }
+      iter = ir_list.erase(iter);
     }
   }
 }

@@ -154,9 +154,9 @@ void Function::debug() {
     local_copy_propagation();
     global_copy_propagation();
     if_simplify();
+    loop_invariant_code_motion();
     staighten();
     delete_unreachable_code();
-    loop_invariant_code_motion();
     remove_dead_code();
   }
   reach_define_analysis();
@@ -621,7 +621,7 @@ void Function::_calc_dominate_IN_OUT() {
   }
 }
 void Function::loop_invariant_code_motion() {
-  auto insert_preheader = [&](const loop &l, const BasicBlock::Ptr &preheader_block) -> BasicBlock::Ptr {
+  auto insert_preheader = [&](const loop &l, const BasicBlock::Ptr &preheader_block) {
     auto entry_block = l.front();  // loop entry
     auto entry_block_iter = next(basic_block_vector_.begin(), entry_block->block_num_);
     for (auto iter = entry_block->predecessor_list_.begin(); iter != entry_block->predecessor_list_.end();) {
@@ -631,13 +631,7 @@ void Function::loop_invariant_code_motion() {
       }) == l.end()) {  // 不在循环中
         preheader_block->predecessor_list_.push_back(pred_block);
         iter = entry_block->predecessor_list_.erase(iter);
-        for (auto it = pred_block->successor_list_.begin(); it != pred_block->successor_list_.end();) {
-          if ((*it).lock()->block_num_ == entry_block->block_num_) {
-            it = pred_block->successor_list_.erase(it);
-          } else {
-            ++it;
-          }
-        }
+        erase_pred_succ_list(pred_block->successor_list_, entry_block);
         pred_block->successor_list_.push_back(preheader_block);
       } else {
         ++iter;
@@ -646,7 +640,6 @@ void Function::loop_invariant_code_motion() {
     preheader_block->successor_list_.push_back(entry_block);
     entry_block->predecessor_list_.push_back(preheader_block);
     basic_block_vector_.insert(entry_block_iter, preheader_block);
-    return preheader_block;
   };
   auto dom_all_exit = [&](const BasicBlock::Ptr &block, const set<int> &exits) -> bool {
     return all_of(exits.begin(), exits.end(), [&](int e) {
@@ -679,7 +672,7 @@ void Function::loop_invariant_code_motion() {
     });
   };
   auto dom_all_use = [&](const BasicBlock::Ptr &block, const loop &l, const IR_Addr::Ptr &a) -> bool {
-    return all_of(l.begin(), l.end(), [&](const auto &loop_block) {
+    return all_of(l.begin(), l.end(), [&](const BasicBlock::Ptr &loop_block) {
       if (block_use_var(loop_block, a)) {
         if (std::find(loop_block->dominate_OUT_.begin(), loop_block->dominate_OUT_.end(), block->block_num_)
             == loop_block->dominate_OUT_.end()) {
@@ -703,17 +696,31 @@ void Function::loop_invariant_code_motion() {
     }
     return all_exit;
   };
+  auto dead_on_all_exit = [&](const IR::Addr::Ptr &a, const set<int> &exits) -> bool {
+    assert(a != nullptr); // DELETE
+    return all_of(exits.begin(), exits.end(), [&](int e) {
+      auto e_block = basic_block_vector_[e];
+      if (find_if(e_block->live_variable_IN_.begin(), e_block->live_variable_IN_.end(), [&a](const auto &live) {
+        return *a == live;
+      }) == e_block->live_variable_IN_.end()) {  // 不在活跃变量范围内
+        return true;
+      }
+      return false;
+    });
+  };
+
   _find_back_edges();
   for (const auto &e : back_edges_) {
     _build_lineno_ir_map(); // update block_num, ir_num_
     auto l = _get_loop(e);
     auto mark_set = _mark_loop_invariant(l);
     if (mark_set.empty()) continue;
+    live_variable_analysis();
     auto preheader = make_empty_basic_block();
     auto all_exit = get_all_exit(l);
     for (auto[cur_block, cur_ir_iter] : mark_set) {
       auto cur_ir = *cur_ir_iter;
-      if (dom_all_exit(cur_block, all_exit) && dom_all_use(cur_block, l, cur_ir->a0)) {  // 符合移动条件
+      if ((dom_all_exit(cur_block, all_exit) || dead_on_all_exit(cur_ir->a0, all_exit))&& dom_all_use(cur_block, l, cur_ir->a0)) {  // 符合移动条件
         preheader->ir_list_.push_back(cur_ir);
         cur_block->ir_list_.erase(cur_ir_iter); // 移除当前指令
       }
@@ -722,6 +729,7 @@ void Function::loop_invariant_code_motion() {
       insert_preheader(l, preheader);
     }
   }
+  _rebuild_basic_block();
 }
 list<IR::Ptr> Function::merge() {
   list<IR::Ptr> ret;
@@ -1086,7 +1094,7 @@ void Function::tail_merging() {
 
 void Function::label_simplify() {
   auto ir_list = merge();
-  remove_redunctant_label(ir_list);
+  remove_useless_label(ir_list);
   remove_unnecessary_jmp(ir_list);
   remove_unnecessary_cmp(ir_list);
   _divide_basic_block(ir_list);

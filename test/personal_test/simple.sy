@@ -1,11 +1,13 @@
 int func2 (int d){
   int a, b, c, e;
-  if (a > 10) {
-    a = b + c;
-    d = a + b;
-  } else {
-    a = b + c;
-    d = a + b;
+  a = 1;
+  b = d;
+  c = b;
+  while (b != 10) {
+    e = a;
+    a = c;
+    d = a + 5;
+    b = b + 1;
   }
-  return a + b + c + d + e;
+  return d;
 }
