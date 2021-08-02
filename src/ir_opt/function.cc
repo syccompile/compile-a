@@ -1011,88 +1011,66 @@ void Function::tail_merging() { // TODO: ignore jmp, ir_specify_optimization
     return equal_of_ir_addr_ptr(a->a0, b->a0) && equal_of_ir_addr_ptr(a->a1, b->a1) &&
         equal_of_ir_addr_ptr(a->a2, b->a2);
   };
-  bool change = true;
-  while (change) {
-    change = false;
-    for (auto iter = basic_block_vector_.rbegin(); iter != basic_block_vector_.rend(); ++iter) {
-      auto cur_block = *iter;
-      auto pred_block_num = len_of_list(cur_block->predecessor_list_);
-      auto continue_flag = false;
-      if (pred_block_num > 1) {  // 多前驱
-        std::vector<BasicBlock::reverse_iterator> ir_iter_vec;
-        std::vector<BasicBlock::Ptr> pred_block_vec;
-        for (const auto &pred_block_weak : cur_block->predecessor_list_) {
-          auto pred_block = pred_block_weak.lock();
-          auto rbeg = pred_block->ir_list_.rbegin();
-          auto last_ir = *rbeg;
-          if (is_jmp_op(last_ir->op_) && last_ir->op_ != IR::Op::JMP) { // 不是无条件跳转
-            continue_flag = true;
-            break;
-          } else if (last_ir->op_ == IR::Op::JMP) {
-            ++rbeg; // 比较的时候忽略JMP语句
-          }
-          ir_iter_vec.push_back(rbeg);
-          pred_block_vec.push_back(pred_block);
-        }
-        if (continue_flag) continue;  // 包含有条件跳转，不符合要求
-        int same_ir_num = 0;
-        while (true) {
-          IR::Ptr pre_ir = nullptr;
-          bool break_flag = false;
-          int i = -1;
-          for (auto &ir_iter : ir_iter_vec) {
-            ++i;
-            if (ir_iter == pred_block_vec[i]->ir_list_.rend()) {  // 扫描完某个前驱块的IR
-              break_flag = true;
-              for (int j = 0; j < i; ++j) { // 恢复前面的迭代器
-                --ir_iter_vec[j];
-              }
-              break;
-            }
-            if (pre_ir == nullptr) continue;
-            if (!equal_of_ir(pre_ir, *ir_iter)) { // 两条指令不相等
-              break_flag = true;
-              for (int j = 0; j < i; ++j) { // 恢复前面的迭代器
-                --ir_iter_vec[j];
-              }
-              break;
-            }
-            pre_ir = *ir_iter;
-            ++ir_iter;
-          }
-          if (break_flag) break;
-          ++same_ir_num;
-        }
-        if (same_ir_num > 0) {  // 有相同的ir
-          for (auto &pred_block : pred_block_vec) { // 删去末尾的JMP指令
-            auto last_ir = *pred_block->ir_list_.rbegin();
-            if (last_ir->op_ == IR::Op::JMP) {
-              pred_block->ir_list_.pop_back();
-            }
-          }
-          cur_block->ir_list_.pop_front();  // 理论上第一条指令必然是label指令
-          auto new_block = make_empty_basic_block();
-          auto first_pred_block = pred_block_vec.front();
-          auto new_label = alloc_label();
-          new_block->ir_list_.push_back(make_label_ir(new_label));  // 插入label指令
-          new_block->ir_list_.splice(new_block->ir_list_.end(),
-                                     first_pred_block->ir_list_,
-                                     ir_iter_vec.front().base(), first_pred_block->ir_list_.end());
-          for (int i = 1; i < pred_block_num; ++i) {  // 把其他块后面的IR指令删除
-            pred_block_vec[i]->ir_list_.erase(ir_iter_vec[i].base(), pred_block_vec[i]->ir_list_.end());
-          }
-          for (auto &pred_block : pred_block_vec) { // 添加跳转指令，建立前驱后继关系
-            pred_block->ir_list_.push_back(make_jmp_ir(new_label)); // make_jmp_ir只能位于循环内部
-            erase_pred_succ_list(pred_block->successor_list_, cur_block);
-            pred_block->successor_list_.push_back(new_block);
-          }
-          new_block->successor_list_.push_back(new_block);
-          cur_block->predecessor_list_.clear();
-          cur_block->predecessor_list_.push_back(new_block);
-          basic_block_vector_.insert(iter.base() - 1, new_block); // 插到当前块的前面
-          change = true;
-          _build_lineno_ir_map(); // 更新blocknum等信息
+  for (auto iter = basic_block_vector_.rbegin(); iter != basic_block_vector_.rend(); ++iter) {
+    auto cur_block = *iter;
+    auto pred_block_num = len_of_list(cur_block->predecessor_list_);
+    auto continue_flag = false;
+    if (pred_block_num > 1) {  // 多前驱
+      std::vector<BasicBlock::reverse_iterator> ir_iter_vec;
+      std::vector<BasicBlock::iterator> ir_iter_end_vec;
+      std::vector<BasicBlock::Ptr> pred_block_vec;
+      for (const auto &pred_block_weak : cur_block->predecessor_list_) {
+        auto pred_block = pred_block_weak.lock();
+        auto rbeg = pred_block->ir_list_.rbegin();
+        auto last_ir = *rbeg;
+        if (is_jmp_op(last_ir->op_) && last_ir->op_ != IR::Op::JMP) { // 不是无条件跳转
+          continue_flag = true;
           break;
+        } else if (last_ir->op_ == IR::Op::JMP) {
+          ++rbeg; // 比较的时候忽略JMP语句
+        }
+        ir_iter_vec.push_back(rbeg);
+        ir_iter_end_vec.push_back(rbeg.base());
+        pred_block_vec.push_back(pred_block);
+      }
+      if (continue_flag) continue;  // 包含有条件跳转，不符合要求
+      int same_ir_num = 0;
+      while (true) {
+        IR::Ptr pre_ir = nullptr;
+        bool break_flag = false;
+        int i = -1;
+        for (auto &ir_iter : ir_iter_vec) {
+          ++i;
+          if (ir_iter == pred_block_vec[i]->ir_list_.rend()) {  // 扫描完某个前驱块的IR
+            break_flag = true;
+            for (int j = 0; j < i; ++j) { // 恢复前面的迭代器
+              --ir_iter_vec[j];
+            }
+            break;
+          }
+          if (pre_ir == nullptr) continue;
+          if (!equal_of_ir(pre_ir, *ir_iter)) { // 两条指令不相等
+            break_flag = true;
+            for (int j = 0; j < i; ++j) { // 恢复前面的迭代器
+              --ir_iter_vec[j];
+            }
+            break;
+          }
+          pre_ir = *ir_iter;
+          ++ir_iter;
+        }
+        if (break_flag) break;
+        ++same_ir_num;
+      }
+      if (same_ir_num > 0) {  // 有相同的ir
+        auto insert_iter = cur_block->ir_list_.begin();
+        ++insert_iter;  // 前进到label之后
+        auto first_pred_block = pred_block_vec.front();
+        cur_block->ir_list_.splice(insert_iter,
+                                   first_pred_block->ir_list_,
+                                   ir_iter_vec.front().base(), ir_iter_end_vec[0]);
+        for (int i = 1; i < pred_block_num; ++i) {  // 把其他块后面的IR指令删除
+          pred_block_vec[i]->ir_list_.erase(ir_iter_vec[i].base(), ir_iter_end_vec[i]);
         }
       }
     }
