@@ -62,7 +62,6 @@ IR::Op get_ir_regular_op(Expression::Op expr_op) {
     CASE(MOD, MOD);
     CASE(AND, AND);
     CASE(OR , OR );
-    CASE(NOT, NOT);
     default: return IR::Op::NOP;
   }
 
@@ -103,22 +102,27 @@ get_offset(const std::vector<int> &shape, Expression::List &dimens) {
     dims.push_back(addr);
   }
 
+  std::vector<int> dim_offset;
   int acc = 1;
-  int i = dims.size() - 1;
+  for (auto it=shape.rbegin() ; it!=shape.rend() ; ++it) {
+    dim_offset.insert(dim_offset.begin(), acc);
+    acc *= (*it);
+  }
 
-  // 常量优化：数组最右边的表达式均为常量
-  // 例如：a[b+c][1][2][3][4]
+  int i = 0;
+
+  // 常量优化：数组最zuo边的表达式均为常量
+  // 例如：a[1][2][3][4][b+c]
   // 那么[1][2][3][4]的偏移量可以直接编译期计算
   int constant_offset = 0;
-  for (; i>=0 ; i--) {
+  for (; i<dims.size() ; i++) {
     // 如果取到非编译期常量的表达式，那么就跳出循环
     if (dims[i]->kind != IR::Addr::Kind::IMM) break;
     // 如果取到编译期常量
-    constant_offset = constant_offset + acc*(dims[i]->val);
-    acc *= shape[i];
+    constant_offset = constant_offset + dim_offset[i]*dims[i]->val;
   } 
   // 如果所有下标都计算完了，就直接返回常地址
-  if (i<0) return std::make_pair(IR::Addr::make_imm(constant_offset), ret);
+  if (i>=dims.size()) return std::make_pair(IR::Addr::make_imm(constant_offset), ret);
   // 常量优化结束
   
   // 再计算非编译期常数的偏移量
@@ -128,11 +132,10 @@ get_offset(const std::vector<int> &shape, Expression::List &dimens) {
   // 先将常量变址计算结果拷贝过来
   ADD_BIN(MOV, offset_addr, IR::Addr::make_imm(constant_offset));
   // 再根据余下的下标计算变址（运行时计算）
-  for (; i>=0 ; i--) {
+  for (; i<dims.size() ; i++) {
     auto tmp = context.allocator.allocate_addr();
-    ADD_TRP(MUL, tmp, dims[i], IR::Addr::make_imm(acc));
+    ADD_TRP(MUL, tmp, dims[i], IR::Addr::make_imm(dim_offset[i]));
     ADD_TRP(ADD, offset_addr, offset_addr, tmp);
-    acc *= shape[i];
   }
 
   return std::make_pair(offset_addr, ret);
@@ -280,8 +283,16 @@ VarExp::translate() {
       auto offset_pair = get_offset(ent->type.arr_shape, *(this->dimens_));
       ret.splice(ret.end(), offset_pair.second);
       // 读取数组内容
-      if (this->dimens_->size()<ent->type.arr_shape.size())
-	      ADD_TRP(ADD, this->addr_, ent->addr, offset_pair.first);
+      if (this->dimens_->size()<ent->type.arr_shape.size()) {
+	IR::Addr::Ptr offset_addr = nullptr;
+	if (offset_pair.first->kind == IR::Addr::Kind::IMM)
+	  offset_addr = IR::Addr::make_imm(offset_pair.first->val * 4);
+	else {
+	  offset_addr = context.allocator.allocate_addr();
+          ADD_TRP(SHL, offset_addr, offset_pair.first, IR::Addr::make_imm(2));
+	}
+	ADD_TRP(ADD, this->addr_, ent->addr, offset_addr);
+      }
       else
         ADD_TRP(LOAD, this->addr_, ent->addr, offset_pair.first);
     }
