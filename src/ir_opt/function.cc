@@ -143,6 +143,7 @@ void Function::debug() {
   cout << green << func_name_ << ": " << normal << endl;
   cout << "------------------------" << endl;
   ir_specify_optimization();
+  tail_merging();
 //  for (int i = 0; i < 2; ++i) {
 //    constant_folding();
 //    algebraic_simplification();
@@ -1050,7 +1051,11 @@ void Function::tail_merging() { // TODO: ir_specify_optimization
             }
             break;
           }
-          if (pre_ir == nullptr) continue;
+          if (pre_ir == nullptr) {
+            pre_ir = *ir_iter;
+            ++ir_iter;
+            continue;
+          }
           if (!equal_of_ir(pre_ir, *ir_iter)) { // 两条指令不相等
             break_flag = true;
             for (int j = 0; j < i; ++j) { // 恢复前面的迭代器
