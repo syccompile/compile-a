@@ -187,7 +187,9 @@ VarExp::is_evaluable() const {
   // 首先检查（数组表达式的）下标是否编译期可求值
   if (ent->is_array()) {
     // 如果是数组，而没有参数列表，则认为是需要传递数组地址，此时不可求值
+    // ADD: if index dimension is fewer than shape dimension, also addr
     if (this->dimens_==nullptr) return false;
+    if (this->dimens_->size() < ent->type.arr_shape.size()) return false;
     auto offset_pair = get_offset(ent->type.arr_shape, *(this->dimens_));
     if (offset_pair.first->kind != IR::Addr::IMM) return false;
   }
@@ -278,7 +280,10 @@ VarExp::translate() {
       auto offset_pair = get_offset(ent->type.arr_shape, *(this->dimens_));
       ret.splice(ret.end(), offset_pair.second);
       // 读取数组内容
-      ADD_TRP(LOAD, this->addr_, ent->addr, offset_pair.first);
+      if (this->dimens_->size()<ent->type.arr_shape.size())
+	      ADD_TRP(ADD, this->addr_, ent->addr, offset_pair.first);
+      else
+        ADD_TRP(LOAD, this->addr_, ent->addr, offset_pair.first);
     }
     // 如果是单一变量
     // 那就啥也不干
@@ -661,8 +666,8 @@ UnaryExp::_translate_logical() {
     // moveq this->addr, 1
     // movne this->addr, 0
     ADD_TRP(CMP, nullptr, this->exp_->get_var_addr(), IR::Addr::make_imm(0));
-    ADD_BIN(MOVEQ, this->addr_, IR::Addr::make_imm(1));
-    ADD_BIN(MOVNE, this->addr_, IR::Addr::make_imm(0));
+    ADD_BIN(MOVEQ, this->addr_, IR::Addr::make_imm(0));
+    ADD_BIN(MOVNE, this->addr_, IR::Addr::make_imm(1));
   }
 
   return ret;
@@ -695,7 +700,7 @@ UnaryExp::_translate_regular() {
 
     ret.splice(ret.end(), this->exp_->translate());
     ADD_BIN(MOV, this->addr_, sub_addr);
-    if (Expression::Op::SUB)
+    if (Expression::Op::SUB == this->op_)
       ADD_TRP(SUB, this->addr_, IR::Addr::make_imm(0), this->addr_);
   }
 
@@ -940,9 +945,9 @@ Array::_translate_local() {
   if (this->immutable_) {
     assert(flattened_container.size()!=0);
     // 要求所有初值都是编译期常量
-    for (Expression *exp: flattened_container) {
-      if (exp==nullptr) continue;
-      assert(exp->is_evaluable());
+    for (auto it = flattened_container.begin() ; it!=flattened_container.end() ; ++it) {
+      if (*it==nullptr) *it = new NumberExp(0);
+      assert((*it)->is_evaluable());
     }
 
     for (Expression *exp: flattened_container) {
@@ -1159,6 +1164,8 @@ WhileStmt::translate() {
     this->condition_->set_fail_label(this->label_end);
 
     // 翻译条件表达式
+    this->condition_->cast_to_logical = true;
+    this->condition_->cast_to_regular = false;
     ADD_UNR(LABEL, this->label_cond);
     ret.splice(ret.end(), this->condition_->translate());
     ret.splice(ret.end(), this->body_->translate());
