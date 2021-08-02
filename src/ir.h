@@ -19,9 +19,11 @@ public:
     MUL,
     DIV,
     MOD,
+    SLL,
+    SRL,
+    SRA,
     AND,
     OR,
-    NOT,
     XOR,
 
     MOV,
