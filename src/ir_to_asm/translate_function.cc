@@ -153,7 +153,8 @@ move_to_reg(FrameInfo &frame, IR::Addr::Ptr ir_addr, std::string tmp_regname) {
       }
     }
   }
-  // ir_armify保证全局变量一定是单一变量
+  // 全局名字有可能是单一变量或数组
+  // 通过全局符号表（context.vartab_cur）确定
   else if (ir_addr->kind == IR::Addr::Kind::NAMED_LABEL) {
     ret_reg = tmp_regname;
     // 先获取全局变量信息

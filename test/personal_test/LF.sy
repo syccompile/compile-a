@@ -1,0 +1,1 @@
+int n;int foo(int a[][2]) {  a[2][1] = n;}int main() {  n = 5;  int a[4][2] = {};  return 0;}

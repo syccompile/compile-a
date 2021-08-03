@@ -1,0 +1,6 @@
+int a = 2;
+int main() {
+  int a[1500];
+  a[1400] = 4;
+  return a[1400];
+}

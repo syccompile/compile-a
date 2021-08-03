@@ -1,6 +1,49 @@
 #include "frame_info.h"
 #include <unordered_map>
 
+namespace {
+
+// 将val循环左移n位
+uint32_t
+rol(uint32_t val, uint32_t n) {
+  n %= 32u;
+  uint32_t ret;
+  ret  = val << n;
+  ret |= (val & (0xffffffffu << (32-n))) >> (32-n);
+  return ret;
+}
+
+// 判断是否为arm立即数
+bool
+is_arm_imm(uint32_t imm) {
+  for (int j=0 ; j<8 ; j++) {
+    uint32_t rol_result = rol(imm, j*2);
+    if (rol_result <= 0x000000ffu) return true;
+  }
+  return false;
+}
+
+// 将一个立即数拆分为arm立即数之和
+std::list<uint32_t>
+split_to_arm_imm(uint32_t imm) {
+  std::list<uint32_t> ret;
+  
+  if (is_arm_imm(imm)) {
+    ret.push_back(imm);
+  }
+  else {
+    std::vector<uint32_t> tmp{0xffu, 0xff00u, 0xff0000u, 0xff000000u};
+    for (auto &i: tmp) {
+      auto result = imm & i;
+      if (result!=0u) ret.push_back(result);
+    }
+  }
+
+  return ret;
+}
+
+};
+
 FrameInfo::FrameInfo()
   : param_size(0), local_arr_size(0), spill_size(0), register_save_size(0), reg_assign(), ret_stmt_buf() { }
 
@@ -81,8 +124,9 @@ FrameInfo::init_statements() {
   ret.push_back(std::string("\tpush\t{") + need_to_save + "}");
 
   // 分配栈帧
-  
-  ret.push_back(string("\tsub\tsp, sp, #") + to_string(4*(frame_offset()-register_save_size)));
+  auto sp_subs = split_to_arm_imm(4*(frame_offset() - register_save_size));
+  for (auto &i: sp_subs)
+    ret.push_back(string("\tsub\tsp, sp, #") + to_string(i));
   
   return ret;
 }
@@ -95,7 +139,9 @@ FrameInfo::ret_statements() {
 
   // 还原栈帧
 
-  ret.push_back(string("\tadd\tsp, sp, #") + to_string(4*(frame_offset()-register_save_size)));
+  auto sp_adds = split_to_arm_imm(4*(frame_offset() - register_save_size));
+  for (auto &i: sp_adds)
+    ret.push_back(string("\tadd\tsp, sp, #") + to_string(i));
 
   // 恢复寄存器
 
