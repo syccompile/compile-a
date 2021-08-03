@@ -169,6 +169,7 @@ class BinaryExp : public Expression {
 public:
   friend class UnaryExp;
   friend class VarExp;
+  friend class FuncCallExp;
 
   BinaryExp(Op op, Expression *left, Expression *right);
   virtual ~BinaryExp();

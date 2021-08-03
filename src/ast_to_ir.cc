@@ -322,35 +322,51 @@ IR::List
 FuncCallExp::translate() {
   IR::List ret;
 
-  // 如果存在参数
-  if (params_!=nullptr) {
-    int i = 0;
-    
-    // 首先计算各个函数参数的值
-    for (Expression *exp : *params_) {
-      exp->allow_pass_base = true;
-      auto addr = exp->get_var_addr();
-      ret.splice(ret.end(), exp->translate());
-      ++i;
-    }
+  // 要求转化为逻辑表达式
+  if (this->translate_to_logical()) {
+    BinaryExp *tmp = new BinaryExp(Expression::Op::NEQ, this, new NumberExp(0));
+    tmp->cast_to_logical = true;
+    tmp->cast_to_regular = false;
+    tmp->set_fail_label(this->label_fail_);
 
-    // 然后生成传参中间代码
-    i=0;
-    for (Expression *exp : *params_) {
-      ADD_BIN(PARAM, context.functab->get_curtab()->get_param_addr(i++) , exp->get_var_addr());
-    }
-  }
+    ret.splice(ret.end(), tmp->translate());
 
-  // 生成函数调用的代码
-  // TODO 未定义函数，参数类型不一致
-  auto func_ent = context.functab->get(this->name_);
-  if (func_ent != nullptr) {
-    ADD_UNR(CALL, func_ent->label);
-    ADD_BIN(MOV,  this->get_var_addr(), IR::Addr::make_ret());
+    // 防止析构 this
+    tmp->left_ = nullptr;
+    delete tmp;
   }
+  // 要求转化为算术表达式
   else {
-    ADD_UNR(CALL, IR::Addr::make_named_label(this->name_));
-    ADD_BIN(MOV,  this->get_var_addr(), IR::Addr::make_ret());
+    // 如果存在参数
+    if (params_!=nullptr) {
+      int i = 0;
+      
+      // 首先计算各个函数参数的值
+      for (Expression *exp : *params_) {
+        exp->allow_pass_base = true;
+        auto addr = exp->get_var_addr();
+        ret.splice(ret.end(), exp->translate());
+        ++i;
+      }
+
+      // 然后生成传参中间代码
+      i=0;
+      for (Expression *exp : *params_) {
+        ADD_BIN(PARAM, context.functab->get_curtab()->get_param_addr(i++) , exp->get_var_addr());
+      }
+    }
+
+    // 生成函数调用的代码
+    // TODO 未定义函数，参数类型不一致
+    auto func_ent = context.functab->get(this->name_);
+    if (func_ent != nullptr) {
+      ADD_UNR(CALL, func_ent->label);
+      ADD_BIN(MOV,  this->get_var_addr(), IR::Addr::make_ret());
+    }
+    else {
+      ADD_UNR(CALL, IR::Addr::make_named_label(this->name_));
+      ADD_BIN(MOV,  this->get_var_addr(), IR::Addr::make_ret());
+    }
   }
 
   return ret;
@@ -361,11 +377,11 @@ BinaryExp::is_evaluable() const {
   switch(this->op_) {
     case Expression::Op::AND:
       if (this->left_->is_evaluable() && this->left_->eval()==0) return true;
-      if (this->right_->is_evaluable() && this->right_->eval()==0) return true;
+      // if (this->right_->is_evaluable() && this->right_->eval()==0) return true;
       break;
     case Expression::Op::OR:
       if (this->left_->is_evaluable() && this->left_->eval()==1) return true;
-      if (this->right_->is_evaluable() && this->right_->eval()==1) return true;
+      // if (this->right_->is_evaluable() && this->right_->eval()==1) return true;
       break;
     default:
       break;
@@ -565,7 +581,7 @@ BinaryExp::_translate_regular() {
   // 上级表达式要求本表达式生成一个逻辑表达式
   // 那么就直接生成一个临时性的关系表达式 (this==0) ，利用它生成中间代码
   if (this->translate_to_logical()) {
-    BinaryExp *tmp = new BinaryExp(Expression::Op::EQ, this, new NumberExp(0));
+    BinaryExp *tmp = new BinaryExp(Expression::Op::NEQ, this, new NumberExp(0));
     tmp->cast_to_logical = true;
     tmp->cast_to_regular = false;
     tmp->set_fail_label(this->label_fail_);
@@ -691,7 +707,7 @@ UnaryExp::_translate_regular() {
   if (this->translate_to_logical()) {
     // 要求生成逻辑表达式
     // 直接生成一个临时性的关系表达式，利用它生成中间代码
-    BinaryExp *tmp = new BinaryExp(Expression::Op::EQ, this, new NumberExp(0));
+    BinaryExp *tmp = new BinaryExp(Expression::Op::NEQ, this, new NumberExp(0));
 
     tmp->cast_to_logical = true;
     tmp->cast_to_regular = false;
@@ -956,15 +972,19 @@ Array::_translate_local() {
   if (this->immutable_) {
     assert(flattened_container.size()!=0);
     // 要求所有初值都是编译期常量
-    for (auto it = flattened_container.begin() ; it!=flattened_container.end() ; ++it) {
-      if (*it==nullptr) *it = new NumberExp(0);
-      assert((*it)->is_evaluable());
-    }
-
     for (Expression *exp: flattened_container) {
-      int val = exp->eval();
-      init_val.push_back(val);
-      ADD_TRP(STORE, addr, IR::Addr::make_imm(offset), IR::Addr::make_imm(val));
+      IR::Addr::Ptr exp_addr;
+      if (exp==nullptr) {
+        exp_addr = IR::Addr::make_imm(0);
+        init_val.push_back(0);
+      }
+      else {
+        assert(exp->is_evaluable());
+        int val = exp->eval();
+        init_val.push_back(val);
+        exp_addr = IR::Addr::make_imm(val);
+      }
+      ADD_TRP(STORE, addr, IR::Addr::make_imm(offset), exp_addr);
       offset++;
     }
   }
