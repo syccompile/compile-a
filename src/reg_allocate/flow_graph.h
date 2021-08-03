@@ -48,6 +48,7 @@ public :
   int num;   // 变量标号
   int degree; // 代表变量的度
   bool is_del; // 是否被删除标志
+  bool is_move;  // 是否是mov指令中的且两变量互不冲突的变量
   // 变量名称
   // string name;
 };
