@@ -77,6 +77,11 @@ ir_parse(IR::List &ir_list) {
   for (auto ir : ir_list) {
     switch (ir->op_) {
 #define OP_CASE(op) case IR::Op::op:
+      OP_CASE(SHL)
+      OP_CASE(SHR)
+      OP_CASE(AND)
+      OP_CASE(OR)
+      OP_CASE(XOR)
       OP_CASE(ADD)
       OP_CASE(SUB)
       OP_CASE(MUL)
@@ -103,6 +108,7 @@ ir_parse(IR::List &ir_list) {
           break;
       }
       // 单独处理 MOV
+      OP_CASE(MVN)
       OP_CASE(MOV) {
           ACCEPT_VAR(def, a0);
           ACCEPT_VAR(used, a1);
