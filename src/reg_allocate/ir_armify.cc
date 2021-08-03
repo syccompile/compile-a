@@ -59,6 +59,16 @@ substitute_param(IR::List &l) {
   l.splice(l.end(), new_l);
 }
 
+void
+substitute_time_func(IR::List &l) {
+  for (auto ir: l) {
+    if (ir->op_ == IR::Op::CALL) {
+      if      (ir->a0->name == "starttime") ir->a0->name = "_sysy_starttime";
+      else if (ir->a0->name == "stoptime")  ir->a0->name = "_sysy_stoptime";
+    }
+  }
+}
+
 // 将一个未知类型的地址a移动到寄存器（VAR）地址中
 // 返回：[新地址, 需要向全局变量定义加入的IR，需要向函数定义加入的IR]
 std::tuple<IR::Addr::Ptr, IR::List, IR::List>
@@ -109,6 +119,7 @@ move_into_var(IR::Addr::Ptr a) {
 void
 ir_armify(std::list<IR::List> &defs, IR::List &func) {
   
+  substitute_time_func(func);
   substitute_param(func);
 
   // 获取函数信息
