@@ -98,15 +98,6 @@ int main(int argc, char *argv[]) {
   for (auto &func: func_list)
     remove_redunctant_label(func);
 
-  // 准备IR，以进行图着色寄存器分配
-  for (auto &func: func_list) {
-    ir_armify(def_list, func);
-  }
-
-  // 寄存器分配
-  for (auto &func: func_list)
-    register_allocate(func);
-
   // 输出中间代码
   std::ofstream IRFile(ir_filename);
   auto old_cout_buf = std::cout.rdbuf(IRFile.rdbuf());
@@ -121,6 +112,16 @@ int main(int argc, char *argv[]) {
 
   std::cout.rdbuf(old_cout_buf);
   IRFile.close();
+  
+  // 准备IR，以进行图着色寄存器分配
+  for (auto &func: func_list) {
+    ir_armify(def_list, func);
+  }
+
+  // 寄存器分配
+  for (auto &func: func_list)
+    register_allocate(func);
+
 
   // 输出汇编代码
   std::ofstream ASMFile(asm_filename);
