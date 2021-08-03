@@ -13,7 +13,7 @@ void _colorize_node(color_node::ptr p, color_allocate& alloc, map<int, int> &num
   if (p->is_colored()) {
     return ;
   }
-  // 得到所有已着色的邻居
+  // 得到所有已着不同色的邻居
   color_node::nodes neighbors = p->get_colored_neighbors(num_color_list);
   // 如果已着色的邻居数量比已分配颜色的数量更多，
   // 只能分配一个新的颜色
@@ -40,6 +40,7 @@ void _colorize_node(color_node::ptr p, color_allocate& alloc, map<int, int> &num
     if (no_neighbor_use) {
       // 找到一个没有邻居使用过的颜色
       p->colorize(i);
+      num_color_list.insert(pair<int, int> (var_p->num, i));
       break;
     }
   }
@@ -67,16 +68,17 @@ void colorize_nodes_allocate(color_node::nodes nodes, color_allocate alloc, map<
   }
 }
 
-// 得到所有已着色邻居
-// num_color_list 记录了num号变量着的色号
 color_node::nodes color_node::get_colored_neighbors(map<int, int> num_color_list) {
-  nodes n;
-  for (ptr p : get_neighbors()) {
-    auto var_p = dynamic_pointer_cast<var>(p);
-    if(num_color_list.find(var_p->num) != num_color_list.end()){
-      n.insert(p);
+    nodes n;
+    vector<int> neighbor_color;
+    for (ptr p : get_neighbors()) {
+        auto var_p = dynamic_pointer_cast<var>(p);
+        // 邻接没被删除，已被着色，且颜色不同于其他邻居
+        if(var_p->is_colored() && std::find(neighbor_color.begin(), neighbor_color.end(), var_p->col) == neighbor_color.end()){
+            neighbor_color.push_back(var_p->col);
+            n.insert(p);
+        }
     }
-  }
-  return n;
+    return n;
 }
 } // namespace color_graph
