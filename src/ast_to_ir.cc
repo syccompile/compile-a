@@ -455,10 +455,19 @@ BinaryExp::_translate_logical() {
         ret.splice(ret.end(), this->right_->translate());
       }
       else if (this->right_->is_evaluable() && this->right_->eval()) {
-        // 右表达式求值为“1”，左表达式不是编译期常量
-        // 此时可看作左表达式的单元(Unary)表达式
-        this->left_->set_fail_label(this->label_fail_);
-        ret.splice(ret.end(), this->left_->translate());
+        if (this->right_->eval()) {
+          // 右表达式求值为“1”，左表达式不是编译期常量
+          // 此时可看作左表达式的单元(Unary)表达式
+          this->left_->set_fail_label(this->label_fail_);
+          ret.splice(ret.end(), this->left_->translate());
+	}
+	else {
+          // 右表达式求值为“0”，左表达式不是编译期常量
+          // 此时 only execute left expr
+	  auto *expstmt = new ExpStmt(this->left_);
+	  ret.splice(ret.end(), expstmt->translate());
+	  ADD_UNR(JMP, this->label_fail_);
+	}
       }
       // 常量优化部分结束
 
@@ -487,10 +496,18 @@ BinaryExp::_translate_logical() {
         ret.splice(ret.end(), this->right_->translate());
       }  
       else if (this->right_->is_evaluable() && !(this->right_->eval())) {
-        // 右表达式求值为“0”，左表达式不是编译期常量
-        // 此时可看作左表达式的单元表达式
-        this->left_->set_fail_label(this->label_fail_);
-        ret.splice(ret.end(), this->left_->translate());
+        if (this->right_->eval()) {
+          // 右表达式求值为“1”，左表达式不是编译期常量
+          // 此时可看作左表达式的单元表达式
+	  auto *expstmt = new ExpStmt(this->left_);
+	  ret.splice(ret.end(), expstmt->translate());
+        }
+        else {
+          // 右表达式求值为“0”，左表达式不是编译期常量
+          // 此时可看作左表达式的单元表达式
+          this->left_->set_fail_label(this->label_fail_);
+          ret.splice(ret.end(), this->left_->translate());
+        }
       }
       // 常量优化部分结束
 
@@ -693,8 +710,8 @@ UnaryExp::_translate_logical() {
     // moveq this->addr, 1
     // movne this->addr, 0
     ADD_TRP(CMP, nullptr, this->exp_->get_var_addr(), IR::Addr::make_imm(0));
-    ADD_BIN(MOVEQ, this->addr_, IR::Addr::make_imm(0));
-    ADD_BIN(MOVNE, this->addr_, IR::Addr::make_imm(1));
+    ADD_BIN(MOVEQ, this->addr_, IR::Addr::make_imm(1));
+    ADD_BIN(MOVNE, this->addr_, IR::Addr::make_imm(0));
   }
 
   return ret;
@@ -1096,12 +1113,10 @@ VarDeclStmt::translate() {
 
 IR::List
 ExpStmt::translate() {
-  // 如果是函数调用，则翻译
-  auto funcall = dynamic_cast<FuncCallExp*>(this->exp_);
-
-  // 没有 ++等影响变量值的操作，不翻译
-  if (funcall==nullptr) return IR::List();
-  else                  return funcall->translate();
+  this->exp_->cast_to_logical = false;
+  this->exp_->cast_to_regular = true;
+  auto disposable_addr = this->exp_->get_var_addr();
+  return this->exp_->translate();
 }
 
 IR::List
