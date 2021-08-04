@@ -1,5 +1,5 @@
 #pragma once
-#include <list>
+#include <vector>
 #include <string>
 #include <unordered_map>
 #include <memory>
@@ -17,9 +17,12 @@ public:
   IR_Addr::Ptr label;
 
   // 参数表
-  std::list<Type> param_list;
+  std::vector<IR::Addr::Ptr> param_list;
 
-  FuncTabEntry(std::string _name, std::list<Type> _param_list) : name(_name), param_list(_param_list) {}
+  FuncTabEntry(std::string _name, std::vector<IR::Addr::Ptr> _param_list) : name(_name), param_list(_param_list) {
+    label = IR_Addr::make_named_label(_name);
+  }
+  IR::Addr::Ptr get_param_addr(int v);
 };
 
 class FuncTab {
@@ -28,7 +31,9 @@ private:
   using EntPtr_const = std::shared_ptr<const FuncTabEntry>;
 
   std::unordered_map<std::string, EntPtr> functab;
+  EntPtr curtab;
 public:
-  void put(std::string name, std::list<Type> param_types);
+  void put(std::string name, std::vector<IR::Addr::Ptr> params);
   EntPtr get(std::string name);
+  EntPtr get_curtab() const;
 };

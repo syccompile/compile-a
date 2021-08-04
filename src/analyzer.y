@@ -68,6 +68,8 @@ int parse_number(char const *);
 %type <blockstmt>   BlockStmt
 %type <blockstmt>   BlockItems
 
+%nonassoc "then"
+%nonassoc ELSE
 %start CompUnit
 
 %%
@@ -166,7 +168,9 @@ DimenList: LBRACKET Exp RBRACKET { $$ = new Expression::List();
 InitValsList : Exp    { $$ = new Array::InitValContainer();
                         dynamic_cast<Array::InitValContainer*>($$)->push_back(new Array::InitValExp($1)); 
                       }
-             | InitVals                     { $$ = $1;}
+             | InitVals { $$ = new Array::InitValContainer();
+                          dynamic_cast<Array::InitValContainer*>($$)->push_back($1); 
+			}
              | InitValsList COMMA Exp       
                        { 
                          $$ = $1; 
@@ -230,9 +234,32 @@ Stmt :  SEMI    { $$ = new Stmt(); }
      |  VarDecl { $$ = $1; }
      |  IDENT ASSIGN Exp SEMI{ $$ = new AssignmentStmt($1, nullptr, $3); delete $1; }
      |  IDENT DimenList ASSIGN Exp SEMI { $$ = new AssignmentStmt($1, $2, $4); delete $1; }
-     |  IF LPARENT LOrExp RPARENT BlockStmt { $$ = new IfStmt($3, $5); }
-     |  IF LPARENT LOrExp RPARENT BlockStmt ELSE BlockStmt { $$ = new IfStmt($3, $5, $7); }
-     |  WHILE LPARENT LOrExp RPARENT BlockStmt { $$ = new WhileStmt($3, $5); }
+     |  IF LPARENT LOrExp RPARENT Stmt ELSE Stmt { 
+               BlockStmt* block_yes = dynamic_cast<BlockStmt*>($5);
+               if (block_yes == nullptr){
+                  block_yes = new BlockStmt();
+                  block_yes->push_back($5);
+               }
+               BlockStmt* block_else = dynamic_cast<BlockStmt*>($7);
+               if (block_else == nullptr){
+                  block_else = new BlockStmt();
+                  block_else->push_back($7);
+               }
+               $$ = new IfStmt($3, block_yes, block_else); }
+     |  IF LPARENT LOrExp RPARENT Stmt %prec "then"{ 
+               BlockStmt* block = dynamic_cast<BlockStmt*>($5);
+               if (block == nullptr){
+                  block = new BlockStmt();
+                  block->push_back($5);
+               }
+               $$ = new IfStmt($3, block); }
+     |  WHILE LPARENT LOrExp RPARENT Stmt { 
+               BlockStmt* block = dynamic_cast<BlockStmt*>($5);
+               if (block == nullptr){
+                  block = new BlockStmt();
+                  block->push_back($5);
+               }
+               $$ = new WhileStmt($3, block); }
      ;
 BlockItems : Stmt { $$ = new BlockStmt(); $$->push_back($1); }
            | BlockItems Stmt { $$ = $1; $$->push_back($2); }

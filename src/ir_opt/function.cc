@@ -1123,9 +1123,9 @@ void Function::optimize(int optimize_level) {
     local_copy_propagation();
     global_copy_propagation();
     if_simplify();
+    loop_invariant_code_motion();
     staighten();
     delete_unreachable_code();
-    loop_invariant_code_motion();
     remove_dead_code();
   }
 }

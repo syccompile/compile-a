@@ -30,7 +30,8 @@
 
 4. 函数返回指令 `RET`
   * 功能：函数返回
-  * `addr0`：`VAR`/`IMM`/`PARAM` 返回值
+  * `addr0`：为空
+  * `addr1`：`VAR`/`IMM`/`PARAM` 返回值
 
 5. 标号值指令`LABVAL`
   * 功能：定义全局变量标号值

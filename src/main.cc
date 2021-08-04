@@ -1,16 +1,37 @@
 #include "ast.h"
 #include "analyzer.hh"
 #include "ir_opt.h"
-#include "ir_opt/module.h"
 #include "reg_allocate/reg_allocate.h"
+#include "reg_allocate/ir_armify.h"
+#include "ir_to_asm/translate_to_asm.h"
 
 #include <vector>
 #include <fstream>
 #include <iostream>
+#include <iterator>
 #include <unistd.h>
 #include <filesystem>
 
 extern int yylineno;
+
+namespace {
+
+std::list<IR::List>
+split_vars(IR::List &vars) {
+  std::list<IR::List> ret;
+  IR::List lst;
+
+  while (!(vars.empty())) {
+    lst.splice(lst.end(), vars, vars.begin());
+    if (lst.back()->op_ == IR::Op::VAREND) {
+      ret.push_back(lst);
+      lst.clear();
+    }
+  }
+  return ret;
+}
+
+};
 
 /** 全局变量声明  **/
 std::vector<VarDeclStmt *> vardecl;
@@ -40,7 +61,7 @@ int main(int argc, char *argv[]) {
         }
         break;
       default:
-        std::cerr << "usage: compiler <sysy_file> [-S] [-o <asm_file>] [-O<optimize_level>] [-r <ir_file>]" << std::endl;
+        std::cerr << "usage: compiler <sysy_file> [-S] [-o <asm_file>] [-O <optimize_level>] [-r <ir_file>]" << std::endl;
         exit(0);
     }
   }
@@ -64,28 +85,20 @@ int main(int argc, char *argv[]) {
   std::list<IR::List> def_list;
   std::list<IR::List> func_list;
 
+  // 将AST翻译为IR
   for (VarDeclStmt *stmt : vardecl) {
-    def_list.emplace_back(stmt->translate());
+    auto vars = stmt->translate();
+    def_list.splice(def_list.end(), split_vars(vars));
   }
   for (FunctionDecl *f : funcs) {
     func_list.emplace_back(f->translate());
   }
 
-  // do some optimization for IR
+  // 执行IR优化
   for (auto &func: func_list)
     remove_redunctant_label(func);
 
-  // only need to handle func_list
-  Module m(func_list);
-//  m.optimize(optimize_level);
-  m.debug();
-//  m.optimize(1);
-  func_list = m.merge();
-
-  for (auto &func: func_list)
-    register_allocate(func);
-
-  // outputs
+  // 输出中间代码
   std::ofstream IRFile(ir_filename);
   auto old_cout_buf = std::cout.rdbuf(IRFile.rdbuf());
 
@@ -99,26 +112,39 @@ int main(int argc, char *argv[]) {
 
   std::cout.rdbuf(old_cout_buf);
   IRFile.close();
+  
+  // 准备IR，以进行图着色寄存器分配
+  for (auto &func: func_list) {
+    ir_armify(def_list, func);
+  }
 
-//  std::ofstream IRFile(ir_filename);
-//  auto old_cout_buf = std::cout.rdbuf(IRFile.rdbuf());
-//  for (const auto &i: ir_list) i->internal_print();
-//  std::cout.rdbuf(old_cout_buf);
-//  IRFile.close();
+  // 寄存器分配
+  for (auto &func: func_list)
+    register_allocate(func);
 
-//  std::vector<std::string> asm_vector;
-//  for (const auto& ir: ir_list) {
-//    auto code = ir->translate_arm();
-//    asm_vector.insert(asm_vector.end(),
-//                      std::move_iterator(code.begin()),
-//                      std::move_iterator(code.end()));
-//  }
-//
-//  // do some optimization for ASM
-//
-//  std::ofstream ASMFile(asm_filename);
-//  for (const auto& code: asm_vector) {
-//    ASMFile << code << std::endl;
-//  }
-//  ASMFile.close();
+
+  // 输出汇编代码
+  std::ofstream ASMFile(asm_filename);
+  old_cout_buf = std::cout.rdbuf(ASMFile.rdbuf());
+
+  std::cout << ".arch armv7\n"
+            << ".macro mov32, reg, val\n"
+            << "\tmovw \\reg, #:lower16:\\val\n"
+            << "\tmovt \\reg, #:upper16:\\val\n"
+            << ".endm" << std::endl;
+  
+  for (auto &def: def_list) {
+    auto asm_list = translate_var(def);
+    for (auto &asm_line: asm_list)
+      std::cout << asm_line << std::endl;
+  }
+
+  for (auto &func: func_list) {
+    auto asm_list = translate_function(func);
+    for (auto &asm_line: asm_list)
+      std::cout << asm_line << std::endl;
+  }
+
+  std::cout.rdbuf(old_cout_buf);
+  ASMFile.close();
 }

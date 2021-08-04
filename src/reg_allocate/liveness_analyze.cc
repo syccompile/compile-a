@@ -1,4 +1,5 @@
 #include "../ir.h"
+#include "../context/context.h"
 #include "flow_graph.h"
 
 #include <assert.h>
@@ -6,11 +7,13 @@
 #include <vector>
 #include <list>
 #include <set>
+#include <utility>
 
 namespace  // helper
 {
 // 前4个参数使用寄存器传递
 const int kTransfer_Reg = 4;
+using std::pair;
 
 // 集合相减
 // ret = lhs\rhs
@@ -56,22 +59,26 @@ find_label(IR::List list, IR_Addr::Ptr label) {
   else if (ir->addr->kind==IR_Addr::Kind::PARAM && ir->addr->val<kTransfer_Reg) {      \
     ir->set.insert(ir->addr);                                                          \
     vars.insert(ir->addr);                                                             \
-    params.insert(ir->addr);                                                           \
   }
 
 // 分析ir，填写varUse中的used、def、pred、succ
-// 返回<所有IR::Addr, 所有为PARAM的IR::Addr>
-tuple<set<color_node::ptr>, set<color_node::ptr>>
+// 返回所有可着色的IR::Addr, 所有的MOV关系
+tuple<set<color_node::ptr>, set<pair<color_node::ptr, color_node::ptr> > >
 ir_parse(IR::List &ir_list) {
   std::unordered_map<int, bool> local_array;
   // 函数中使用的所有变量
   set<color_node::ptr> vars;
   // 变量中函数的参数
-  set<color_node::ptr> params;
+  set<pair<color_node::ptr, color_node::ptr> > mov_related;
+  // 函数对应的符号表项
+  auto functab_ent = context.functab->get(ir_list.front()->a0->name);
+
   IR::Ptr prev_ir;
   for (auto ir : ir_list) {
     switch (ir->op_) {
 #define OP_CASE(op) case IR::Op::op:
+      OP_CASE(SHL)
+      OP_CASE(SHR)
       OP_CASE(AND)
       OP_CASE(OR)
       OP_CASE(XOR)
@@ -95,11 +102,22 @@ ir_parse(IR::List &ir_list) {
       OP_CASE(MOVGE)
       OP_CASE(MOVGT)
       OP_CASE(MOVEQ)
-      OP_CASE(MOVNE)
-      OP_CASE(MVN)
-      OP_CASE(MOV) {
+      OP_CASE(MOVNE) {
           ACCEPT_VAR(used, a1);
           ACCEPT_VAR(def, a0);
+          break;
+      }
+      // 单独处理 MOV
+      OP_CASE(MVN)
+      OP_CASE(MOV) {
+          ACCEPT_VAR(def, a0);
+          ACCEPT_VAR(used, a1);
+          // 只有可着色节点才考虑mov消除
+          if (ir->def.size() && ir->used.size()) {
+            auto a0_cnode = static_pointer_cast<color_node>(ir->a0);
+            auto a1_cnode = static_pointer_cast<color_node>(ir->a1);
+            mov_related.insert(std::make_pair(a0_cnode, a1_cnode));
+          }
           break;
       }
       OP_CASE(JMP)
@@ -129,16 +147,29 @@ ir_parse(IR::List &ir_list) {
       OP_CASE(PARAM) {
         ACCEPT_VAR(def, a0);
         ACCEPT_VAR(used, a1);
+        break;
       }
       OP_CASE(ALLOC_IN_STACK) {
         local_array[ir->a0->val] = true;
         break;
       }
+      OP_CASE(CALL) {
+        int param_num = std::min(size_t(4), functab_ent->param_list.size());
+        for (int i=0 ; i<param_num ; i++) {
+          auto addr = functab_ent->get_param_addr(i);
+          ir->def.insert(addr);
+          ir->used.insert(addr);
+          vars.insert(addr);
+        }
+        break;
+      }
+      OP_CASE(RET) {
+        ACCEPT_VAR(used, a1);
+        break;
+      }
       OP_CASE(LABEL)
       OP_CASE(FUNCDEF)
       OP_CASE(FUNCEND)
-      OP_CASE(CALL)
-      OP_CASE(RET)
       OP_CASE(VARDEF)
       OP_CASE(DATA)
       OP_CASE(ZERO)
@@ -154,7 +185,7 @@ ir_parse(IR::List &ir_list) {
     }
     prev_ir = ir;
   }
-  return make_tuple(vars, params);
+  return make_tuple(vars, mov_related);
 }
 #undef ACCEPT_VAR
 
@@ -192,13 +223,28 @@ make_conflict_graph(vector<varUse::ptr> var_uses, set<color_node::ptr> nodes) {
 }
 } // namespace
 
+// 更新mov_related，因为只有不冲突的Mov相关变量，才可能合并
+void
+update_move_related(set<pair<color_node::ptr, color_node::ptr> > &mov_related){
+  for(auto it = mov_related.begin() ; it!=mov_related.end() ;) {
+    auto first_cnode  = dynamic_pointer_cast<IR_Addr>((*it).first);  // 变量first的地址
+    auto second_cnode = dynamic_pointer_cast<IR_Addr>((*it).second);  // 变量second的地址
+
+    if (first_cnode->is_neighbored(second_cnode)) {
+      it = mov_related.erase(it);
+    } else {
+      ++it;
+    }
+  }
+}
+
 // 活跃分析
 // pre-condition: ir_list必须是一个函数的完整ir
 //      ir_list不能为空
-tuple<set<color_node::ptr>, set<color_node::ptr>>
+tuple<set<color_node::ptr>, set<pair<color_node::ptr, color_node::ptr> > >
 liveness_analyze(IR::List &ir_list) {
 
-  auto[vars, params] = ir_parse(ir_list);
+  auto[vars, mov_related] = ir_parse(ir_list);
   std::vector<varUse::ptr> nodes;
   
   for (auto ir : ir_list) { nodes.push_back(ir); }
@@ -206,17 +252,21 @@ liveness_analyze(IR::List &ir_list) {
   while (true) {
     int immut_time = 0;
     for (varUse::ptr n : nodes) {
-      set<shared_ptr<var>> in = n->in, out = n->out;
-      // in[n] = use[n] U (out[n] - def[n])
-      n->in = set_union(n->used, set_sub(n->out, n->def));
+      // in out 用于记录未更新前的值
+      auto orig_in_size  = n->in.size(),
+           orig_out_size = n->out.size();
 
       // out[n] = U in[s] ; s in succ[n]
       n->out.clear();
       for (varUse::ptr succ : n->succ) {
         n->out = set_union(n->out, succ->in);
       }
+
+      // in[n] = use[n] U (out[n] - def[n])
+      n->in = set_union(n->used, set_sub(n->out, n->def));
+
       // 判断结束条件
-      if (n->in.size() == in.size() && n->out.size() == out.size()) {
+      if (n->in.size() == orig_in_size && n->out.size() == orig_out_size) {
         immut_time ++;
       }
     }
@@ -228,6 +278,6 @@ liveness_analyze(IR::List &ir_list) {
 
   // 构造冲突图
   make_conflict_graph(nodes, vars);
-
-  return make_tuple(vars, params);
+  update_move_related(mov_related);
+  return make_tuple(vars, mov_related);
 }

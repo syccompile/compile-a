@@ -62,7 +62,6 @@ IR::Op get_ir_regular_op(Expression::Op expr_op) {
     CASE(MOD, MOD);
     CASE(AND, AND);
     CASE(OR , OR );
-    CASE(NOT, NOT);
     default: return IR::Op::NOP;
   }
 
@@ -103,22 +102,27 @@ get_offset(const std::vector<int> &shape, Expression::List &dimens) {
     dims.push_back(addr);
   }
 
+  std::vector<int> dim_offset;
   int acc = 1;
-  int i = dims.size() - 1;
+  for (auto it=shape.rbegin() ; it!=shape.rend() ; ++it) {
+    dim_offset.insert(dim_offset.begin(), acc);
+    acc *= (*it);
+  }
 
-  // 常量优化：数组最右边的表达式均为常量
-  // 例如：a[b+c][1][2][3][4]
+  int i = 0;
+
+  // 常量优化：数组最zuo边的表达式均为常量
+  // 例如：a[1][2][3][4][b+c]
   // 那么[1][2][3][4]的偏移量可以直接编译期计算
   int constant_offset = 0;
-  for (; i>=0 ; i--) {
+  for (; i<dims.size() ; i++) {
     // 如果取到非编译期常量的表达式，那么就跳出循环
     if (dims[i]->kind != IR::Addr::Kind::IMM) break;
     // 如果取到编译期常量
-    constant_offset = constant_offset + acc*(dims[i]->val);
-    acc *= shape[i];
+    constant_offset = constant_offset + dim_offset[i]*dims[i]->val;
   } 
   // 如果所有下标都计算完了，就直接返回常地址
-  if (i<0) return std::make_pair(IR::Addr::make_imm(constant_offset), ret);
+  if (i>=dims.size()) return std::make_pair(IR::Addr::make_imm(constant_offset), ret);
   // 常量优化结束
   
   // 再计算非编译期常数的偏移量
@@ -128,11 +132,10 @@ get_offset(const std::vector<int> &shape, Expression::List &dimens) {
   // 先将常量变址计算结果拷贝过来
   ADD_BIN(MOV, offset_addr, IR::Addr::make_imm(constant_offset));
   // 再根据余下的下标计算变址（运行时计算）
-  for (; i>=0 ; i--) {
+  for (; i<dims.size() ; i++) {
     auto tmp = context.allocator.allocate_addr();
-    ADD_TRP(MUL, tmp, dims[i], IR::Addr::make_imm(acc));
+    ADD_TRP(MUL, tmp, dims[i], IR::Addr::make_imm(dim_offset[i]));
     ADD_TRP(ADD, offset_addr, offset_addr, tmp);
-    acc *= shape[i];
   }
 
   return std::make_pair(offset_addr, ret);
@@ -187,7 +190,9 @@ VarExp::is_evaluable() const {
   // 首先检查（数组表达式的）下标是否编译期可求值
   if (ent->is_array()) {
     // 如果是数组，而没有参数列表，则认为是需要传递数组地址，此时不可求值
+    // ADD: if index dimension is fewer than shape dimension, also addr
     if (this->dimens_==nullptr) return false;
+    if (this->dimens_->size() < ent->type.arr_shape.size()) return false;
     auto offset_pair = get_offset(ent->type.arr_shape, *(this->dimens_));
     if (offset_pair.first->kind != IR::Addr::IMM) return false;
   }
@@ -251,7 +256,7 @@ VarExp::translate() {
   // 翻译模式：生成临时表达式 (this==0)
   if (this->translate_to_logical()) {
     // 生成 (this==0)临时表达式
-    BinaryExp *tmp = new BinaryExp(Op::EQ, this, new NumberExp(0));
+    BinaryExp *tmp = new BinaryExp(Op::NEQ, this, new NumberExp(0));
     // 要求这个临时表达式转为逻辑表达式，并赋予本表达式的失败标号
     tmp->cast_to_logical = true;
     tmp->cast_to_regular = false;
@@ -278,7 +283,18 @@ VarExp::translate() {
       auto offset_pair = get_offset(ent->type.arr_shape, *(this->dimens_));
       ret.splice(ret.end(), offset_pair.second);
       // 读取数组内容
-      ADD_TRP(LOAD, this->addr_, ent->addr, offset_pair.first);
+      if (this->dimens_->size()<ent->type.arr_shape.size()) {
+	IR::Addr::Ptr offset_addr = nullptr;
+	if (offset_pair.first->kind == IR::Addr::Kind::IMM)
+	  offset_addr = IR::Addr::make_imm(offset_pair.first->val * 4);
+	else {
+	  offset_addr = context.allocator.allocate_addr();
+          ADD_TRP(SHL, offset_addr, offset_pair.first, IR::Addr::make_imm(2));
+	}
+	ADD_TRP(ADD, this->addr_, ent->addr, offset_addr);
+      }
+      else
+        ADD_TRP(LOAD, this->addr_, ent->addr, offset_pair.first);
     }
     // 如果是单一变量
     // 那就啥也不干
@@ -299,39 +315,59 @@ FuncCallExp::eval() {
 
 IR::Addr::Ptr
 FuncCallExp::get_var_addr() {
-  return this->addr_ = IR::Addr::make_ret();
+  return Expression::get_var_addr();
 }
 
 IR::List
 FuncCallExp::translate() {
   IR::List ret;
 
-  // 如果存在参数
-  if (params_!=nullptr) {
-    int i = 0;
-    
-    // 首先计算各个函数参数的值
-    for (Expression *exp : *params_) {
-      exp->allow_pass_base = true;
-      auto addr = exp->get_var_addr();
-      ret.splice(ret.end(), exp->translate());
-      ++i;
+  // 要求转化为逻辑表达式
+  if (this->translate_to_logical()) {
+    BinaryExp *tmp = new BinaryExp(Expression::Op::NEQ, this, new NumberExp(0));
+    tmp->cast_to_logical = true;
+    tmp->cast_to_regular = false;
+    tmp->set_fail_label(this->label_fail_);
+
+    ret.splice(ret.end(), tmp->translate());
+
+    // 防止析构 this
+    tmp->left_ = nullptr;
+    delete tmp;
+  }
+  // 要求转化为算术表达式
+  else {
+    // 如果存在参数
+    if (params_!=nullptr) {
+      int i = 0;
+      
+      // 首先计算各个函数参数的值
+      for (Expression *exp : *params_) {
+        exp->allow_pass_base = true;
+        auto addr = exp->get_var_addr();
+        ret.splice(ret.end(), exp->translate());
+        ++i;
+      }
+
+      // 然后生成传参中间代码
+      i=0;
+      for (Expression *exp : *params_) {
+        ADD_BIN(PARAM, context.functab->get_curtab()->get_param_addr(i++) , exp->get_var_addr());
+      }
     }
 
-    // 然后生成传参中间代码
-    i=0;
-    for (Expression *exp : *params_) {
-      ADD_BIN(PARAM, IR::Addr::make_param(i++), exp->get_var_addr());
+    // 生成函数调用的代码
+    // TODO 未定义函数，参数类型不一致
+    auto func_ent = context.functab->get(this->name_);
+    if (func_ent != nullptr) {
+      ADD_UNR(CALL, func_ent->label);
+      ADD_BIN(MOV,  this->get_var_addr(), IR::Addr::make_ret());
+    }
+    else {
+      ADD_UNR(CALL, IR::Addr::make_named_label(this->name_));
+      ADD_BIN(MOV,  this->get_var_addr(), IR::Addr::make_ret());
     }
   }
-
-  // 生成函数调用的代码
-  // TODO 未定义函数，参数类型不一致
-  auto func_ent = context.functab->get(this->name_);
-  if (func_ent != nullptr)
-    ADD_UNR(CALL, func_ent->label);
-  else
-    ADD_UNR(CALL, IR::Addr::make_named_label(this->name_));
 
   return ret;
 }
@@ -341,11 +377,11 @@ BinaryExp::is_evaluable() const {
   switch(this->op_) {
     case Expression::Op::AND:
       if (this->left_->is_evaluable() && this->left_->eval()==0) return true;
-      if (this->right_->is_evaluable() && this->right_->eval()==0) return true;
+      // if (this->right_->is_evaluable() && this->right_->eval()==0) return true;
       break;
     case Expression::Op::OR:
       if (this->left_->is_evaluable() && this->left_->eval()==1) return true;
-      if (this->right_->is_evaluable() && this->right_->eval()==1) return true;
+      // if (this->right_->is_evaluable() && this->right_->eval()==1) return true;
       break;
     default:
       break;
@@ -419,10 +455,19 @@ BinaryExp::_translate_logical() {
         ret.splice(ret.end(), this->right_->translate());
       }
       else if (this->right_->is_evaluable() && this->right_->eval()) {
-        // 右表达式求值为“1”，左表达式不是编译期常量
-        // 此时可看作左表达式的单元(Unary)表达式
-        this->left_->set_fail_label(this->label_fail_);
-        ret.splice(ret.end(), this->left_->translate());
+        if (this->right_->eval()) {
+          // 右表达式求值为“1”，左表达式不是编译期常量
+          // 此时可看作左表达式的单元(Unary)表达式
+          this->left_->set_fail_label(this->label_fail_);
+          ret.splice(ret.end(), this->left_->translate());
+	}
+	else {
+          // 右表达式求值为“0”，左表达式不是编译期常量
+          // 此时 only execute left expr
+	  auto *expstmt = new ExpStmt(this->left_);
+	  ret.splice(ret.end(), expstmt->translate());
+	  ADD_UNR(JMP, this->label_fail_);
+	}
       }
       // 常量优化部分结束
 
@@ -451,10 +496,18 @@ BinaryExp::_translate_logical() {
         ret.splice(ret.end(), this->right_->translate());
       }  
       else if (this->right_->is_evaluable() && !(this->right_->eval())) {
-        // 右表达式求值为“0”，左表达式不是编译期常量
-        // 此时可看作左表达式的单元表达式
-        this->left_->set_fail_label(this->label_fail_);
-        ret.splice(ret.end(), this->left_->translate());
+        if (this->right_->eval()) {
+          // 右表达式求值为“1”，左表达式不是编译期常量
+          // 此时可看作左表达式的单元表达式
+	  auto *expstmt = new ExpStmt(this->left_);
+	  ret.splice(ret.end(), expstmt->translate());
+        }
+        else {
+          // 右表达式求值为“0”，左表达式不是编译期常量
+          // 此时可看作左表达式的单元表达式
+          this->left_->set_fail_label(this->label_fail_);
+          ret.splice(ret.end(), this->left_->translate());
+        }
       }
       // 常量优化部分结束
 
@@ -545,7 +598,7 @@ BinaryExp::_translate_regular() {
   // 上级表达式要求本表达式生成一个逻辑表达式
   // 那么就直接生成一个临时性的关系表达式 (this==0) ，利用它生成中间代码
   if (this->translate_to_logical()) {
-    BinaryExp *tmp = new BinaryExp(Expression::Op::EQ, this, new NumberExp(0));
+    BinaryExp *tmp = new BinaryExp(Expression::Op::NEQ, this, new NumberExp(0));
     tmp->cast_to_logical = true;
     tmp->cast_to_regular = false;
     tmp->set_fail_label(this->label_fail_);
@@ -671,7 +724,7 @@ UnaryExp::_translate_regular() {
   if (this->translate_to_logical()) {
     // 要求生成逻辑表达式
     // 直接生成一个临时性的关系表达式，利用它生成中间代码
-    BinaryExp *tmp = new BinaryExp(Expression::Op::EQ, this, new NumberExp(0));
+    BinaryExp *tmp = new BinaryExp(Expression::Op::NEQ, this, new NumberExp(0));
 
     tmp->cast_to_logical = true;
     tmp->cast_to_regular = false;
@@ -691,7 +744,7 @@ UnaryExp::_translate_regular() {
 
     ret.splice(ret.end(), this->exp_->translate());
     ADD_BIN(MOV, this->addr_, sub_addr);
-    if (Expression::Op::SUB)
+    if (Expression::Op::SUB == this->op_)
       ADD_TRP(SUB, this->addr_, IR::Addr::make_imm(0), this->addr_);
   }
 
@@ -937,14 +990,18 @@ Array::_translate_local() {
     assert(flattened_container.size()!=0);
     // 要求所有初值都是编译期常量
     for (Expression *exp: flattened_container) {
-      if (exp==nullptr) continue;
-      assert(exp->is_evaluable());
-    }
-
-    for (Expression *exp: flattened_container) {
-      int val = exp->eval();
-      init_val.push_back(val);
-      ADD_TRP(STORE, addr, IR::Addr::make_imm(offset), IR::Addr::make_imm(val));
+      IR::Addr::Ptr exp_addr;
+      if (exp==nullptr) {
+        exp_addr = IR::Addr::make_imm(0);
+        init_val.push_back(0);
+      }
+      else {
+        assert(exp->is_evaluable());
+        int val = exp->eval();
+        init_val.push_back(val);
+        exp_addr = IR::Addr::make_imm(val);
+      }
+      ADD_TRP(STORE, addr, IR::Addr::make_imm(offset), exp_addr);
       offset++;
     }
   }
@@ -986,6 +1043,9 @@ Array::_translate_global() {
     if (exp==nullptr) continue;
     assert(exp->is_evaluable());
   }
+
+  // 初值
+  std::vector<int> init_val;
   
   // 生成中间代码
   ADD_UNR(VARDEF, addr);
@@ -994,6 +1054,7 @@ Array::_translate_global() {
   if (flattened_container.size()==0) {
     int total_size = multiply(shape);
     ADD_UNR(ZERO, IR::Addr::make_imm(total_size));
+    init_val = std::vector(0, total_size);
   }
   // 已经指定初值
   else {
@@ -1004,14 +1065,17 @@ Array::_translate_global() {
     
       if (val==0) {
         z_num++;
+        init_val.push_back(0);
       }
       else {
         if (z_num!=0) ADD_UNR(ZERO, IR::Addr::make_imm(z_num));
         z_num = 0;
         ADD_UNR(DATA, IR::Addr::make_imm(val));
+        init_val.push_back(val);
       }
     }
     if (z_num!=0) ADD_UNR(ZERO, IR::Addr::make_imm(z_num));
+    for (int i=0 ; i<z_num ; i++) init_val.push_back(0);
   }
   ADD_NOP(VAREND);
 
@@ -1019,7 +1083,7 @@ Array::_translate_global() {
     this->name_,
     shape,
     addr,
-    std::vector<int>(),
+    init_val,
     this->immutable_
   ));
 
@@ -1049,8 +1113,10 @@ VarDeclStmt::translate() {
 
 IR::List
 ExpStmt::translate() {
-  // 没有 ++等影响变量值的操作，不翻译
-  return IR::List();
+  this->exp_->cast_to_logical = false;
+  this->exp_->cast_to_regular = true;
+  auto disposable_addr = this->exp_->get_var_addr();
+  return this->exp_->translate();
 }
 
 IR::List
@@ -1144,6 +1210,8 @@ WhileStmt::translate() {
     this->condition_->set_fail_label(this->label_end);
 
     // 翻译条件表达式
+    this->condition_->cast_to_logical = true;
+    this->condition_->cast_to_regular = false;
     ADD_UNR(LABEL, this->label_cond);
     ret.splice(ret.end(), this->condition_->translate());
     ret.splice(ret.end(), this->body_->translate());
@@ -1164,7 +1232,7 @@ ReturnStmt::translate() {
   else                retexp_addr = IR::Addr::make_imm(0);
 
   if (this->ret_exp_) ret.splice(ret.end(), ret_exp_->translate());
-  ADD_UNR(RET, retexp_addr);
+  ADD_BIN(RET, nullptr, retexp_addr);
 
   return ret;
 }
@@ -1225,21 +1293,23 @@ IR::List
 FunctionDecl::translate() {
   IR::List ret;
 
-  IR::Addr::param_reset();
-  int cnt = 0; // cnt 函数参数个数
+  std::vector<IR::Addr::Ptr> param_list;
+  int cnt = 0;
   if (this->params_) for (Variable *i: *(this->params_)) {
     i->param_no = cnt++;
     i->translate();
+
     auto i_ent = i->vartab_ent;
+    param_list.push_back(i_ent->addr);
+    
     this->body_->pre_defined.push_back(i_ent);
   }
+  context.functab->put(name(), param_list);
 
   ADD_BIN(FUNCDEF, IR::Addr::make_named_label(this->name_), IR::Addr::make_imm(cnt));
   ret.splice(ret.end(), this->body_->translate());
   ADD_NOP(FUNCEND);
-  std::list<Type> *list = new std::list<Type>();
-  // FIX: 空的参数表
-  context.functab->put(name(), *list);
+
 
   return ret;
 }
