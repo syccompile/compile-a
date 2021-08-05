@@ -411,7 +411,8 @@ translate_function(IR::List &l) {
   std::list<string> ret;
 
   // register allocate and assign
-  register_allocate(l);
+  // allocated already in main.cc
+  //register_allocate(l);
   auto color_assign = register_assign(l);
 
   // stack space calculation
