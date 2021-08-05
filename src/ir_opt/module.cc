@@ -19,7 +19,6 @@ Module::Module(std::list<IR::Ptr> &ir_list) {
 
 Module::Module(list<std::list<IR::Ptr>> &ir_lists) {
   for (auto &func_ir_list : ir_lists) {
-    func_ir_list.pop_back();  // POP FUNCEND
     function_list_.push_back(make_function_block(func_ir_list));
   }
 }
@@ -46,7 +45,10 @@ void Module::make_inline_function() {
 std::list<std::list<IR::Ptr>> Module::merge() {
   std::list<std::list<IR::Ptr>> ret;
   for (auto &function: function_list_) {
-    ret.push_back(function->merge());
+    std::list<IR::Ptr> tmp = function->merge();
+    tmp.push_front(function->header_);
+    tmp.push_back(function->footer_);
+    ret.push_back(tmp);
   }
   return ret;
 }

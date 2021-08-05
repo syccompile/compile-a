@@ -129,7 +129,10 @@ void Function::_link_basic_block() {
 Function::Function(list<IR::Ptr> &ir_list) {
   func_name_ = ir_list.front()->a0->name;
   arg_num_ = ir_list.front()->a1->val;
+  header_ = ir_list.front();
+  footer_ = ir_list.back();
   ir_list.pop_front();  // pop FUNCDEF
+  ir_list.pop_back();  // POP FUNCEND
 
   _divide_basic_block(ir_list);
   _build_lineno_ir_map();

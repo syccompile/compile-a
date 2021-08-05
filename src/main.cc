@@ -4,6 +4,7 @@
 #include "reg_allocate/reg_allocate.h"
 #include "reg_allocate/ir_armify.h"
 #include "ir_to_asm/translate_to_asm.h"
+#include "ir_opt/module.h"
 
 #include <vector>
 #include <fstream>
@@ -43,17 +44,17 @@ int optimize_level = 0;
 
 int main(int argc, char *argv[]) {
   int ch;
-  string asm_filename, ir_filename;
+  std::filesystem::path asm_file, ir_file, opt_ir_file, reg_alloc_ir_file;
   while ((ch = getopt(argc, argv, "So:O::r:")) != -1) {
     switch (ch) {
       case 'S':
         // do nothing
         break;
       case 'o':
-        asm_filename = optarg;
+        asm_file = optarg;
         break;
       case 'r':
-        ir_filename = optarg;
+        ir_file = optarg;
         break;
       case 'O':
         if (optarg) {
@@ -71,12 +72,15 @@ int main(int argc, char *argv[]) {
   }
   std::filesystem::path sysy_file(argv[optind]);
 
-  if (asm_filename.empty()) {
-    asm_filename = sysy_file.stem().string() + ".s";
+  if (asm_file.empty()) {
+    asm_file = sysy_file.parent_path() / sysy_file.stem().concat(".s");
   }
-  if (ir_filename.empty()) {
-    ir_filename = sysy_file.stem().string() + ".ir";
+  if (ir_file.empty()) {
+    ir_file = sysy_file.parent_path() / sysy_file.stem().concat(".ir");
   }
+
+  opt_ir_file = ir_file.parent_path() / ir_file.stem().concat(".oir");
+  reg_alloc_ir_file = ir_file.parent_path() / ir_file.stem().concat(".air");
 
   freopen(sysy_file.c_str(), "r", stdin);
   yylineno = 1;
@@ -99,20 +103,32 @@ int main(int argc, char *argv[]) {
     remove_redunctant_label(func);
 
   // 输出中间代码
-  std::ofstream IRFile(ir_filename);
+  std::ofstream IRFile(ir_file);
   auto old_cout_buf = std::cout.rdbuf(IRFile.rdbuf());
-
   for (auto &def: def_list)
-    for (auto ir: def)
+    for (const auto& ir: def)
       ir->internal_print();
-
   for (auto &func: func_list)
-    for (auto ir: func)
+    for (const auto& ir: func)
       ir->internal_print();
-
   std::cout.rdbuf(old_cout_buf);
   IRFile.close();
-  
+
+  auto m = Module(func_list);
+  m.optimize(1);
+  func_list = m.merge();
+
+  IRFile.open(opt_ir_file);
+  old_cout_buf = std::cout.rdbuf(IRFile.rdbuf());
+  for (auto &def: def_list)
+    for (const auto& ir: def)
+      ir->internal_print();
+  for (auto &func: func_list)
+    for (const auto& ir: func)
+      ir->internal_print();
+  std::cout.rdbuf(old_cout_buf);
+  IRFile.close();
+
   // 准备IR，以进行图着色寄存器分配
   for (auto &func: func_list) {
     ir_armify(def_list, func);
@@ -122,9 +138,19 @@ int main(int argc, char *argv[]) {
   for (auto &func: func_list)
     register_allocate(func);
 
+  IRFile.open(reg_alloc_ir_file);
+  old_cout_buf = std::cout.rdbuf(IRFile.rdbuf());
+  for (auto &def: def_list)
+    for (const auto& ir: def)
+      ir->internal_print();
+  for (auto &func: func_list)
+    for (const auto& ir: func)
+      ir->internal_print();
+  std::cout.rdbuf(old_cout_buf);
+  IRFile.close();
 
   // 输出汇编代码
-  std::ofstream ASMFile(asm_filename);
+  std::ofstream ASMFile(asm_file);
   old_cout_buf = std::cout.rdbuf(ASMFile.rdbuf());
 
   std::cout << ".arch armv7\n"

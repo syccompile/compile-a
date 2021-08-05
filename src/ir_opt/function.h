@@ -70,6 +70,8 @@ class Function {
   using iterator = vector<BasicBlock::Ptr>::iterator;
 
   vector<BasicBlock::Ptr> basic_block_vector_;
+  IR::Ptr header_;
+  IR::Ptr footer_;
   string func_name_;
   int arg_num_;
   int ir_num_;

@@ -19,7 +19,6 @@ bool is_mov_op(IR::Op op) {
 }
 
 bool is_algo_op(IR::Op op) {
-  if (op == IR::Op::NOT) return false;  // TODO: 会用到吗
   return op >= IR::Op::ADD && op <= IR::Op::XOR;
 }
 
@@ -247,7 +246,7 @@ void BasicBlock::calc_use_def() {
       add_to_use(cur_ir->a1);
       add_to_use(cur_ir->a2);
     } else if (cur_ir->op_ == IR::Op::RET) {
-      add_to_use(cur_ir->a0);
+      add_to_use(cur_ir->a1); // TODO: 文档写的a0
     } else if (cur_ir->op_ == IR::Op::PARAM) {
       add_to_use(cur_ir->a1);
     }
@@ -368,8 +367,6 @@ void BasicBlock::algebraic_simplification() {
         ir->a2 = nullptr;
       }
     } else if (ir->op_ == IR::Op::OR) {
-      // do nothing, DELETE
-    } else if (ir->op_ == IR::Op::NOT) {
       // do nothing, DELETE
     } else if (ir->op_ == IR::Op::XOR) {
       // do nothing, DELETE

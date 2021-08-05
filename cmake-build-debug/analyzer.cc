@@ -519,10 +519,10 @@ union yyalloc
 /* YYFINAL -- State number of the termination state.  */
 #define YYFINAL  9
 /* YYLAST -- Last index in YYTABLE.  */
-#define YYLAST   212
+#define YYLAST   228
 
 /* YYNTOKENS -- Number of terminals.  */
-#define YYNTOKENS  37
+#define YYNTOKENS  38
 /* YYNNTS -- Number of nonterminals.  */
 #define YYNNTS  23
 /* YYNRULES -- Number of rules.  */
@@ -531,7 +531,7 @@ union yyalloc
 #define YYNSTATES  152
 
 #define YYUNDEFTOK  2
-#define YYMAXUTOK   291
+#define YYMAXUTOK   292
 
 
 /* YYTRANSLATE(TOKEN-NUM) -- Symbol number corresponding to TOKEN-NUM
@@ -572,22 +572,22 @@ static const yytype_int8 yytranslate[] =
        5,     6,     7,     8,     9,    10,    11,    12,    13,    14,
       15,    16,    17,    18,    19,    20,    21,    22,    23,    24,
       25,    26,    27,    28,    29,    30,    31,    32,    33,    34,
-      35,    36
+      35,    36,    37
 };
 
 #if YYDEBUG
   /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
 static const yytype_int16 yyrline[] =
 {
-       0,    74,    74,    75,    76,    77,    80,    81,    83,    86,
-      87,    88,    91,    92,    93,    94,    96,    97,    98,    99,
-     100,   101,   104,   105,   106,   107,   110,   111,   112,   113,
-     114,   117,   118,   119,   122,   123,   126,   127,   130,   133,
-     139,   146,   155,   158,   161,   166,   169,   170,   175,   180,
-     181,   185,   189,   193,   197,   201,   205,   211,   215,   223,
-     224,   225,   226,   227,   228,   229,   230,   231,   232,   233,
-     234,   235,   237,   238,   240,   241,   244,   248,   252,   256,
-     262,   263
+       0,    76,    76,    77,    78,    79,    82,    83,    85,    88,
+      89,    90,    93,    94,    95,    96,    98,    99,   100,   101,
+     102,   103,   106,   107,   108,   109,   112,   113,   114,   115,
+     116,   119,   120,   121,   124,   125,   128,   129,   132,   135,
+     141,   148,   157,   160,   163,   168,   171,   174,   179,   184,
+     185,   189,   193,   197,   201,   205,   209,   215,   219,   227,
+     228,   229,   230,   231,   232,   233,   234,   235,   236,   237,
+     249,   256,   264,   265,   267,   268,   271,   275,   279,   283,
+     289,   290
 };
 #endif
 
@@ -600,11 +600,11 @@ static const char *const yytname[] =
   "RPARENT", "LCURLY", "RCURLY", "INT", "VOID", "CONST", "RETURN", "IF",
   "BREAK", "WHILE", "CONTINUE", "ELSE", "SEMI", "COMMA", "ASSIGN", "EQ",
   "NEQ", "LT", "GT", "LE", "GE", "AND", "OR", "NUMBER", "ADD", "SUB",
-  "MUL", "DIV", "MOD", "NOT", "IDENT", "$accept", "CompUnit", "BType",
-  "Exp", "AddExp", "MulExp", "UnaryExp", "PrimaryExp", "RelExp", "EqExp",
-  "LAndExp", "LOrExp", "ExpList", "VarDecl", "DimenList", "InitValsList",
-  "InitVals", "VarDefList", "Stmt", "BlockItems", "BlockStmt",
-  "FuncFParams", "FuncDef", YY_NULLPTR
+  "MUL", "DIV", "MOD", "NOT", "IDENT", "\"then\"", "$accept", "CompUnit",
+  "BType", "Exp", "AddExp", "MulExp", "UnaryExp", "PrimaryExp", "RelExp",
+  "EqExp", "LAndExp", "LOrExp", "ExpList", "VarDecl", "DimenList",
+  "InitValsList", "InitVals", "VarDefList", "Stmt", "BlockItems",
+  "BlockStmt", "FuncFParams", "FuncDef", YY_NULLPTR
 };
 #endif
 
@@ -616,11 +616,11 @@ static const yytype_int16 yytoknum[] =
        0,   256,   257,   258,   259,   260,   261,   262,   263,   264,
      265,   266,   267,   268,   269,   270,   271,   272,   273,   274,
      275,   276,   277,   278,   279,   280,   281,   282,   283,   284,
-     285,   286,   287,   288,   289,   290,   291
+     285,   286,   287,   288,   289,   290,   291,   292
 };
 # endif
 
-#define YYPACT_NINF (-64)
+#define YYPACT_NINF (-83)
 
 #define yypact_value_is_default(Yyn) \
   ((Yyn) == YYPACT_NINF)
@@ -634,22 +634,22 @@ static const yytype_int16 yytoknum[] =
      STATE-NUM.  */
 static const yytype_int16 yypact[] =
 {
-     131,   -64,   -64,    37,   172,   -15,   -64,   -64,   -10,   -64,
-     -64,   -64,    10,    89,     5,   132,     7,     8,   140,    24,
-     -64,    35,   -64,   -64,   140,   -64,   140,   140,   140,    95,
-      36,    46,   166,   -64,   -64,    74,    48,    14,   -64,   140,
-      90,    38,    46,   163,   152,    83,     0,   -64,   -64,   -64,
-     108,   112,   -64,   140,   140,   140,   140,   140,   117,   -64,
-     114,    74,    37,   130,    58,   -64,   140,    65,   140,   140,
-     140,   140,   140,   140,   140,   -64,   140,   -64,   -64,    77,
-     166,   166,   -64,   -64,   -64,   -64,    44,   144,   118,   150,
-     159,   -64,    19,   -10,   175,   -64,   -64,   149,   -64,   112,
-     -64,   167,   -64,   -64,   -64,    53,   -64,   -64,    90,    46,
-      46,    46,    46,   163,   163,   152,    83,   -64,   140,   -64,
-     186,   140,   -64,   140,   -64,   140,    75,   -64,   -64,   -64,
-     114,   -64,   161,   -64,   -64,   -64,     3,     4,   187,   140,
-     112,   -64,   -64,    74,    74,   -64,   188,   190,   -64,   -64,
-      74,   -64
+     132,   -83,   -83,    74,   110,   -12,   -83,   -83,    -8,   -83,
+     -83,   -83,    22,    89,    18,   118,     1,   197,    44,    43,
+     -83,     8,   -83,   -83,    44,   -83,    44,    44,    44,    17,
+      84,   119,   139,   -83,   -83,    40,    30,    66,   -83,    44,
+      94,    57,   119,   185,   180,    76,     5,   -83,   -83,   -83,
+     109,   131,   -83,    44,    44,    44,    44,    44,    82,   -83,
+     148,    40,    74,   151,   161,   -83,    44,    61,    44,    44,
+      44,    44,    44,    44,    44,   -83,    44,   -83,   -83,    80,
+     139,   139,   -83,   -83,   -83,   -83,   152,   170,   168,   172,
+     171,   -83,    38,    -8,   198,   -83,   -83,   117,   -83,   131,
+     -83,   181,   -83,   -83,   -83,     0,   -83,   -83,    94,   119,
+     119,   119,   119,   185,   185,   180,    76,   -83,    44,   -83,
+     200,    44,   -83,    44,   -83,    44,    62,   -83,   -83,   -83,
+     148,   -83,   169,   -83,   -83,   -83,    11,    12,   201,    44,
+     131,   -83,   -83,   149,   149,   -83,   202,   204,   -83,   -83,
+     149,   -83
 };
 
   /* YYDEFACT[STATE-NUM] -- Default reduction number in state STATE-NUM.
@@ -671,22 +671,22 @@ static const yytype_int8 yydefact[] =
       30,    27,    28,    32,    33,    35,    37,    20,     0,    62,
        0,     0,    65,     0,    64,     0,    25,    60,    75,    73,
       78,    50,     0,    58,    39,    63,     0,     0,     0,     0,
-      79,    47,    48,     0,     0,    67,     0,    69,    71,    68,
-       0,    70
+      79,    47,    48,     0,     0,    67,     0,    70,    71,    68,
+       0,    69
 };
 
   /* YYPGOTO[NTERM-NUM].  */
 static const yytype_int16 yypgoto[] =
 {
-     -64,   -64,     2,   -16,   -17,   141,    64,   -64,   129,   134,
-     133,   -20,   -64,    82,   -25,   -64,   -63,   202,   115,   -64,
-     -32,   -64,   207
+     -83,   -83,     9,   -16,   -17,   159,   167,   -83,   142,   153,
+     150,   -45,   -83,    10,   -25,   -83,   -63,   217,   -82,   -83,
+     -32,   -83,   224
 };
 
   /* YYDEFGOTO[NTERM-NUM].  */
 static const yytype_int8 yydefgoto[] =
 {
-      -1,     4,     5,    94,    31,    32,    33,    34,    43,    44,
+      -1,     4,    93,    94,    31,    32,    33,    34,    43,    44,
       45,    46,    79,    95,    19,   105,    65,    13,    96,    97,
       98,    37,     7
 };
@@ -696,90 +696,92 @@ static const yytype_int8 yydefgoto[] =
      number is the opposite.  If YYTABLE_NINF, syntax error.  */
 static const yytype_uint8 yytable[] =
 {
-      30,   106,    38,    59,    51,     8,    75,    42,    16,   143,
-     144,    23,    24,    16,    35,    17,    67,     1,     2,    36,
-      61,    12,    16,    63,    50,    18,    14,    39,    76,   100,
-      18,    76,    76,    62,    78,    99,    25,    26,    27,   125,
-      52,    16,    28,    29,    40,   133,     1,     2,   104,    24,
-     107,   109,   110,   111,   112,    42,    42,    42,    66,    42,
-      93,   131,   119,    24,   101,    64,   103,   126,    39,   142,
-     120,    41,   132,    25,    26,    27,    53,    54,    39,    28,
-      29,    58,     6,   117,    60,   108,    10,    25,    26,    27,
-      47,    48,    49,    28,    29,   139,   118,    64,    16,    93,
-      50,   136,   134,   137,    42,   140,    42,    20,    21,   138,
-      74,   147,   148,    24,    77,    39,   141,    16,   151,    82,
-      83,    84,    24,   146,    58,    85,     1,     2,     3,    86,
-      87,    88,    89,    90,   102,    91,   122,    25,    26,    27,
-       1,     2,     3,    28,    29,    24,    25,    26,    27,   121,
-      22,    21,    28,    92,    24,   123,    58,   128,     1,     2,
-       3,    86,    87,    88,    89,    90,    24,    91,    64,    25,
-      26,    27,     9,    72,    73,    28,    29,   124,    25,    26,
-      27,     1,     2,     3,    28,    92,    68,    69,    70,    71,
-      25,    26,    27,   127,    80,    81,    28,    29,    55,    56,
-      57,   113,   114,   130,   135,   145,   149,   150,   115,   116,
-      15,    11,   129
+      30,   106,    38,    59,    51,    23,    24,    42,   131,     5,
+       6,    75,     8,     5,    10,   129,    67,   143,   144,   132,
+      16,    16,    50,    63,    12,    16,    36,    17,    14,   100,
+      25,    26,    27,    76,    78,    99,    28,    29,    18,    76,
+      76,    16,    18,    50,    41,   133,    39,    58,   104,    24,
+     107,   109,   110,   111,   112,    42,    42,    42,   125,    42,
+      16,   147,   148,    40,    39,    39,    60,   126,   151,   142,
+     120,   101,    61,    25,    26,    27,   136,    66,   137,    28,
+      29,   108,   139,     1,     2,    62,   117,    24,    52,    58,
+      85,     1,     2,     3,    86,    87,    88,    89,    90,   118,
+      91,    64,   134,    74,    42,   140,    42,    20,    21,   138,
+       9,    25,    26,    27,    24,    77,   141,    28,    92,     1,
+       2,     3,    24,   146,    58,   128,     1,     2,     3,    86,
+      87,    88,    89,    90,    39,    91,    22,    21,    25,    26,
+      27,     1,     2,     3,    28,    29,    25,    26,    27,    53,
+      54,    16,    28,    92,    24,   102,    58,    24,     1,     2,
+       3,    86,    87,    88,    89,    90,    24,    91,    64,   103,
+     119,    55,    56,    57,    24,   121,    64,   123,    25,    26,
+      27,    25,    26,    27,    28,    92,   122,    28,    29,   124,
+      25,    26,    27,    47,    48,    49,    28,    29,    25,    26,
+      27,    72,    73,    35,    28,    29,     1,     2,    68,    69,
+      70,    71,    80,    81,   113,   114,   127,   130,   135,   145,
+     149,   150,    82,    83,    84,    15,   116,   115,    11
 };
 
 static const yytype_uint8 yycheck[] =
 {
-      16,    64,    18,    35,    29,     3,     6,    24,     3,     6,
-       6,     4,     5,     3,     6,     5,    41,     9,    10,    17,
-       6,    36,     3,    39,     5,    20,    36,     3,    28,    61,
-      20,    28,    28,    19,    50,    60,    29,    30,    31,    20,
-       4,     3,    35,    36,    20,   108,     9,    10,    64,     5,
+      16,    64,    18,    35,    29,     4,     5,    24,     8,     0,
+       0,     6,     3,     4,     4,    97,    41,     6,     6,    19,
+       3,     3,     5,    39,    36,     3,    17,     5,    36,    61,
+      29,    30,    31,    28,    50,    60,    35,    36,    20,    28,
+      28,     3,    20,     5,    36,   108,     3,     7,    64,     5,
       66,    68,    69,    70,    71,    72,    73,    74,    20,    76,
-      58,     8,    18,     5,    62,     7,     8,    92,     3,   132,
-      86,    36,    19,    29,    30,    31,    30,    31,     3,    35,
-      36,     7,     0,     6,    36,    20,     4,    29,    30,    31,
-      26,    27,    28,    35,    36,    20,    19,     7,     3,    97,
-       5,   121,   118,   123,   121,   130,   123,    18,    19,   125,
-      27,   143,   144,     5,     6,     3,   132,     3,   150,    55,
-      56,    57,     5,   139,     7,     8,     9,    10,    11,    12,
-      13,    14,    15,    16,     4,    18,    18,    29,    30,    31,
-       9,    10,    11,    35,    36,     5,    29,    30,    31,     5,
-      18,    19,    35,    36,     5,     5,     7,     8,     9,    10,
-      11,    12,    13,    14,    15,    16,     5,    18,     7,    29,
-      30,    31,     0,    21,    22,    35,    36,    18,    29,    30,
-      31,     9,    10,    11,    35,    36,    23,    24,    25,    26,
-      29,    30,    31,    18,    53,    54,    35,    36,    32,    33,
-      34,    72,    73,    36,    18,    18,    18,    17,    74,    76,
-       8,     4,    97
+       3,   143,   144,    20,     3,     3,    36,    92,   150,   132,
+      86,    62,     6,    29,    30,    31,   121,    20,   123,    35,
+      36,    20,    20,     9,    10,    19,     6,     5,     4,     7,
+       8,     9,    10,    11,    12,    13,    14,    15,    16,    19,
+      18,     7,   118,    27,   121,   130,   123,    18,    19,   125,
+       0,    29,    30,    31,     5,     6,   132,    35,    36,     9,
+      10,    11,     5,   139,     7,     8,     9,    10,    11,    12,
+      13,    14,    15,    16,     3,    18,    18,    19,    29,    30,
+      31,     9,    10,    11,    35,    36,    29,    30,    31,    30,
+      31,     3,    35,    36,     5,     4,     7,     5,     9,    10,
+      11,    12,    13,    14,    15,    16,     5,    18,     7,     8,
+      18,    32,    33,    34,     5,     5,     7,     5,    29,    30,
+      31,    29,    30,    31,    35,    36,    18,    35,    36,    18,
+      29,    30,    31,    26,    27,    28,    35,    36,    29,    30,
+      31,    21,    22,     6,    35,    36,     9,    10,    23,    24,
+      25,    26,    53,    54,    72,    73,    18,    36,    18,    18,
+      18,    17,    55,    56,    57,     8,    76,    74,     4
 };
 
   /* YYSTOS[STATE-NUM] -- The (internal number of the) accessing
      symbol of state STATE-NUM.  */
 static const yytype_int8 yystos[] =
 {
-       0,     9,    10,    11,    38,    39,    50,    59,    39,     0,
-      50,    59,    36,    54,    36,    54,     3,     5,    20,    51,
+       0,     9,    10,    11,    39,    40,    51,    60,    40,     0,
+      51,    60,    36,    55,    36,    55,     3,     5,    20,    52,
       18,    19,    18,     4,     5,    29,    30,    31,    35,    36,
-      40,    41,    42,    43,    44,     6,    39,    58,    40,     3,
-      20,    36,    41,    45,    46,    47,    48,    43,    43,    43,
-       5,    51,     4,    30,    31,    32,    33,    34,     7,    57,
-      36,     6,    19,    40,     7,    53,    20,    51,    23,    24,
-      25,    26,    21,    22,    27,     6,    28,     6,    40,    49,
-      42,    42,    43,    43,    43,     8,    12,    13,    14,    15,
-      16,    18,    36,    39,    40,    50,    55,    56,    57,    51,
-      57,    39,     4,     8,    40,    52,    53,    40,    20,    41,
-      41,    41,    41,    45,    45,    46,    47,     6,    19,    18,
-      40,     5,    18,     5,    18,    20,    51,    18,     8,    55,
-      36,     8,    19,    53,    40,    18,    48,    48,    40,    20,
-      51,    40,    53,     6,     6,    18,    40,    57,    57,    18,
-      17,    57
+      41,    42,    43,    44,    45,     6,    40,    59,    41,     3,
+      20,    36,    42,    46,    47,    48,    49,    44,    44,    44,
+       5,    52,     4,    30,    31,    32,    33,    34,     7,    58,
+      36,     6,    19,    41,     7,    54,    20,    52,    23,    24,
+      25,    26,    21,    22,    27,     6,    28,     6,    41,    50,
+      43,    43,    44,    44,    44,     8,    12,    13,    14,    15,
+      16,    18,    36,    40,    41,    51,    56,    57,    58,    52,
+      58,    40,     4,     8,    41,    53,    54,    41,    20,    42,
+      42,    42,    42,    46,    46,    47,    48,     6,    19,    18,
+      41,     5,    18,     5,    18,    20,    52,    18,     8,    56,
+      36,     8,    19,    54,    41,    18,    49,    49,    41,    20,
+      52,    41,    54,     6,     6,    18,    41,    56,    56,    18,
+      17,    56
 };
 
   /* YYR1[YYN] -- Symbol number of symbol that rule YYN derives.  */
 static const yytype_int8 yyr1[] =
 {
-       0,    37,    38,    38,    38,    38,    39,    39,    40,    41,
-      41,    41,    42,    42,    42,    42,    43,    43,    43,    43,
-      43,    43,    44,    44,    44,    44,    45,    45,    45,    45,
-      45,    46,    46,    46,    47,    47,    48,    48,    49,    49,
-      50,    50,    51,    51,    51,    52,    52,    52,    52,    53,
-      53,    54,    54,    54,    54,    54,    54,    54,    54,    55,
-      55,    55,    55,    55,    55,    55,    55,    55,    55,    55,
-      55,    55,    56,    56,    57,    57,    58,    58,    58,    58,
-      59,    59
+       0,    38,    39,    39,    39,    39,    40,    40,    41,    42,
+      42,    42,    43,    43,    43,    43,    44,    44,    44,    44,
+      44,    44,    45,    45,    45,    45,    46,    46,    46,    46,
+      46,    47,    47,    47,    48,    48,    49,    49,    50,    50,
+      51,    51,    52,    52,    52,    53,    53,    53,    53,    54,
+      54,    55,    55,    55,    55,    55,    55,    55,    55,    56,
+      56,    56,    56,    56,    56,    56,    56,    56,    56,    56,
+      56,    56,    57,    57,    58,    58,    59,    59,    59,    59,
+      60,    60
 };
 
   /* YYR2[YYN] -- Number of symbols on the right hand side of rule YYN.  */
@@ -791,8 +793,8 @@ static const yytype_int8 yyr2[] =
        3,     1,     3,     3,     1,     3,     1,     3,     1,     3,
        4,     3,     3,     4,     2,     1,     1,     3,     3,     2,
        3,     3,     4,     1,     2,     3,     4,     5,     6,     1,
-       2,     1,     2,     3,     2,     2,     1,     4,     5,     5,
-       7,     5,     1,     2,     2,     3,     2,     3,     4,     5,
+       2,     1,     2,     3,     2,     2,     1,     4,     5,     7,
+       5,     5,     1,     2,     2,     3,     2,     3,     4,     5,
        6,     5
 };
 
@@ -1489,239 +1491,239 @@ yyreduce:
   switch (yyn)
     {
   case 2:
-#line 74 "src/analyzer.y"
+#line 76 "src/analyzer.y"
                   { vardecl.push_back((yyvsp[0].vardeclstmt)); }
-#line 1495 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
+#line 1497 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
     break;
 
   case 3:
-#line 75 "src/analyzer.y"
+#line 77 "src/analyzer.y"
                   { funcs.push_back((yyvsp[0].funcdecl)); }
-#line 1501 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
+#line 1503 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
     break;
 
   case 4:
-#line 76 "src/analyzer.y"
+#line 78 "src/analyzer.y"
                            { vardecl.push_back((yyvsp[0].vardeclstmt)); }
-#line 1507 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
+#line 1509 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
     break;
 
   case 5:
-#line 77 "src/analyzer.y"
+#line 79 "src/analyzer.y"
                            { funcs.push_back((yyvsp[0].funcdecl)); }
-#line 1513 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
+#line 1515 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
     break;
 
   case 6:
-#line 80 "src/analyzer.y"
+#line 82 "src/analyzer.y"
             { (yyval.btype) =BType::INT; }
-#line 1519 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
+#line 1521 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
     break;
 
   case 7:
-#line 81 "src/analyzer.y"
+#line 83 "src/analyzer.y"
              { (yyval.btype) = BType::VOID; }
-#line 1525 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
+#line 1527 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
     break;
 
   case 8:
-#line 83 "src/analyzer.y"
+#line 85 "src/analyzer.y"
              { (yyval.exp) = (yyvsp[0].exp); }
-#line 1531 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
+#line 1533 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
     break;
 
   case 9:
-#line 86 "src/analyzer.y"
+#line 88 "src/analyzer.y"
                   { (yyval.exp) = (yyvsp[0].exp); }
-#line 1537 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
+#line 1539 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
     break;
 
   case 10:
-#line 87 "src/analyzer.y"
+#line 89 "src/analyzer.y"
                              { (yyval.exp) = new BinaryExp(Expression::Op::ADD, (yyvsp[-2].exp), (yyvsp[0].exp)); }
-#line 1543 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
+#line 1545 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
     break;
 
   case 11:
-#line 88 "src/analyzer.y"
+#line 90 "src/analyzer.y"
                              { (yyval.exp) = new BinaryExp(Expression::Op::SUB, (yyvsp[-2].exp), (yyvsp[0].exp)); }
-#line 1549 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
+#line 1551 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
     break;
 
   case 12:
-#line 91 "src/analyzer.y"
+#line 93 "src/analyzer.y"
                   { (yyval.exp) = (yyvsp[0].exp);}
-#line 1555 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
+#line 1557 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
     break;
 
   case 13:
-#line 92 "src/analyzer.y"
+#line 94 "src/analyzer.y"
                              { (yyval.exp) = new BinaryExp(Expression::Op::MUL, (yyvsp[-2].exp), (yyvsp[0].exp)); }
-#line 1561 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
+#line 1563 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
     break;
 
   case 14:
-#line 93 "src/analyzer.y"
+#line 95 "src/analyzer.y"
                              { (yyval.exp) = new BinaryExp(Expression::Op::DIV, (yyvsp[-2].exp), (yyvsp[0].exp)); }
-#line 1567 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
+#line 1569 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
     break;
 
   case 15:
-#line 94 "src/analyzer.y"
+#line 96 "src/analyzer.y"
                              { (yyval.exp) = new BinaryExp(Expression::Op::MOD, (yyvsp[-2].exp), (yyvsp[0].exp)); }
-#line 1573 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
+#line 1575 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
     break;
 
   case 16:
-#line 96 "src/analyzer.y"
+#line 98 "src/analyzer.y"
                       { (yyval.exp) = (yyvsp[0].exp); }
-#line 1579 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
+#line 1581 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
     break;
 
   case 17:
-#line 97 "src/analyzer.y"
+#line 99 "src/analyzer.y"
                         { (yyval.exp) = new UnaryExp(Expression::Op::ADD, (yyvsp[0].exp)); }
-#line 1585 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
+#line 1587 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
     break;
 
   case 18:
-#line 98 "src/analyzer.y"
+#line 100 "src/analyzer.y"
                         { (yyval.exp) = new UnaryExp(Expression::Op::SUB, (yyvsp[0].exp)); }
-#line 1591 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
+#line 1593 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
     break;
 
   case 19:
-#line 99 "src/analyzer.y"
+#line 101 "src/analyzer.y"
                         { (yyval.exp) = new UnaryExp(Expression::Op::NOT, (yyvsp[0].exp)); }
-#line 1597 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
+#line 1599 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
     break;
 
   case 20:
-#line 100 "src/analyzer.y"
+#line 102 "src/analyzer.y"
                                          { (yyval.exp) = new FuncCallExp((yyvsp[-3].string), (yyvsp[-1].explist)); delete (yyvsp[-3].string); }
-#line 1603 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
+#line 1605 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
     break;
 
   case 21:
-#line 101 "src/analyzer.y"
+#line 103 "src/analyzer.y"
                                  { (yyval.exp) = new FuncCallExp((yyvsp[-2].string), nullptr); delete (yyvsp[-2].string); }
-#line 1609 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
+#line 1611 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
     break;
 
   case 22:
-#line 104 "src/analyzer.y"
+#line 106 "src/analyzer.y"
                                     { (yyval.exp) = (yyvsp[-1].exp); }
-#line 1615 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
+#line 1617 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
     break;
 
   case 23:
-#line 105 "src/analyzer.y"
+#line 107 "src/analyzer.y"
                     { (yyval.exp) = new NumberExp(parse_number((yyvsp[0].string)->c_str())); delete (yyvsp[0].string); }
-#line 1621 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
+#line 1623 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
     break;
 
   case 24:
-#line 106 "src/analyzer.y"
+#line 108 "src/analyzer.y"
                     { (yyval.exp) = new VarExp((yyvsp[0].string), nullptr); delete (yyvsp[0].string); }
-#line 1627 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
+#line 1629 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
     break;
 
   case 25:
-#line 107 "src/analyzer.y"
+#line 109 "src/analyzer.y"
                               { (yyval.exp) = new VarExp((yyvsp[-1].string), (yyvsp[0].explist)); delete (yyvsp[-1].string); }
-#line 1633 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
+#line 1635 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
     break;
 
   case 26:
-#line 110 "src/analyzer.y"
+#line 112 "src/analyzer.y"
                   { (yyval.exp) = (yyvsp[0].exp); }
-#line 1639 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
+#line 1641 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
     break;
 
   case 27:
-#line 111 "src/analyzer.y"
+#line 113 "src/analyzer.y"
                           { (yyval.exp) = new BinaryExp(Expression::Op::LE, (yyvsp[-2].exp), (yyvsp[0].exp)); }
-#line 1645 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
+#line 1647 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
     break;
 
   case 28:
-#line 112 "src/analyzer.y"
+#line 114 "src/analyzer.y"
                           { (yyval.exp) = new BinaryExp(Expression::Op::GE, (yyvsp[-2].exp), (yyvsp[0].exp)); }
-#line 1651 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
+#line 1653 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
     break;
 
   case 29:
-#line 113 "src/analyzer.y"
+#line 115 "src/analyzer.y"
                           { (yyval.exp) = new BinaryExp(Expression::Op::LT, (yyvsp[-2].exp), (yyvsp[0].exp)); }
-#line 1657 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
+#line 1659 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
     break;
 
   case 30:
-#line 114 "src/analyzer.y"
+#line 116 "src/analyzer.y"
                           { (yyval.exp) = new BinaryExp(Expression::Op::GT, (yyvsp[-2].exp), (yyvsp[0].exp)); }
-#line 1663 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
+#line 1665 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
     break;
 
   case 31:
-#line 117 "src/analyzer.y"
+#line 119 "src/analyzer.y"
                { (yyval.exp) = (yyvsp[0].exp); }
-#line 1669 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
+#line 1671 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
     break;
 
   case 32:
-#line 118 "src/analyzer.y"
+#line 120 "src/analyzer.y"
                          { (yyval.exp) = new BinaryExp(Expression::Op::EQ, (yyvsp[-2].exp), (yyvsp[0].exp)); }
-#line 1675 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
+#line 1677 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
     break;
 
   case 33:
-#line 119 "src/analyzer.y"
+#line 121 "src/analyzer.y"
                          { (yyval.exp) = new BinaryExp(Expression::Op::NEQ, (yyvsp[-2].exp), (yyvsp[0].exp)); }
-#line 1681 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
+#line 1683 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
     break;
 
   case 34:
-#line 122 "src/analyzer.y"
+#line 124 "src/analyzer.y"
                 { (yyval.exp) = (yyvsp[0].exp); }
-#line 1687 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
+#line 1689 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
     break;
 
   case 35:
-#line 123 "src/analyzer.y"
+#line 125 "src/analyzer.y"
                             { (yyval.exp) = new BinaryExp(Expression::Op::AND, (yyvsp[-2].exp), (yyvsp[0].exp)); }
-#line 1693 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
+#line 1695 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
     break;
 
   case 36:
-#line 126 "src/analyzer.y"
+#line 128 "src/analyzer.y"
                  { (yyval.exp) = (yyvsp[0].exp); }
-#line 1699 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
+#line 1701 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
     break;
 
   case 37:
-#line 127 "src/analyzer.y"
+#line 129 "src/analyzer.y"
                            { (yyval.exp) = new BinaryExp(Expression::Op::OR, (yyvsp[-2].exp), (yyvsp[0].exp)); }
-#line 1705 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
+#line 1707 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
     break;
 
   case 38:
-#line 130 "src/analyzer.y"
+#line 132 "src/analyzer.y"
                { (yyval.explist) = new Expression::List();
                  (yyval.explist)->push_back((yyvsp[0].exp));
                }
-#line 1713 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
+#line 1715 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
     break;
 
   case 39:
-#line 133 "src/analyzer.y"
+#line 135 "src/analyzer.y"
                             { (yyval.explist) = (yyvsp[-2].explist);
                               (yyval.explist)->push_back((yyvsp[0].exp));
                             }
-#line 1721 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
+#line 1723 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
     break;
 
   case 40:
-#line 139 "src/analyzer.y"
+#line 141 "src/analyzer.y"
                                      { (yyval.vardeclstmt) = new VarDeclStmt();  
                                       for(Variable * var : *(yyvsp[-1].varlist)){
                                         var->set_immutable(true);
@@ -1729,11 +1731,11 @@ yyreduce:
                                         (yyval.vardeclstmt)->push_back(var);
                                       }
                                    }
-#line 1733 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
+#line 1735 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
     break;
 
   case 41:
-#line 146 "src/analyzer.y"
+#line 148 "src/analyzer.y"
                                { (yyval.vardeclstmt) = new VarDeclStmt();
                                 for(Variable * var : *(yyvsp[-1].varlist)){
                                         var->set_immutable(false);
@@ -1741,302 +1743,327 @@ yyreduce:
                                         (yyval.vardeclstmt)->push_back(var);
                                 }
                                }
-#line 1745 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
+#line 1747 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
     break;
 
   case 42:
-#line 155 "src/analyzer.y"
+#line 157 "src/analyzer.y"
                                  { (yyval.explist) = new Expression::List(); 
                                    (yyval.explist)->push_back((yyvsp[-1].exp));
                                   }
-#line 1753 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
+#line 1755 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
     break;
 
   case 43:
-#line 158 "src/analyzer.y"
+#line 160 "src/analyzer.y"
                                             { (yyvsp[-3].explist)->push_back((yyvsp[-1].exp));
                                               (yyval.explist) = (yyvsp[-3].explist);
                                              }
-#line 1761 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
+#line 1763 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
     break;
 
   case 44:
-#line 161 "src/analyzer.y"
+#line 163 "src/analyzer.y"
                               { (yyval.explist) = new Expression::List();
                                 (yyval.explist)->push_back(new NumberExp(0));
                               }
-#line 1769 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
+#line 1771 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
     break;
 
   case 45:
-#line 166 "src/analyzer.y"
+#line 168 "src/analyzer.y"
                       { (yyval.initval) = new Array::InitValContainer();
                         dynamic_cast<Array::InitValContainer*>((yyval.initval))->push_back(new Array::InitValExp((yyvsp[0].exp))); 
                       }
-#line 1777 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
+#line 1779 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
     break;
 
   case 46:
-#line 169 "src/analyzer.y"
-                                            { (yyval.initval) = (yyvsp[0].initval);}
-#line 1783 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
+#line 171 "src/analyzer.y"
+                        { (yyval.initval) = new Array::InitValContainer();
+                          dynamic_cast<Array::InitValContainer*>((yyval.initval))->push_back((yyvsp[0].initval)); 
+			}
+#line 1787 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
     break;
 
   case 47:
-#line 171 "src/analyzer.y"
+#line 175 "src/analyzer.y"
                        { 
                          (yyval.initval) = (yyvsp[-2].initval); 
                          dynamic_cast<Array::InitValContainer*>((yyval.initval))->push_back(new Array::InitValExp((yyvsp[0].exp))); 
                        }
-#line 1792 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
+#line 1796 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
     break;
 
   case 48:
-#line 175 "src/analyzer.y"
+#line 179 "src/analyzer.y"
                                             { (yyval.initval) = (yyvsp[-2].initval); 
                            dynamic_cast<Array::InitValContainer*>((yyval.initval))->push_back((yyvsp[0].initval)); 
                           }
-#line 1800 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
+#line 1804 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
     break;
 
   case 49:
-#line 180 "src/analyzer.y"
+#line 184 "src/analyzer.y"
                                       { (yyval.initval) = new Array::InitValContainer(); }
-#line 1806 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
+#line 1810 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
     break;
 
   case 50:
-#line 181 "src/analyzer.y"
+#line 185 "src/analyzer.y"
                                       { (yyval.initval) = (yyvsp[-1].initval); }
-#line 1812 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
+#line 1816 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
     break;
 
   case 51:
-#line 185 "src/analyzer.y"
+#line 189 "src/analyzer.y"
                                                { (yyval.varlist) = new Variable::List();
                                                  (yyval.varlist)->push_back(new Variable(BType::UNKNOWN, (yyvsp[-2].string), false, (yyvsp[0].exp)));
                                                  delete (yyvsp[-2].string);
                                                }
-#line 1821 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
+#line 1825 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
     break;
 
   case 52:
-#line 189 "src/analyzer.y"
+#line 193 "src/analyzer.y"
                                                { (yyval.varlist) = new Variable::List();
                                                  (yyval.varlist)->push_back(new Array(BType::UNKNOWN, (yyvsp[-3].string), false, (yyvsp[-2].explist), (yyvsp[0].initval)));
                                                  delete (yyvsp[-3].string);
                                                }
-#line 1830 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
+#line 1834 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
     break;
 
   case 53:
-#line 193 "src/analyzer.y"
+#line 197 "src/analyzer.y"
                                                { (yyval.varlist) = new Variable::List();
                                                  (yyval.varlist)->push_back(new Variable(BType::UNKNOWN, (yyvsp[0].string), false));
                                                  delete (yyvsp[0].string);
                                                }
-#line 1839 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
+#line 1843 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
     break;
 
   case 54:
-#line 197 "src/analyzer.y"
+#line 201 "src/analyzer.y"
                                                { (yyval.varlist) = new Variable::List();
                                                  (yyval.varlist)->push_back(new Array(BType::UNKNOWN, (yyvsp[-1].string), false, (yyvsp[0].explist)));
                                                  delete (yyvsp[-1].string);
                                                }
-#line 1848 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
+#line 1852 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
     break;
 
   case 55:
-#line 201 "src/analyzer.y"
+#line 205 "src/analyzer.y"
                                                { (yyval.varlist) = (yyvsp[-2].varlist);
                                                  (yyval.varlist)->push_back(new Variable(BType::UNKNOWN, (yyvsp[0].string), false));
                                                  delete (yyvsp[0].string);
                                                }
-#line 1857 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
+#line 1861 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
     break;
 
   case 56:
-#line 206 "src/analyzer.y"
+#line 210 "src/analyzer.y"
                       { 
                         (yyval.varlist) = (yyvsp[-3].varlist); 
                         (yyval.varlist)->push_back(new Array(BType::UNKNOWN, (yyvsp[-1].string), false, (yyvsp[0].explist)));
                         delete (yyvsp[-1].string);
                       }
-#line 1867 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
+#line 1871 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
     break;
 
   case 57:
-#line 211 "src/analyzer.y"
+#line 215 "src/analyzer.y"
                                                { (yyval.varlist) = (yyvsp[-4].varlist);
                                                  (yyval.varlist)->push_back(new Variable(BType::UNKNOWN, (yyvsp[-2].string), false, (yyvsp[0].exp)));
                                                  delete (yyvsp[-2].string);
                                                }
-#line 1876 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
+#line 1880 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
     break;
 
   case 58:
-#line 216 "src/analyzer.y"
+#line 220 "src/analyzer.y"
                       { 
                         (yyval.varlist) = (yyvsp[-5].varlist); 
                         (yyval.varlist)->push_back(new Array(BType::UNKNOWN, (yyvsp[-3].string), false, (yyvsp[-2].explist), (yyvsp[0].initval)));
                         delete (yyvsp[-3].string);
                       }
-#line 1886 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
+#line 1890 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
     break;
 
   case 59:
-#line 223 "src/analyzer.y"
+#line 227 "src/analyzer.y"
                 { (yyval.stmt) = new Stmt(); }
-#line 1892 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
+#line 1896 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
     break;
 
   case 60:
-#line 224 "src/analyzer.y"
+#line 228 "src/analyzer.y"
                  { (yyval.stmt) = new ExpStmt((yyvsp[-1].exp)); }
-#line 1898 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
+#line 1902 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
     break;
 
   case 61:
-#line 225 "src/analyzer.y"
+#line 229 "src/analyzer.y"
                   { (yyval.stmt) = (yyvsp[0].blockstmt); }
-#line 1904 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
+#line 1908 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
     break;
 
   case 62:
-#line 226 "src/analyzer.y"
+#line 230 "src/analyzer.y"
                     { (yyval.stmt) = new ReturnStmt(nullptr); }
-#line 1910 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
+#line 1914 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
     break;
 
   case 63:
-#line 227 "src/analyzer.y"
+#line 231 "src/analyzer.y"
                        { (yyval.stmt) = new ReturnStmt((yyvsp[-1].exp)); }
-#line 1916 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
+#line 1920 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
     break;
 
   case 64:
-#line 228 "src/analyzer.y"
+#line 232 "src/analyzer.y"
                        { (yyval.stmt) = new ContinueStmt(); }
-#line 1922 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
+#line 1926 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
     break;
 
   case 65:
-#line 229 "src/analyzer.y"
+#line 233 "src/analyzer.y"
                     { (yyval.stmt) = new BreakStmt(); }
-#line 1928 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
+#line 1932 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
     break;
 
   case 66:
-#line 230 "src/analyzer.y"
+#line 234 "src/analyzer.y"
                 { (yyval.stmt) = (yyvsp[0].vardeclstmt); }
-#line 1934 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
+#line 1938 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
     break;
 
   case 67:
-#line 231 "src/analyzer.y"
+#line 235 "src/analyzer.y"
                              { (yyval.stmt) = new AssignmentStmt((yyvsp[-3].string), nullptr, (yyvsp[-1].exp)); delete (yyvsp[-3].string); }
-#line 1940 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
+#line 1944 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
     break;
 
   case 68:
-#line 232 "src/analyzer.y"
+#line 236 "src/analyzer.y"
                                         { (yyval.stmt) = new AssignmentStmt((yyvsp[-4].string), (yyvsp[-3].explist), (yyvsp[-1].exp)); delete (yyvsp[-4].string); }
-#line 1946 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
+#line 1950 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
     break;
 
   case 69:
-#line 233 "src/analyzer.y"
-                                            { (yyval.stmt) = new IfStmt((yyvsp[-2].exp), (yyvsp[0].blockstmt)); }
-#line 1952 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
+#line 237 "src/analyzer.y"
+                                                 { 
+               BlockStmt* block_yes = dynamic_cast<BlockStmt*>((yyvsp[-2].stmt));
+               if (block_yes == nullptr){
+                  block_yes = new BlockStmt();
+                  block_yes->push_back((yyvsp[-2].stmt));
+               }
+               BlockStmt* block_else = dynamic_cast<BlockStmt*>((yyvsp[0].stmt));
+               if (block_else == nullptr){
+                  block_else = new BlockStmt();
+                  block_else->push_back((yyvsp[0].stmt));
+               }
+               (yyval.stmt) = new IfStmt((yyvsp[-4].exp), block_yes, block_else); }
+#line 1967 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
     break;
 
   case 70:
-#line 234 "src/analyzer.y"
-                                                           { (yyval.stmt) = new IfStmt((yyvsp[-4].exp), (yyvsp[-2].blockstmt), (yyvsp[0].blockstmt)); }
-#line 1958 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
+#line 249 "src/analyzer.y"
+                                                   { 
+               BlockStmt* block = dynamic_cast<BlockStmt*>((yyvsp[0].stmt));
+               if (block == nullptr){
+                  block = new BlockStmt();
+                  block->push_back((yyvsp[0].stmt));
+               }
+               (yyval.stmt) = new IfStmt((yyvsp[-2].exp), block); }
+#line 1979 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
     break;
 
   case 71:
-#line 235 "src/analyzer.y"
-                                               { (yyval.stmt) = new WhileStmt((yyvsp[-2].exp), (yyvsp[0].blockstmt)); }
-#line 1964 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
+#line 256 "src/analyzer.y"
+                                          { 
+               BlockStmt* block = dynamic_cast<BlockStmt*>((yyvsp[0].stmt));
+               if (block == nullptr){
+                  block = new BlockStmt();
+                  block->push_back((yyvsp[0].stmt));
+               }
+               (yyval.stmt) = new WhileStmt((yyvsp[-2].exp), block); }
+#line 1991 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
     break;
 
   case 72:
-#line 237 "src/analyzer.y"
+#line 264 "src/analyzer.y"
                   { (yyval.blockstmt) = new BlockStmt(); (yyval.blockstmt)->push_back((yyvsp[0].stmt)); }
-#line 1970 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
+#line 1997 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
     break;
 
   case 73:
-#line 238 "src/analyzer.y"
+#line 265 "src/analyzer.y"
                              { (yyval.blockstmt) = (yyvsp[-1].blockstmt); (yyval.blockstmt)->push_back((yyvsp[0].stmt)); }
-#line 1976 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
+#line 2003 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
     break;
 
   case 74:
-#line 240 "src/analyzer.y"
+#line 267 "src/analyzer.y"
                           { (yyval.blockstmt) = new BlockStmt(); }
-#line 1982 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
+#line 2009 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
     break;
 
   case 75:
-#line 241 "src/analyzer.y"
+#line 268 "src/analyzer.y"
                                      { (yyval.blockstmt) = (yyvsp[-1].blockstmt); }
-#line 1988 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
+#line 2015 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
     break;
 
   case 76:
-#line 244 "src/analyzer.y"
+#line 271 "src/analyzer.y"
                                       { (yyval.funcfparams) = new Variable::List(); 
                                         (yyval.funcfparams)->push_back(new Variable((yyvsp[-1].btype), (yyvsp[0].string), false)); 
                                         delete (yyvsp[0].string);
                                       }
-#line 1997 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
+#line 2024 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
     break;
 
   case 77:
-#line 248 "src/analyzer.y"
+#line 275 "src/analyzer.y"
                                       { (yyval.funcfparams) = new Variable::List();
                                         (yyval.funcfparams)->push_back(new Array((yyvsp[-2].btype), (yyvsp[-1].string), false, (yyvsp[0].explist)));
                                         delete (yyvsp[-1].string);
                                       }
-#line 2006 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
+#line 2033 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
     break;
 
   case 78:
-#line 252 "src/analyzer.y"
+#line 279 "src/analyzer.y"
                                             { (yyval.funcfparams) = (yyvsp[-3].funcfparams); 
                                               (yyval.funcfparams)->push_back(new Variable((yyvsp[-1].btype), (yyvsp[0].string), false));
                                               delete (yyvsp[0].string);
                                             }
-#line 2015 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
+#line 2042 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
     break;
 
   case 79:
-#line 256 "src/analyzer.y"
+#line 283 "src/analyzer.y"
                                                       { (yyval.funcfparams) = (yyvsp[-4].funcfparams);
                                                         (yyval.funcfparams)->push_back(new Array((yyvsp[-2].btype),  (yyvsp[-1].string), false, (yyvsp[0].explist)));
                                                         delete (yyvsp[-1].string);
                                                       }
-#line 2024 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
+#line 2051 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
     break;
 
   case 80:
-#line 262 "src/analyzer.y"
+#line 289 "src/analyzer.y"
                                                              { (yyval.funcdecl) = new FunctionDecl((yyvsp[-5].btype), (yyvsp[-4].string), (yyvsp[-2].funcfparams), (yyvsp[0].blockstmt)); delete (yyvsp[-4].string); }
-#line 2030 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
+#line 2057 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
     break;
 
   case 81:
-#line 263 "src/analyzer.y"
+#line 290 "src/analyzer.y"
                                                          { (yyval.funcdecl) = new FunctionDecl((yyvsp[-4].btype), (yyvsp[-3].string), nullptr, (yyvsp[0].blockstmt)); delete (yyvsp[-3].string); }
-#line 2036 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
+#line 2063 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
     break;
 
 
-#line 2040 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
+#line 2067 "/mnt/f/C++/Compiler/compile-a/cmake-build-debug/analyzer.cc"
 
       default: break;
     }
@@ -2268,7 +2295,7 @@ yyreturn:
 #endif
   return yyresult;
 }
-#line 265 "src/analyzer.y"
+#line 292 "src/analyzer.y"
 
 
 int parse_hex(char const *num) {
