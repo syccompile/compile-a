@@ -9,14 +9,15 @@
 %option yylineno
 %x LINECOMMENT
 %x MULTICOMMENT
+%x STRING
 %%
 
 "//"        { BEGIN LINECOMMENT; }
 "/*"        { BEGIN MULTICOMMENT; }
 <LINECOMMENT>\n { BEGIN INITIAL; }
-<LINECOMMENT>.|[ \t] {}
+<LINECOMMENT>.|[ \t\r] {}
 <MULTICOMMENT>"*/" { BEGIN INITIAL; }
-<MULTICOMMENT>.|[ \t\n] {}
+<MULTICOMMENT>.|[ \t\r\n] {}
 
 "int"       { return INT; }
 "void"      { return VOID; }
@@ -28,7 +29,8 @@
 "while"     { return WHILE; }
 "continue"  { return CONTINUE; }
 [0-9]+      { yylval.string = new std::string(yytext); return NUMBER; }
-"0x"[0-9A-Fa-f]+  { yylval.string = new std::string(yytext); return NUMBER; }
+"0"[Xx][0-9A-Fa-f]+  { yylval.string = new std::string(yytext); return NUMBER; }
+"\"[.%\n]*\""       { yylval.string = (new std::string(yytext)); return STR; }
 "=="              { return EQ; }
 "!="              { return NEQ; }
 "!"               { return NOT; }
@@ -53,5 +55,5 @@
 ")"           { yylval.token = RPARENT; return RPARENT; }
 "["           { yylval.token = LBRACKET; return LBRACKET; }
 "]"           { yylval.token = RBRACKET; return RBRACKET; }
-.|[ \t\n]       {}
+[ \t\n\r]       {}
 %%

@@ -7,6 +7,8 @@
 
 using namespace color_graph;
 
+class IR;
+
 struct IR_Addr: public Debug_impl, public var{
 public:
   using Ptr = std::shared_ptr<IR_Addr>;
@@ -14,6 +16,7 @@ public:
   enum Kind: int { VAR, PARAM, IMM, BRANCH_LABEL, NAMED_LABEL, RET } kind;
   int val;
   std::string name;
+  std::shared_ptr<IR> _label_decl_addr;
 
   IR_Addr(Kind kind) : kind(kind), val(-1), name(), var() { }
   IR_Addr(Kind kind, int val): kind(kind), name(), val(val), var() { }

@@ -1,0 +1,4 @@
+int main(){
+	int a = 0x00010100;
+	return a;
+}

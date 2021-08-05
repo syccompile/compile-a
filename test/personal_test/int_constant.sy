@@ -1,0 +1,11 @@
+int a = 0;
+int func(){
+	a = 1;
+	return 1;
+}
+int main(){
+	const int x = 10;
+	if (x || func()){
+	}
+	return a;
+}

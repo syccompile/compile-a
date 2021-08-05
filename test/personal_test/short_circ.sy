@@ -1,0 +1,11 @@
+int n = 0;
+
+int foo() {
+	n = 5;
+	return getint();
+}
+
+int main() {
+	(1 || !(foo()));
+	return n;
+}

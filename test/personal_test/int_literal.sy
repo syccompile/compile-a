@@ -1,6 +1,4 @@
-int a = 2;
 int main() {
-  int a[1500];
-  a[1400] = 4;
-  return a[1400];
+	int a[100] = {0x1, 0x0001, 0x100, 0xfff, 0xfbba, 0xf0000, 0xffffffff, 037777777777, 2147483648, 4294967297};
+	return 0;
 }

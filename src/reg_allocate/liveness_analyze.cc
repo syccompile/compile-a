@@ -51,14 +51,15 @@ find_label(IR::List list, IR_Addr::Ptr label) {
   return nullptr;
 }
 
-#define ACCEPT_VAR(set, addr)                                                          \
-  if (ir->addr->kind == IR_Addr::Kind::VAR && !(local_array.count(ir->addr->val))) {   \
-    ir->set.insert(ir->addr);                                                          \
-    vars.insert(ir->addr);                                                             \
-  }                                                                                    \
-  else if (ir->addr->kind==IR_Addr::Kind::PARAM && ir->addr->val<kTransfer_Reg) {      \
-    ir->set.insert(ir->addr);                                                          \
-    vars.insert(ir->addr);                                                             \
+#define ACCEPT_VAR(set, addr)                                                               \
+  if (ir->addr == nullptr) { }                                                              \
+  else if (ir->addr->kind == IR_Addr::Kind::VAR && !(local_array.count(ir->addr->val))) {   \
+    ir->set.insert(ir->addr);                                                               \
+    vars.insert(ir->addr);                                                                  \
+  }                                                                                         \
+  else if (ir->addr->kind==IR_Addr::Kind::PARAM && ir->addr->val<kTransfer_Reg) {           \
+    ir->set.insert(ir->addr);                                                               \
+    vars.insert(ir->addr);                                                                  \
   }
 
 // 分析ir，填写varUse中的used、def、pred、succ
@@ -127,7 +128,7 @@ ir_parse(IR::List &ir_list) {
       OP_CASE(JGT)
       OP_CASE(JE)
       OP_CASE(JNE) {
-        auto label_ir = find_label(ir_list, ir->a0);
+        auto label_ir = ir->a0->_label_decl_addr;
         ir->succ.push_back(label_ir);
         label_ir->pred.push_back(ir);
         break;

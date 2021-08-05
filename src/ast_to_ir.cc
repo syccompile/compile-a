@@ -10,6 +10,9 @@
 #define ADD_BIN(OP, A0, A1    ) ret.emplace_back(IR::make_binary(IR::Op:: OP , A0, A1))
 #define ADD_UNR(OP, A0        ) ret.emplace_back(IR::make_unary (IR::Op:: OP , A0))
 #define ADD_NOP(OP            ) ret.emplace_back(IR::make_no_operand (IR::Op:: OP))
+#define ADD_LABEL(_, A0) \
+A0->_label_decl_addr = IR::make_unary(IR::Op::LABEL, A0); \
+ret.emplace_back(A0->_label_decl_addr);
 
 // helper: get correspond IR::Op of Expr::Op
 IR::Op get_ir_jmp_op(Expression::Op expr_op) {
@@ -110,7 +113,6 @@ get_offset(const std::vector<int> &shape, Expression::List &dimens) {
   }
 
   int i = 0;
-
   // 常量优化：数组最zuo边的表达式均为常量
   // 例如：a[1][2][3][4][b+c]
   // 那么[1][2][3][4]的偏移量可以直接编译期计算
@@ -412,6 +414,12 @@ BinaryExp::eval() {
     CASE(MUL, *);
     CASE(DIV, /);
     CASE(MOD, %);
+    CASE(EQ, ==);
+    CASE(NEQ, !=);
+    CASE(LT, <);
+    CASE(LE, <=);
+    CASE(GT, >);
+    CASE(GE, >=);
     default: return 0;  // TODO WARNING
   }
 
@@ -443,7 +451,7 @@ BinaryExp::_translate_logical() {
 
   // 根据表达式类型，选择不同翻译模式
   switch(this->op_) {
-    case Expression::Op::AND:
+    case Expression::Op::AND: {
       // 逻辑“与”
 
       // 常量优化部分
@@ -454,15 +462,24 @@ BinaryExp::_translate_logical() {
         this->right_->set_fail_label(this->label_fail_);
         ret.splice(ret.end(), this->right_->translate());
       }
-      else if (this->right_->is_evaluable() && this->right_->eval()) {
-        // 右表达式求值为“1”，左表达式不是编译期常量
-        // 此时可看作左表达式的单元(Unary)表达式
-        this->left_->set_fail_label(this->label_fail_);
-        ret.splice(ret.end(), this->left_->translate());
+      else if (this->right_->is_evaluable()) {
+        if (this->right_->eval()) {
+          // 右表达式求值为“1”，左表达式不是编译期常量
+          // 此时可看作左表达式的单元(Unary)表达式
+          this->left_->set_fail_label(this->label_fail_);
+          ret.splice(ret.end(), this->left_->translate());
+	}
+	else {
+          // 右表达式求值为“0”，左表达式不是编译期常量
+          // 此时 only execute left expr
+	  auto *expstmt = new ExpStmt(this->left_);
+	  ret.splice(ret.end(), expstmt->translate());
+	  ADD_UNR(JMP, this->label_fail_);
+	}
       }
       // 常量优化部分结束
 
-      else {
+      else { 
         // if (lhs) <do nothing>; else goto fail;
         // if (rhs) <do nothing>; else goto fail;
         // ... <codes that execute on success>
@@ -476,7 +493,8 @@ BinaryExp::_translate_logical() {
       }
 
       break;
-    case Expression::Op::OR:
+  }
+    case Expression::Op::OR: {
       // 逻辑“或”：
 
       // 常量优化部分
@@ -486,15 +504,23 @@ BinaryExp::_translate_logical() {
         this->right_->set_fail_label(this->label_fail_);
         ret.splice(ret.end(), this->right_->translate());
       }  
-      else if (this->right_->is_evaluable() && !(this->right_->eval())) {
-        // 右表达式求值为“0”，左表达式不是编译期常量
-        // 此时可看作左表达式的单元表达式
-        this->left_->set_fail_label(this->label_fail_);
-        ret.splice(ret.end(), this->left_->translate());
+      else if (this->right_->is_evaluable()) {
+        if (this->right_->eval()) {
+          // 右表达式求值为“1”，左表达式不是编译期常量
+          // 此时可看作左表达式的单元表达式
+	  auto *expstmt = new ExpStmt(this->left_);
+	  ret.splice(ret.end(), expstmt->translate());
+        }
+        else {
+          // 右表达式求值为“0”，左表达式不是编译期常量
+          // 此时可看作左表达式的单元表达式
+          this->left_->set_fail_label(this->label_fail_);
+          ret.splice(ret.end(), this->left_->translate());
+        }
       }
       // 常量优化部分结束
 
-      else {
+      else { 
         //   if (lhs) <do nothing>; else goto lhs_fail_label;
         //   goto lhs_success_label;
         // lhs_fail_label:
@@ -511,11 +537,12 @@ BinaryExp::_translate_logical() {
 
         ret.splice(ret.end(), this->left_->translate());
         ADD_UNR(JMP,   lhs_success_label);
-        ADD_UNR(LABEL, lhs_fail_label);
+        ADD_LABEL(LABEL, lhs_fail_label);
         ret.splice(ret.end(), this->right_->translate());
-        ADD_UNR(LABEL, lhs_success_label);
+        ADD_LABEL(LABEL, lhs_success_label);
       }
       break;
+     }
     default:
       break;
   }
@@ -531,9 +558,9 @@ BinaryExp::_translate_logical() {
 
     ADD_BIN(MOV, this->addr_, IR::Addr::make_imm(1));
     ADD_UNR(JMP, end_label);
-    ADD_UNR(LABEL, this->label_fail_);
+    ADD_LABEL(LABEL, this->label_fail_);
     ADD_BIN(MOV, this->addr_, IR::Addr::make_imm(0));
-    ADD_UNR(LABEL, end_label);
+    ADD_LABEL(LABEL, end_label);
   }
 
   return ret;
@@ -676,7 +703,7 @@ UnaryExp::_translate_logical() {
     ret.splice(ret.end(), this->exp_->translate());
 
     ADD_UNR(JMP, this->label_fail_);
-    ADD_UNR(LABEL, this_success);
+    ADD_LABEL(LABEL, this_success);
   } 
   else {
     // 要求子表达式翻译为算术表达式
@@ -693,8 +720,8 @@ UnaryExp::_translate_logical() {
     // moveq this->addr, 1
     // movne this->addr, 0
     ADD_TRP(CMP, nullptr, this->exp_->get_var_addr(), IR::Addr::make_imm(0));
-    ADD_BIN(MOVEQ, this->addr_, IR::Addr::make_imm(0));
-    ADD_BIN(MOVNE, this->addr_, IR::Addr::make_imm(1));
+    ADD_BIN(MOVEQ, this->addr_, IR::Addr::make_imm(1));
+    ADD_BIN(MOVNE, this->addr_, IR::Addr::make_imm(0));
   }
 
   return ret;
@@ -769,7 +796,22 @@ NumberExp::get_var_addr() {
 
 IR::List
 NumberExp::translate() {
-  // 常量，无需翻译
+  IR::List ret;
+  if(this->translate_to_logical()){
+    BinaryExp *tmp = new BinaryExp(Op::NEQ, this, new NumberExp(0));
+    // 要求这个临时表达式转为逻辑表达式，并赋予本表达式的失败标号
+    tmp->cast_to_logical = true;
+    tmp->cast_to_regular = false;
+    tmp->set_fail_label(this->label_fail_);
+
+    // 翻译这个临时表达式，作为本表达式的翻译结果
+    ret.splice(ret.end(), tmp->translate());
+
+    // delete 掉这个临时表达式
+    tmp->left_ = nullptr;  // 为防止析构掉 this
+    delete tmp;
+  }else{
+  }
   return IR::List();
 }
 
@@ -1096,12 +1138,10 @@ VarDeclStmt::translate() {
 
 IR::List
 ExpStmt::translate() {
-  // 如果是函数调用，则翻译
-  auto funcall = dynamic_cast<FuncCallExp*>(this->exp_);
-
-  // 没有 ++等影响变量值的操作，不翻译
-  if (funcall==nullptr) return IR::List();
-  else                  return funcall->translate();
+  this->exp_->cast_to_logical = false;
+  this->exp_->cast_to_regular = true;
+  auto disposable_addr = this->exp_->get_var_addr();
+  return this->exp_->translate();
 }
 
 IR::List
@@ -1124,12 +1164,12 @@ IR::List
 IfStmt::translate() {
   // TODO 报错
   assert(this->condition_);
-
   // 常量优化
   if (this->condition_->is_evaluable()) {
     if (this->condition_->eval()) return this->yes_->translate();
     // else block may not exist
     else if (this->no_)           return this->no_->translate();   
+    return IR::List();
   }
 
   IR::List ret;
@@ -1157,11 +1197,11 @@ IfStmt::translate() {
   // jmp label_end
   ADD_UNR(JMP, label_end);
   // set label label_else
-  ADD_UNR(LABEL, label_else);
+  ADD_LABEL(LABEL, label_else);
   // false expressions: else may not exist
   if (this->no_!=nullptr) ret.splice(ret.end(), this->no_->translate());
   // set label label_end
-  ADD_UNR(LABEL, label_end);
+  ADD_LABEL(LABEL, label_end);
 
   return ret;
 }
@@ -1180,28 +1220,28 @@ WhileStmt::translate() {
   if (this->condition_->is_evaluable()) {
     if (this->condition_->eval()) {
       // 无限循环
-      ADD_UNR(LABEL, this->label_cond);
+      ADD_LABEL(LABEL, this->label_cond);
       ret.splice(ret.end(), this->body_->translate());
       ADD_UNR(JMP, this->label_cond);
-      ADD_UNR(LABEL, this->label_end);
+      ADD_LABEL(LABEL, this->label_end);
     } else {
       // 不执行
     }
   }
   // 常量优化结束
 
-  else {
+  else { 
     // 为条件表达式分配标号
     this->condition_->set_fail_label(this->label_end);
 
     // 翻译条件表达式
     this->condition_->cast_to_logical = true;
     this->condition_->cast_to_regular = false;
-    ADD_UNR(LABEL, this->label_cond);
+    ADD_LABEL(LABEL, this->label_cond);
     ret.splice(ret.end(), this->condition_->translate());
     ret.splice(ret.end(), this->body_->translate());
     ADD_UNR(JMP, this->label_cond);
-    ADD_UNR(LABEL, this->label_end);
+    ADD_LABEL(LABEL, this->label_end);
   }
 
   context.while_chain.pop_back();

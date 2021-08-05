@@ -51,6 +51,7 @@ int parse_number(char const *);
 %token <string> NUMBER
 %token <token> ADD SUB MUL DIV MOD NOT
 %token <string> IDENT
+%token <string> STR
 
 %type <token>       CompUnit
 %type <btype>       BType
@@ -132,9 +133,11 @@ LOrExp : LAndExp { $$ = $1; }
 ExpList : Exp  { $$ = new Expression::List();
                  $$->push_back($1);
                }
+	| STR  { $$ = new Expression::List(); }
         | ExpList COMMA Exp { $$ = $1;
                               $$->push_back($3);
                             }
+	| ExpList COMMA STR { $$ = $1; }
         ;
 
 // [const] int a = 21, b[10]... = {...}, ... ;
@@ -326,8 +329,8 @@ int parse_dec(char const *num) {
 int parse_number(char const *num) {
   if ((*num)=='0') {
     ++num;
-    if ((*num)=='X' || (*num)=='x') return parse_hex(num+1);
-    else                            return parse_oct(num);
+    if ((*num)=='X' || (*num)=='x') return std::stoi(num-1, 0, 16);
+    else                            return std::stoi(num-1, 0, 8);
   }
-  return parse_dec(num);
+  return std::stoi(num);
 }

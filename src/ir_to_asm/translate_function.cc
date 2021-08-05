@@ -3,6 +3,7 @@
 #include "../context/context.h"
 #include "frame_info.h"
 #include "reg_assign.h"
+#include <iostream>
 #include <list>
 #include <string>
 #include <cassert>
@@ -168,6 +169,7 @@ move_to_reg(FrameInfo &frame, IR::Addr::Ptr ir_addr, std::string tmp_regname) {
   // 立即数
   else if (ir_addr->kind == IR::Addr::Kind::IMM) {
     ret_reg = tmp_regname;
+    /*
     // 如果ARM可以表示这个立即数
     if (is_arm_imm(ir_addr->val)) {
       ret.push_back(string("\tmov\t") + tmp_regname + ", #" + std::to_string(ir_addr->val));
@@ -177,9 +179,9 @@ move_to_reg(FrameInfo &frame, IR::Addr::Ptr ir_addr, std::string tmp_regname) {
       ret.push_back(string("\tmvn\t") + tmp_regname + ", #" + std::to_string(~(ir_addr->val)));
     }
     // 如果都不行，就需要动用mov32
-    else {
+    else { */
       ret.push_back(string("\tmov32\t") + tmp_regname + ", #" + std::to_string(ir_addr->val));
-    }
+    //}
   }
 
   return std::make_pair(ret_reg, ret);
@@ -362,7 +364,10 @@ translate(FrameInfo &frame, IR::Ptr ir) {
     ret.splice(ret.end(), frame.ret_statements());
   }
   else if (ir->op_ == IR::Op::FUNCEND) {
-    if (!last_ret) ret.splice(ret.end(), frame.ret_statements());
+    if (!last_ret) {
+	    ret.push_back(string("\tmov\tr0, #0"));
+	    ret.splice(ret.end(), frame.ret_statements());
+    }
   }
   // LOAD
   else if (ir->op_ == IR::Op::LOAD) {

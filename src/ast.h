@@ -162,6 +162,7 @@ private:
 };
 
 class UnaryExp;
+class NumberExp;
 /**
  * 二元表达式，例如" 1 + 2 "，" 4 * 3 "
  */
@@ -170,6 +171,7 @@ public:
   friend class UnaryExp;
   friend class VarExp;
   friend class FuncCallExp;
+  friend class NumberExp;
 
   BinaryExp(Op op, Expression *left, Expression *right);
   virtual ~BinaryExp();

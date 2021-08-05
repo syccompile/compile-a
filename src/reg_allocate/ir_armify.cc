@@ -165,7 +165,7 @@ ir_armify(std::list<IR::List> &defs, IR::List &func) {
 
     // ir为除法、取模外的算术逻辑型，a0  = a1 op a2
     // 或者是cmp型     nil = a1 op a2
-    if (ir->is_al() || ir->op_==IR::Op::CMP) {
+    else if (ir->is_al() || ir->op_==IR::Op::CMP) {
       // 首先保证a1、a2在VAR中
       auto [a1, a1_def_app, a1_func_app] = move_into_var(ir->a1);
       auto [a2, a2_def_app, a2_func_app] = move_into_var(ir->a2);
