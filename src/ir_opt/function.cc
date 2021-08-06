@@ -149,7 +149,7 @@ void Function::debug() {
     algebraic_simplification();
     delete_local_common_expression();
     delete_global_common_expression();
-//    local_copy_propagation();
+    local_copy_propagation();
 //    global_copy_propagation();
 //    if_simplify();
 //    loop_invariant_code_motion();
@@ -1137,8 +1137,8 @@ void Function::optimize(int optimize_level) {
     algebraic_simplification();
     delete_local_common_expression();
     delete_global_common_expression();
-//    local_copy_propagation();
-//    global_copy_propagation();
+    local_copy_propagation();
+    global_copy_propagation();
 //    if_simplify();
 //    loop_invariant_code_motion();
 //    staighten();
