@@ -392,7 +392,7 @@ void BasicBlock::local_copy_propagation(std::set<Exp> &available_copy_exps) {
     } // ignore else
   };
   auto remove_exp = [&](const IR::Addr::Ptr &a) {
-    assert(is_var_or_param(a) || a->kind == IR::Addr::Kind::NAMED_LABEL);
+    assert(is_var_or_param(a) || a->kind == IR::Addr::Kind::NAMED_LABEL || a->kind == IR::Addr::Kind::RET);
     auto iter = available_copy_exps.begin();
     for (; iter != available_copy_exps.end();) {
       if ((*iter).copy_related_to(a)) {
@@ -406,7 +406,6 @@ void BasicBlock::local_copy_propagation(std::set<Exp> &available_copy_exps) {
     if (is_mov_op(ir->op_)) { // 赋值指令
       copy_value(ir->a1);
       remove_exp(ir->a0);
-      if (ir->a0->kind == IR::Addr::Kind::NAMED_LABEL) continue;  // TODO: temp ignore
       available_copy_exps.insert(make_mov_exp(ir));
     } else if (is_algo_op(ir->op_)) { // 算术指令
       copy_value(ir->a1);
@@ -427,6 +426,8 @@ void BasicBlock::local_copy_propagation(std::set<Exp> &available_copy_exps) {
       copy_value(ir->a1);
     } else if (ir->op_ == IR::Op::RET) {
       copy_value(ir->a1);
+    } else if (ir->op_ == IR::Op::CALL) {
+      remove_exp(IR::Addr::make_ret());
     }
   }
 }

@@ -20,17 +20,5 @@ add_executable(${COMPILER}
         ${FLEX_Scanner_OUTPUTS}
         )
 
-add_executable(personal_test test/personal_test.cpp)
-target_link_libraries(personal_test pthread)
-add_dependencies(personal_test ${COMPILER})
-
-add_executable(functional_test test/functional_test.cpp)
-target_link_libraries(functional_test pthread)
-add_dependencies(functional_test ${COMPILER})
-
-add_executable(performance_test test/performance_test.cpp)
-target_link_libraries(performance_test pthread)
-add_dependencies(performance_test ${COMPILER})
-
 add_executable(test test/test.cpp)
 add_dependencies(test ${COMPILER})

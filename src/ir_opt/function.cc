@@ -150,7 +150,7 @@ void Function::debug() {
     delete_local_common_expression();
     delete_global_common_expression();
     local_copy_propagation();
-//    global_copy_propagation();
+    global_copy_propagation();
 //    if_simplify();
 //    loop_invariant_code_motion();
 //    staighten();
@@ -390,7 +390,11 @@ void Function::_calc_available_expression_IN_OUT() {
       if (basic_block->predecessor_list_.empty()) {
         basic_block->available_expression_IN_.clear();
       } else {
-        basic_block->available_expression_IN_.swap(tmp_IN);
+        if (basic_block->block_num_ == 0) {
+          basic_block->available_expression_IN_.clear();
+        } else {
+          basic_block->available_expression_IN_.swap(tmp_IN);
+        }
       }
       set_difference(basic_block->available_expression_IN_.begin(),
                      basic_block->available_expression_IN_.end(),

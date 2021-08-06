@@ -365,12 +365,16 @@ break;
       }
       break;
     case IR::Addr::Kind::PARAM:
-      std::cout << "r" << this->get_color();
+      if (this->is_colored()) {
+        std::cout << "r" << this->get_color();
+      } else {
+        std::cout << "p" << this->val;
+      }
       break;
     CASE(IMM, '#');
     CASE(BRANCH_LABEL, ".L");
     CASE(NAMED_LABEL, "");
-    CASE(RET, 'r');
+    CASE(RET, "ret");
   };
 
 #undef CASE

@@ -105,10 +105,10 @@ void printResult() {
               std::ostream_iterator<std::string>(std::cout, "\n"));
     std::cout << red << "Failed cases: " << normal << std::endl;
     std::copy(failed_cases.begin(), failed_cases.end(), std::ostream_iterator<std::string>(std::cout, "\n"));
-    std::cout << std::endl << green << "Passed cases: " << normal << std::endl;
-    std::copy(passed_cases.begin(), passed_cases.end(), std::ostream_iterator<std::string>(std::cout, "\n"));
-    std::cout << std::endl << yellow << "Ignored cases: " << normal << std::endl;
-    std::copy(ignored_cases.begin(), ignored_cases.end(), std::ostream_iterator<std::string>(std::cout, "\n"));
+//    std::cout << std::endl << green << "Passed cases: " << normal << std::endl;
+//    std::copy(passed_cases.begin(), passed_cases.end(), std::ostream_iterator<std::string>(std::cout, "\n"));
+//    std::cout << std::endl << yellow << "Ignored cases: " << normal << std::endl;
+//    std::copy(ignored_cases.begin(), ignored_cases.end(), std::ostream_iterator<std::string>(std::cout, "\n"));
     std::cout << std::endl;
   }
 }
