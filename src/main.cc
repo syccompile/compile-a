@@ -115,7 +115,7 @@ int main(int argc, char *argv[]) {
   IRFile.close();
 
   auto m = Module(func_list);
-  m.optimize(1);
+  m.optimize(optimize_level);
   func_list = m.merge();
 
   IRFile.open(opt_ir_file);

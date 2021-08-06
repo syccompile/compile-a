@@ -1,0 +1,227 @@
+VARDEF	len		
+DATA	#20		
+VAREND			
+FUNCDEF	main	#0	
+MOV	r5	r1	
+MOV	r1	r2	
+MOV	r1	r3	
+MOV	r1	r4	
+ALLOC_IN_STACK	%5	#20	
+STORE	%5	#0	#1
+STORE	%5	#1	#2
+STORE	%5	#2	#3
+STORE	%5	#3	#4
+STORE	%5	#4	#5
+STORE	%5	#5	#6
+STORE	%5	#6	#7
+STORE	%5	#7	#8
+STORE	%5	#8	#9
+STORE	%5	#9	#0
+STORE	%5	#10	#1
+STORE	%5	#11	#2
+STORE	%5	#12	#3
+STORE	%5	#13	#4
+STORE	%5	#14	#5
+STORE	%5	#15	#6
+STORE	%5	#16	#7
+STORE	%5	#17	#8
+STORE	%5	#18	#9
+STORE	%5	#19	#0
+ALLOC_IN_STACK	%6	#20	
+STORE	%6	#0	#2
+STORE	%6	#1	#3
+STORE	%6	#2	#4
+STORE	%6	#3	#2
+STORE	%6	#4	#5
+STORE	%6	#5	#7
+STORE	%6	#6	#9
+STORE	%6	#7	#9
+STORE	%6	#8	#0
+STORE	%6	#9	#1
+STORE	%6	#10	#9
+STORE	%6	#11	#8
+STORE	%6	#12	#7
+STORE	%6	#13	#6
+STORE	%6	#14	#4
+STORE	%6	#15	#3
+STORE	%6	#16	#2
+STORE	%6	#17	#1
+STORE	%6	#18	#2
+STORE	%6	#19	#2
+MOV	r10	#20	
+MOV	r1	#20	
+ALLOC_IN_STACK	%9	#25	
+ALLOC_IN_STACK	%10	#25	
+ALLOC_IN_STACK	%11	#40	
+STORE	%11	#0	#0
+STORE	%11	#1	#0
+STORE	%11	#2	#0
+STORE	%11	#3	#0
+STORE	%11	#4	#0
+STORE	%11	#5	#0
+STORE	%11	#6	#0
+STORE	%11	#7	#0
+STORE	%11	#8	#0
+STORE	%11	#9	#0
+STORE	%11	#10	#0
+STORE	%11	#11	#0
+STORE	%11	#12	#0
+STORE	%11	#13	#0
+STORE	%11	#14	#0
+STORE	%11	#15	#0
+STORE	%11	#16	#0
+STORE	%11	#17	#0
+STORE	%11	#18	#0
+STORE	%11	#19	#0
+STORE	%11	#20	#0
+STORE	%11	#21	#0
+STORE	%11	#22	#0
+STORE	%11	#23	#0
+STORE	%11	#24	#0
+STORE	%11	#25	#0
+STORE	%11	#26	#0
+STORE	%11	#27	#0
+STORE	%11	#28	#0
+STORE	%11	#29	#0
+STORE	%11	#30	#0
+STORE	%11	#31	#0
+STORE	%11	#32	#0
+STORE	%11	#33	#0
+STORE	%11	#34	#0
+STORE	%11	#35	#0
+STORE	%11	#36	#0
+STORE	%11	#37	#0
+STORE	%11	#38	#0
+STORE	%11	#39	#0
+MOV	r5	#0	
+LABEL	.L0		
+CMP		r5	r10
+JGE	.L1		
+MOV	r6	#0	
+MOV	r7	r5	
+ADD	r6	r6	r7
+LOAD	r6	%5	r6
+MOV	r7	#0	
+MOV	r8	r5	
+ADD	r7	r7	r8
+STORE	%9	r7	r6
+ADD	r5	r5	#1
+JMP	.L0		
+LABEL	.L1		
+MOV	r5	#0	
+LABEL	.L2		
+CMP		r5	r1
+JGE	.L3		
+MOV	r6	#0	
+MOV	r7	r5	
+ADD	r6	r6	r7
+LOAD	r6	%6	r6
+MOV	r7	#0	
+MOV	r8	r5	
+ADD	r7	r7	r8
+STORE	%10	r7	r6
+ADD	r5	r5	#1
+JMP	.L2		
+LABEL	.L3		
+ADD	r13	r10	r1
+MOV	r5	r13	
+SUB	r8	r5	#1
+MOV	r5	#0	
+LABEL	.L4		
+CMP		r5	r8
+JGT	.L5		
+MOV	r6	#0	
+MOV	r7	r5	
+ADD	r6	r6	r7
+STORE	%11	r6	#0
+ADD	r5	r5	#1
+JMP	.L4		
+LABEL	.L5		
+MOV	r9	#0	
+SUB	r5	r1	#1
+LABEL	.L6		
+CMP		r5	#-1
+JLE	.L7		
+MOV	r1	#0	
+MOV	r6	r5	
+ADD	r1	r1	r6
+LOAD	r1	%10	r1
+MOV	r7	r1	
+SUB	r6	r10	#1
+LABEL	.L8		
+CMP		r6	#-1
+JLE	.L9		
+MOV	r1	#0	
+MOV	r9	r8	
+ADD	r1	r1	r9
+LOAD	r1	%11	r1
+MOV	r9	#0	
+MOV	r11	r6	
+ADD	r9	r9	r11
+LOAD	r9	%9	r9
+MUL	r9	r7	r9
+ADD	r9	r1	r9
+CMP		r9	#10
+JLT	.L10		
+MOV	r1	#0	
+MOV	r2	r8	
+ADD	r1	r1	r2
+STORE	%11	r1	r9
+SUB	r15	r8	#1
+MOV	r1	r15	
+MOV	r11	#0	
+MOV	r2	r1	
+ADD	r11	r11	r2
+LOAD	r11	%11	r11
+PARAM	r2	#10	
+PARAM	r1	r9	
+CALL	__aeabi_idiv		
+MOV	r12	r1	
+ADD	r1	r11	r12
+MOV	r11	r15	
+MOV	r12	#0	
+MOV	r14	r11	
+ADD	r12	r12	r14
+STORE	%11	r12	r1
+JMP	.L11		
+LABEL	.L10		
+MOV	r1	#0	
+MOV	r11	r8	
+ADD	r1	r1	r11
+STORE	%11	r1	r9
+LABEL	.L11		
+SUB	r6	r6	#1
+SUB	r8	r8	#1
+JMP	.L8		
+LABEL	.L9		
+ADD	r1	r8	r10
+SUB	r8	r1	#1
+SUB	r5	r5	#1
+JMP	.L6		
+LABEL	.L7		
+LOAD	r1	%11	#0
+CMP		r1	#0
+JE	.L12		
+LOAD	r1	%11	#0
+PARAM	r1	r1	
+CALL	putint		
+MOV	r5	r1	
+LABEL	.L12		
+MOV	r5	#1	
+LABEL	.L14		
+MOV	r1	r13	
+SUB	r1	r1	#1
+CMP		r5	r1
+JGT	.L15		
+MOV	r1	#0	
+MOV	r6	r5	
+ADD	r1	r1	r6
+LOAD	r1	%11	r1
+PARAM	r1	r1	
+CALL	putint		
+MOV	r6	r1	
+ADD	r5	r5	#1
+JMP	.L14		
+LABEL	.L15		
+RET		#0	
+FUNCEND			

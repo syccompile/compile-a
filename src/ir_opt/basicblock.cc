@@ -259,7 +259,7 @@ void BasicBlock::calc_use_def() {
 void BasicBlock::delete_local_common_expression() {
   std::map<Exp, iterator> exp_to_iter;
   std::map<Exp, IR::Addr::Ptr> available_exps;
-  auto delete_avail_exp = [&](const IR::Addr::Ptr &a, const iterator &store_iter) {
+  auto delete_avail_exp = [&](const IR::Addr::Ptr &a) {
     auto iter2 = exp_to_iter.begin();
     for (auto iter = available_exps.begin(); iter != available_exps.end();)
       if ((*iter).first.related_to(a)) {
@@ -293,9 +293,13 @@ void BasicBlock::delete_local_common_expression() {
         available_exps[exp] = nullptr; // add avail_exp
         exp_to_iter[exp] = iter;
       }
-      delete_avail_exp(cur_ir->a0, iter);
+      delete_avail_exp(cur_ir->a0);
     } else if (is_mov_op(cur_ir->op_)) {
-      delete_avail_exp(cur_ir->a0, iter);
+      delete_avail_exp(cur_ir->a0);
+    } else if (cur_ir->op_ == IR::Op::PARAM) {
+      delete_avail_exp(cur_ir->a0);
+    } else if (cur_ir->op_ == IR::Op::LOAD) {
+      delete_avail_exp(cur_ir->a0);
     }
   }
 }

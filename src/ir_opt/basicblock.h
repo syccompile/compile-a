@@ -2,6 +2,7 @@
 #define COMPILER_SRC_IR_OPT_BASICBLOCK_HPP_
 
 #include "../ir.h"
+#include "../context/context.h"
 
 #include <memory>
 #include <list>
@@ -50,22 +51,14 @@ inline Exp make_mov_exp(const IR::Ptr &ir) {
   return Exp(ir->op_, ir->a0, ir->a1);
 }
 
-static int cur_num = 100;
-inline int alloc_num() { return ++cur_num; }
-inline IR::Addr::Ptr alloc_var() { return std::make_shared<IR::Addr>(IR::Addr::Kind::VAR, alloc_num()); }
+inline IR::Addr::Ptr alloc_var() {
+  return context.allocator.allocate_addr();
+}
 inline IR::Addr::Ptr make_imm(int val) { return std::make_shared<IR::Addr>(IR::Addr::Kind::IMM, val); }
 inline IR::Addr::Ptr make_var(int val) { return std::make_shared<IR::Addr>(IR::Addr::Kind::VAR, val); }
 inline IR::Addr::Ptr make_param(int val) { return std::make_shared<IR::Addr>(IR::Addr::Kind::PARAM, val); }
 inline IR::Ptr make_tmp_assign_exp_ir(const Exp &exp) {
   return std::make_shared<IR>(exp.op_, alloc_var(), exp.a0_, exp.a1_);
-}
-static int cur_label_num = 100;
-inline IR::Addr::Ptr alloc_label() { return IR::Addr::make_label(++cur_label_num); }
-inline IR::Ptr make_label_ir(const IR::Addr::Ptr &label) {
-  return IR::make_unary(IR::Op::LABEL, label);
-}
-inline IR::Ptr make_jmp_ir(const IR::Addr::Ptr &label) {
-  return IR::make_unary(IR::Op::JMP, label);
 }
 
 class BasicBlock {

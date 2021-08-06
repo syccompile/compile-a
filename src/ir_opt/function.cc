@@ -149,13 +149,13 @@ void Function::debug() {
     algebraic_simplification();
     delete_local_common_expression();
     delete_global_common_expression();
-    local_copy_propagation();
-    global_copy_propagation();
-    if_simplify();
-    loop_invariant_code_motion();
-    staighten();
-    delete_unreachable_code();
-    remove_dead_code();
+//    local_copy_propagation();
+//    global_copy_propagation();
+//    if_simplify();
+//    loop_invariant_code_motion();
+//    staighten();
+//    delete_unreachable_code();
+//    remove_dead_code();
   }
   reach_define_analysis();
   available_expression_analysis();
@@ -504,6 +504,7 @@ void Function::delete_local_common_expression() {
 list<Function::source> Function::_find_sources(const Exp &exp, const shared_ptr<BasicBlock> &cur_block) {
   searched_.assign(basic_block_vector_.size(), false);
   list<source> sources;
+  searched_[cur_block->block_num_] = true;  // 不检查当前块
   _real_find_sources(exp, cur_block, sources);
   return sources;
 }
@@ -1124,14 +1125,18 @@ void Function::induction_variable_elimination() {
 
 void Function::optimize(int optimize_level) {
   if (optimize_level == 0) return;
+  if (optimize_level > 5) {
+    debug();
+    return;
+  }
   for (int i = 0; i < 3; ++i) {
     ir_specify_optimization();
     tail_merging();
     label_simplify();
     constant_folding();
     algebraic_simplification();
-//    delete_local_common_expression();
-//    delete_global_common_expression();
+    delete_local_common_expression();
+    delete_global_common_expression();
 //    local_copy_propagation();
 //    global_copy_propagation();
 //    if_simplify();
