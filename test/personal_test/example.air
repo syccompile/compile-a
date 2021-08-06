@@ -1,0 +1,94 @@
+VARDEF	a		
+DATA	#1		
+DATA	#2		
+DATA	#3		
+DATA	#4		
+ZERO	#6		
+DATA	#1		
+DATA	#2		
+DATA	#3		
+ZERO	#87		
+VAREND			
+VARDEF	b		
+DATA	#10		
+VAREND			
+VARDEF	c		
+DATA	#0		
+VAREND			
+VARDEF	d		
+ZERO	#5292		
+VAREND			
+VARDEF	e		
+ZERO	#1288		
+VAREND			
+VARDEF	s		
+DATA	#2		
+VAREND			
+FUNCDEF	func2	#1	
+MOV	r6	r1	
+MOV	r1	r2	
+MOV	r1	r3	
+MOV	r1	r4	
+MOV	r1	#10	
+ADD	r2	r6	#10
+ADD	r5	#11	#1254
+LABEL	.L0		
+CMP		r6	#0
+JE	.L5		
+JMP	.L6		
+LABEL	.L5		
+ADD	r1	r1	#5
+CMP		r1	#0
+JE	.L6		
+MUL	r1	#114	r2
+CMP		r1	#0
+JE	.L1		
+LABEL	.L6		
+MOV	r1	#11	
+CMP		r5	#10
+JLE	.L7		
+JMP	.L1		
+LABEL	.L7		
+JMP	.L0		
+LABEL	.L1		
+FUNCEND			
+FUNCDEF	func3	#1	
+MOV	r6	r1	
+MOV	r1	r2	
+MOV	r1	r3	
+MOV	r1	r4	
+ALLOC_IN_STACK	%6	#10	
+ADD	r1	r6	#5
+STORE	%6	#0	r1
+ADD	r1	r6	#4
+STORE	%6	#1	r1
+STORE	%6	#2	#6
+STORE	%6	#3	#0
+STORE	%6	#4	#0
+STORE	%6	#5	#0
+STORE	%6	#6	#0
+STORE	%6	#7	#0
+STORE	%6	#8	#0
+STORE	%6	#9	#0
+CMP		r6	#-6
+JLE	.L12		
+JMP	.L11		
+LABEL	.L12		
+LOAD	r1	%6	#3
+CMP		r1	#9
+JLE	.L9		
+LABEL	.L11		
+JMP	.L9		
+LABEL	.L9		
+RET		r5	
+FUNCEND			
+FUNCDEF	func1	#2	
+MOV	r5	r1	
+MOV	r1	r2	
+MOV	r1	r3	
+MOV	r1	r4	
+PARAM	r1	r5	
+PARAM	r2	#10	
+CALL	func2		
+RET		#10	
+FUNCEND			

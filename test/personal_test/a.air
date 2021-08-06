@@ -1,0 +1,187 @@
+VARDEF	N		
+DATA	#1024		
+VAREND			
+VARDEF	A		
+ZERO	#1048576		
+VAREND			
+VARDEF	B		
+ZERO	#1048576		
+VAREND			
+VARDEF	C		
+ZERO	#1048576		
+VAREND			
+FUNCDEF	mm	#4	
+MOV	r11	r1	
+MOV	r12	r2	
+MOV	r9	r3	
+MOV	r10	r4	
+MOV	r1	#0	
+MOV	r2	#0	
+MOV	r2	#0	
+LABEL	.L0		
+CMP		r1	r11
+JGE	.L1		
+MUL	r4	r1	#1024
+LABEL	.L2		
+CMP		r2	r11
+JGE	.L3		
+ADD	r3	r4	r2
+STORE	r10	r3	#0
+ADD	r2	r2	#1
+JMP	.L2		
+LABEL	.L3		
+ADD	r1	r1	#1
+JMP	.L0		
+LABEL	.L1		
+MOV	r3	#0	
+MOV	r1	#0	
+MOV	r2	#0	
+LABEL	.L4		
+CMP		r3	r11
+JGE	.L5		
+LABEL	.L6		
+CMP		r1	r11
+JGE	.L7		
+MOV	r4	#0	
+MUL	r8	r1	#1024
+MOV	r4	r8	
+ADD	r4	r8	r3
+LOAD	r4	r12	r4
+CMP		r4	#0
+JNE	.L8		
+ADD	r1	r1	#1
+JMP	.L6		
+LABEL	.L8		
+LABEL	.L10		
+CMP		r2	r11
+JGE	.L11		
+MOV	r4	#0	
+MOV	r4	r8	
+ADD	r4	r8	r2
+LOAD	r5	r10	r4
+MOV	r4	#0	
+MOV	r4	r8	
+ADD	r4	r8	r3
+LOAD	r4	r12	r4
+MOV	r6	#0	
+MUL	r7	r3	#1024
+MOV	r6	r7	
+ADD	r6	r7	r2
+LOAD	r6	r9	r6
+MUL	r4	r4	r6
+ADD	r5	r5	r4
+MOV	r4	#0	
+MUL	r8	r1	#1024
+MOV	r4	r8	
+ADD	r4	r8	r2
+STORE	r10	r4	r5
+ADD	r2	r2	#1
+JMP	.L10		
+LABEL	.L11		
+ADD	r1	r1	#1
+JMP	.L6		
+LABEL	.L7		
+ADD	r3	r3	#1
+JMP	.L4		
+LABEL	.L5		
+FUNCEND			
+FUNCDEF	main	#0	
+MOV	r5	r1	
+MOV	r5	r2	
+MOV	r5	r3	
+MOV	r5	r4	
+CALL	getint		
+MOV	r5	r1	
+MOV	r6	#0	
+MOV	r7	#0	
+MOV	r7	#0	
+LABEL	.L12		
+CMP		r6	r5
+JGE	.L13		
+MUL	r9	r6	#1024
+LABEL	.L14		
+CMP		r7	r5
+JGE	.L15		
+CALL	getint		
+ADD	r8	r9	r7
+MOV	r10	A	
+STORE	r10	r8	r1
+ADD	r7	r7	#1
+JMP	.L14		
+LABEL	.L15		
+ADD	r6	r6	#1
+JMP	.L12		
+LABEL	.L13		
+MOV	r6	#0	
+MOV	r7	#0	
+LABEL	.L16		
+CMP		r6	r5
+JGE	.L17		
+MUL	r9	r6	#1024
+LABEL	.L18		
+CMP		r7	r5
+JGE	.L19		
+CALL	getint		
+MOV	r8	r9	
+ADD	r8	r9	r7
+MOV	r10	B	
+STORE	r10	r8	r1
+ADD	r7	r7	#1
+JMP	.L18		
+LABEL	.L19		
+ADD	r6	r6	#1
+JMP	.L16		
+LABEL	.L17		
+CALL	_sysy_starttime		
+MOV	r6	#0	
+LABEL	.L20		
+CMP		r6	#5
+JGE	.L21		
+PARAM	r1	r5	
+MOV	r2	A	
+PARAM	r2	r2	
+MOV	r3	B	
+PARAM	r3	r3	
+MOV	r4	C	
+PARAM	r4	r4	
+CALL	mm		
+PARAM	r1	r5	
+MOV	r2	A	
+PARAM	r2	r2	
+MOV	r3	C	
+PARAM	r3	r3	
+MOV	r4	B	
+PARAM	r4	r4	
+CALL	mm		
+ADD	r6	r6	#1
+JMP	.L20		
+LABEL	.L21		
+MOV	r8	#0	
+MOV	r6	#0	
+LABEL	.L22		
+CMP		r6	r5
+JGE	.L23		
+MOV	r7	#0	
+LABEL	.L24		
+CMP		r7	r5
+JGE	.L25		
+MOV	r9	#0	
+MUL	r10	r6	#1024
+MOV	r9	r10	
+ADD	r9	r10	r7
+MOV	r10	B	
+LOAD	r9	r10	r9
+ADD	r8	r8	r9
+ADD	r7	r7	#1
+JMP	.L24		
+LABEL	.L25		
+ADD	r6	r6	#1
+JMP	.L22		
+LABEL	.L23		
+CALL	_sysy_stoptime		
+PARAM	r1	r8	
+CALL	putint		
+PARAM	r1	#10	
+CALL	putch		
+RET		#0	
+FUNCEND			

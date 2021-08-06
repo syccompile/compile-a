@@ -1,0 +1,27 @@
+VARDEF	n		
+DATA	#0		
+VAREND			
+FUNCDEF	foo	#1	
+MOV	r5	r1	
+MOV	r1	r2	
+MOV	r1	r3	
+MOV	r1	r4	
+MOV	r1	n	
+STORE	r5	#5	r1
+FUNCEND			
+FUNCDEF	main	#0	
+MOV	r5	r1	
+MOV	r1	r2	
+MOV	r1	r3	
+MOV	r1	r4	
+ALLOC_IN_STACK	%0	#8	
+STORE	%0	#0	#0
+STORE	%0	#1	#0
+STORE	%0	#2	#0
+STORE	%0	#3	#0
+STORE	%0	#4	#0
+STORE	%0	#5	#0
+STORE	%0	#6	#0
+STORE	%0	#7	#0
+RET		#0	
+FUNCEND			

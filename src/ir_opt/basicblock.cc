@@ -107,6 +107,7 @@ bool Exp::be_used_by(const IR::Ptr &ir) const {
   return false;
 }
 bool Exp::related_to(const IR_Addr::Ptr &a) const {
+  if (a == nullptr) return false;
   if (is_algo_op(op_)) {
     return (*a0_ == *a) || (*a1_ == *a);
   } else {  // MOV
@@ -208,7 +209,7 @@ void BasicBlock::calc_use_def() {
   use_.clear();
   def_.clear();
   auto add_to_def = [&](const IR::Addr::Ptr &a) {
-    if (a->kind == IR::Addr::Kind::VAR || a->kind == IR::Addr::Kind::PARAM) {
+    if (is_var_or_param(a)) {
       auto result = std::find(def_.begin(), def_.end(), *a);
       if (result == def_.end()) {
         def_.push_back(*a);
@@ -217,7 +218,7 @@ void BasicBlock::calc_use_def() {
     }
   };
   auto add_to_use = [&](const IR::Addr::Ptr &a) {
-    if (a->kind == IR::Addr::Kind::VAR || a->kind == IR::Addr::Kind::PARAM) {
+    if (is_var_or_param(a)) {
       auto result = std::find(use_.begin(), use_.end(), *a);
       if (result == use_.end()) {
         use_.push_back(*a);
@@ -248,6 +249,7 @@ void BasicBlock::calc_use_def() {
     } else if (cur_ir->op_ == IR::Op::RET) {
       add_to_use(cur_ir->a1); // TODO: 文档写的a0
     } else if (cur_ir->op_ == IR::Op::PARAM) {
+      add_to_def(cur_ir->a0);
       add_to_use(cur_ir->a1);
     }
   }
@@ -376,7 +378,7 @@ void BasicBlock::algebraic_simplification() {
 void BasicBlock::local_copy_propagation(std::set<Exp> &available_copy_exps) {
 //  std::set<Exp> available_copy_exps;
   auto copy_value = [&](IR::Addr::Ptr &a) {
-    if (is_var_or_param(a)) {
+    if (is_var_or_param(a) || a->kind == IR::Addr::Kind::NAMED_LABEL) {
       auto iter = available_copy_exps.begin();
       for (; iter != available_copy_exps.end(); ++iter) {
         if ((*iter).copy_be_used_by(a)) {
@@ -386,7 +388,7 @@ void BasicBlock::local_copy_propagation(std::set<Exp> &available_copy_exps) {
     } // ignore else
   };
   auto remove_exp = [&](const IR::Addr::Ptr &a) {
-    assert(is_var_or_param(a));
+    assert(is_var_or_param(a) || a->kind == IR::Addr::Kind::NAMED_LABEL);
     auto iter = available_copy_exps.begin();
     for (; iter != available_copy_exps.end();) {
       if ((*iter).copy_related_to(a)) {
@@ -396,10 +398,11 @@ void BasicBlock::local_copy_propagation(std::set<Exp> &available_copy_exps) {
       }
     }
   };
-  for (auto &ir: ir_list_) {  // TODO: 未处理PARAM,RET,ALLOC_IN_STACK
+  for (auto &ir: ir_list_) {
     if (is_mov_op(ir->op_)) { // 赋值指令
       copy_value(ir->a1);
       remove_exp(ir->a0);
+      if (ir->a0->kind == IR::Addr::Kind::NAMED_LABEL) continue;  // TODO: temp ignore
       available_copy_exps.insert(make_mov_exp(ir));
     } else if (is_algo_op(ir->op_)) { // 算术指令
       copy_value(ir->a1);
@@ -408,20 +411,25 @@ void BasicBlock::local_copy_propagation(std::set<Exp> &available_copy_exps) {
     } else if (ir->op_ == IR::Op::CMP) {  // 比较指令
       copy_value(ir->a1);
       copy_value(ir->a2);
-    } else if (ir->op_ != IR::Op::STORE) {  // 存储
+    } else if (ir->op_ == IR::Op::STORE) {  // 存储
       copy_value(ir->a0);
       copy_value(ir->a1);
       copy_value(ir->a2);
-    } else if (ir->op_ != IR::Op::LOAD) { // 取数
+    } else if (ir->op_ == IR::Op::LOAD) { // 取数
       copy_value(ir->a1);
       copy_value(ir->a2);
       remove_exp(ir->a0);
+    } else if (ir->op_ == IR::Op::PARAM) {
+      copy_value(ir->a1);
+    } else if (ir->op_ == IR::Op::RET) {
+      copy_value(ir->a1);
     }
   }
 }
 void BasicBlock::remove_dead_code() {
   auto live_variables = live_variable_OUT_;
   auto is_live = [&](const IR::Addr::Ptr &a) {
+    if (a->kind == IR::Addr::Kind::NAMED_LABEL) return true;  // 全局变量
     assert(is_var_or_param(a));
     if (std::find(live_variables.begin(), live_variables.end(), *a) ==
         live_variables.end()) { // 没找到
@@ -431,6 +439,7 @@ void BasicBlock::remove_dead_code() {
   };
   auto add_live = [&](const IR::Addr::Ptr &a) {
     if (a == nullptr) return;
+    if (a->kind == IR::Addr::Kind::NAMED_LABEL) return;
     if (!is_var_or_param(a)) return;
     if (!is_live(a)) {
       live_variables.push_back(*a);
@@ -438,7 +447,6 @@ void BasicBlock::remove_dead_code() {
   };
   for (auto iter = std::prev(ir_list_.end()); true; --iter) {
     auto cur_ir = *iter;
-    // bool removed = false;
     if (is_mov_op(cur_ir->op_)) { // 赋值操作
       if (is_live(cur_ir->a0)) {
         add_live(cur_ir->a1);
@@ -482,6 +490,7 @@ void BasicBlock::ir_specify_optimization() {
    * */
   auto live_variables = live_variable_OUT_;
   auto is_live = [&](const IR::Addr::Ptr &a) {
+    if (a->kind == IR::Addr::Kind::NAMED_LABEL) return true;
     assert(is_var_or_param(a));
     if (std::find(live_variables.begin(), live_variables.end(), *a) ==
         live_variables.end()) { // 没找到
@@ -491,6 +500,7 @@ void BasicBlock::ir_specify_optimization() {
   };
   auto add_live = [&](const IR::Addr::Ptr &a) {
     if (a == nullptr) return;
+    if (a->kind == IR::Addr::Kind::NAMED_LABEL) return;
     if (!is_var_or_param(a)) return;
     if (!is_live(a)) {
       live_variables.push_back(*a);
@@ -510,7 +520,7 @@ void BasicBlock::ir_specify_optimization() {
     --iter;
     if (iter == ir_list_.begin()) break;
 
-update_live:
+    update_live:
     if (is_mov_op(cur_ir->op_)) { // 赋值操作
       if (is_live(cur_ir->a0)) {
         add_live(cur_ir->a1);

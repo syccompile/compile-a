@@ -31,3 +31,6 @@ add_dependencies(functional_test ${COMPILER})
 add_executable(performance_test test/performance_test.cpp)
 target_link_libraries(performance_test pthread)
 add_dependencies(performance_test ${COMPILER})
+
+add_executable(test test/test.cpp)
+add_dependencies(test ${COMPILER})

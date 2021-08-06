@@ -12,7 +12,7 @@ namespace fs = std::filesystem;
 
 fs::path compiler{"./compiler"};
 std::string link_flags = " -g -static ";
-std::vector<std::string> passed_cases, ignored_cases, failed_cases;
+inline std::vector<std::string> passed_cases, ignored_cases, compile_error_cases, failed_cases;
 const std::string normal = "\033[0m";
 const std::string black = "\033[0;30m";
 const std::string red = "\033[0;31m";
@@ -52,7 +52,7 @@ void test(const fs::path &testFile, const fs::path &outputDir) {
   exit_code = std::system(compile_command.c_str());
   if (exit_code != 0) {
     std::cout << red << "\tfail to compile " << testFilename << normal << std::endl << std::endl;
-    failed_cases.push_back(testFile.filename());
+    compile_error_cases.push_back(testFile.filename());
     return;
   } else {
     std::cout << green << "\tcompile " << testFilename << " successfully" << normal << std::endl;
@@ -75,7 +75,7 @@ void test(const fs::path &testFile, const fs::path &outputDir) {
     }
     exit_code = std::system(run_command.c_str());
     std::ofstream ofs(outputResultFile, std::ios::app);
-    ofs << std::endl << (exit_code>>8) << std::endl;
+    ofs << std::endl << (exit_code >> 8) << std::endl;
     ofs.close();
 
     /* check */
@@ -89,7 +89,8 @@ void test(const fs::path &testFile, const fs::path &outputDir) {
 
   } else {  // just compile
     ignored_cases.push_back(testFilename);
-    std::cout << yellow << "\tcouldn't find " <<  expectedResultFile.filename().string() << ", ignored" << normal << std::endl;
+    std::cout << yellow << "\tcouldn't find " << expectedResultFile.filename().string() << ", ignored" << normal
+              << std::endl;
   }
   std::cout << std::endl;
 }
@@ -98,6 +99,10 @@ void printResult() {
   if (failed_cases.empty()) {
     std::cout << green << "All tests passed!" << normal << std::endl;
   } else {
+    std::cout << red << "Compile Error cases: " << normal << std::endl;
+    std::copy(compile_error_cases.begin(),
+              compile_error_cases.end(),
+              std::ostream_iterator<std::string>(std::cout, "\n"));
     std::cout << red << "Failed cases: " << normal << std::endl;
     std::copy(failed_cases.begin(), failed_cases.end(), std::ostream_iterator<std::string>(std::cout, "\n"));
     std::cout << std::endl << green << "Passed cases: " << normal << std::endl;

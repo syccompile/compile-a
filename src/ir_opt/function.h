@@ -41,17 +41,7 @@ class Function {
 
   void _calc_dominate_IN_OUT();
   using edge = pair<BasicBlock::Ptr, BasicBlock::Ptr>;
-  static bool back_edge_less(const edge &lhs, const edge &rhs) {
-    int range1 = lhs.first->block_num_ - lhs.second->block_num_;
-    int range2 = rhs.first->block_num_ - rhs.second->block_num_;
-    assert(range1 > 0);
-    assert(range2 > 0);
-    if (range1 != range2) {
-      return range1 < range2;
-    }
-    return lhs.second->block_num_ < rhs.second->block_num_;
-  }
-  set<edge, decltype(back_edge_less) *> back_edges_;
+  set<edge> back_edges_;
   void _find_back_edges();
   using loop = vector<BasicBlock::Ptr>;
   static loop _get_loop(const edge &e);
@@ -60,7 +50,7 @@ class Function {
   void _explore(const BasicBlock::Ptr &block);
   void _delete_block(int i);
 
-  void _merge_block(const BasicBlock::Ptr &block1, const BasicBlock::Ptr &block2);
+  void _merge_block(BasicBlock::Ptr &block1, const BasicBlock::Ptr &block2);
 
   void _divide_basic_block(list<IR::Ptr> &ir_list);
   void _link_basic_block();
@@ -128,14 +118,22 @@ inline bool erase_pred_succ_list(std::list<BasicBlock::Ptr_weak> &l, const Basic
 
 inline void remove_useless_label(std::list<IR::Ptr> &ir_list) {
   // TODO: 不确保正确性，建立在所有相同label的地址相同
+  std::map<IR::Addr::Ptr, IR::Addr::Ptr> alias;
   for (auto iter = ir_list.begin(); iter != ir_list.end(); ++iter) {
     auto next_iter = std::next(iter);
     if (next_iter == ir_list.end()) break;
     auto cur_ir = *iter;
     auto next_ir = *next_iter;
     if (cur_ir->op_ == IR::Op::LABEL && next_ir->op_ == IR::Op::LABEL) {
-      *(cur_ir->a0) = *(next_ir->a0);
-      iter = ir_list.erase(iter);
+      alias.emplace(next_ir->a0, cur_ir->a0);
+      ir_list.erase(next_iter);
+    }
+  }
+  for (auto &ir : ir_list) {
+    if (is_jmp_op(ir->op_)) {
+      if (alias.count(ir->a0)) {
+        ir->a0 = alias[ir->a0];
+      }
     }
   }
 }
@@ -149,6 +147,11 @@ inline void remove_unnecessary_jmp(std::list<IR::Ptr> &ir_list) {
     if (is_jmp_op(cur_ir->op_) && is_jmp_op(next_ir->op_)) {
       assert(next_ir->op_ == IR::Op::JMP);  // 可能会断言失败
       if (*cur_ir->a0 == *next_ir->a0) {  // 要跳转到相同的标号
+        iter = ir_list.erase(iter);
+      }
+    }
+    else if (is_jmp_op(cur_ir->op_) && next_ir->op_ == IR::Op::LABEL) {
+      if (*cur_ir->a0 == *next_ir->a0) {
         iter = ir_list.erase(iter);
       }
     }

@@ -1,0 +1,213 @@
+VARDEF	N		
+DATA	#1024		
+VAREND			
+VARDEF	A		
+ZERO	#1048576		
+VAREND			
+VARDEF	B		
+ZERO	#1048576		
+VAREND			
+VARDEF	C		
+ZERO	#1048576		
+VAREND			
+FUNCDEF	mm	#4	
+MOV	%0	#0	
+MOV	%1	#0	
+LABEL	.L0		
+CMP		%0	r0
+JGE	.L1		
+MOV	%1	#0	
+LABEL	.L2		
+CMP		%1	r0
+JGE	.L3		
+MOV	%3	#0	
+MUL	%4	%0	#1024
+ADD	%3	%3	%4
+MUL	%5	%1	#1
+ADD	%3	%3	%5
+STORE	r0	%3	#0
+ADD	%6	%1	#1
+MOV	%1	%6	
+JMP	.L2		
+LABEL	.L3		
+ADD	%7	%0	#1
+MOV	%0	%7	
+JMP	.L0		
+LABEL	.L1		
+MOV	%0	#0	
+MOV	%1	#0	
+MOV	%2	#0	
+LABEL	.L4		
+CMP		%2	r0
+JGE	.L5		
+MOV	%0	#0	
+LABEL	.L6		
+CMP		%0	r0
+JGE	.L7		
+MOV	%21	#0	
+MUL	%22	%0	#1024
+ADD	%21	%21	%22
+MUL	%23	%2	#1
+ADD	%21	%21	%23
+LOAD	%17	r0	%21
+CMP		%17	#0
+JNE	.L8		
+ADD	%24	%0	#1
+MOV	%0	%24	
+JMP	.L6		
+JMP	.L8		
+LABEL	.L8		
+MOV	%1	#0	
+LABEL	.L10		
+CMP		%1	r0
+JGE	.L11		
+MOV	%43	#0	
+MUL	%44	%0	#1024
+ADD	%43	%43	%44
+MUL	%45	%1	#1
+ADD	%43	%43	%45
+LOAD	%35	r0	%43
+MOV	%60	#0	
+MUL	%61	%0	#1024
+ADD	%60	%60	%61
+MUL	%62	%2	#1
+ADD	%60	%60	%62
+LOAD	%52	r0	%60
+MOV	%66	#0	
+MUL	%67	%2	#1024
+ADD	%66	%66	%67
+MUL	%68	%1	#1
+ADD	%66	%66	%68
+LOAD	%56	r0	%66
+MUL	%39	%52	%56
+ADD	%28	%35	%39
+MOV	%69	#0	
+MUL	%70	%0	#1024
+ADD	%69	%69	%70
+MUL	%71	%1	#1
+ADD	%69	%69	%71
+STORE	r0	%69	%28
+ADD	%72	%1	#1
+MOV	%1	%72	
+JMP	.L10		
+LABEL	.L11		
+ADD	%73	%0	#1
+MOV	%0	%73	
+JMP	.L6		
+LABEL	.L7		
+ADD	%74	%2	#1
+MOV	%2	%74	
+JMP	.L4		
+LABEL	.L5		
+FUNCEND			
+FUNCDEF	main	#0	
+CALL	getint		
+MOV	%76	r0	
+MOV	%75	%76	
+MOV	%77	#0	
+MOV	%78	#0	
+LABEL	.L12		
+CMP		%77	%75
+JGE	.L13		
+MOV	%78	#0	
+LABEL	.L14		
+CMP		%78	%75
+JGE	.L15		
+CALL	getint		
+MOV	%79	r0	
+MOV	%80	#0	
+MUL	%81	%77	#1024
+ADD	%80	%80	%81
+MUL	%82	%78	#1
+ADD	%80	%80	%82
+STORE	A	%80	%79
+ADD	%83	%78	#1
+MOV	%78	%83	
+JMP	.L14		
+LABEL	.L15		
+ADD	%84	%77	#1
+MOV	%77	%84	
+JMP	.L12		
+LABEL	.L13		
+MOV	%77	#0	
+MOV	%78	#0	
+LABEL	.L16		
+CMP		%77	%75
+JGE	.L17		
+MOV	%78	#0	
+LABEL	.L18		
+CMP		%78	%75
+JGE	.L19		
+CALL	getint		
+MOV	%85	r0	
+MOV	%86	#0	
+MUL	%87	%77	#1024
+ADD	%86	%86	%87
+MUL	%88	%78	#1
+ADD	%86	%86	%88
+STORE	B	%86	%85
+ADD	%89	%78	#1
+MOV	%78	%89	
+JMP	.L18		
+LABEL	.L19		
+ADD	%90	%77	#1
+MOV	%77	%90	
+JMP	.L16		
+LABEL	.L17		
+CALL	starttime		
+MOV	%91	r0	
+MOV	%77	#0	
+LABEL	.L20		
+CMP		%77	#5
+JGE	.L21		
+PARAM	r0	%75	
+PARAM	r0	A	
+PARAM	r0	B	
+PARAM	r0	C	
+CALL	mm		
+MOV	%92	r0	
+PARAM	r0	%75	
+PARAM	r0	A	
+PARAM	r0	C	
+PARAM	r0	B	
+CALL	mm		
+MOV	%93	r0	
+ADD	%94	%77	#1
+MOV	%77	%94	
+JMP	.L20		
+LABEL	.L21		
+MOV	%95	#0	
+MOV	%77	#0	
+LABEL	.L22		
+CMP		%77	%75
+JGE	.L23		
+MOV	%78	#0	
+LABEL	.L24		
+CMP		%78	%75
+JGE	.L25		
+MOV	%104	#0	
+MUL	%105	%77	#1024
+ADD	%104	%104	%105
+MUL	%106	%78	#1
+ADD	%104	%104	%106
+LOAD	%100	B	%104
+ADD	%96	%95	%100
+MOV	%95	%96	
+ADD	%107	%78	#1
+MOV	%78	%107	
+JMP	.L24		
+LABEL	.L25		
+ADD	%108	%77	#1
+MOV	%77	%108	
+JMP	.L22		
+LABEL	.L23		
+CALL	stoptime		
+MOV	%109	r0	
+PARAM	r0	%95	
+CALL	putint		
+MOV	%110	r0	
+PARAM	r0	#10	
+CALL	putch		
+MOV	%111	r0	
+RET		#0	
+FUNCEND			

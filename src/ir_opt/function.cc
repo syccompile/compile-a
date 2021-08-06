@@ -80,48 +80,43 @@ void Function::_link_basic_block() {
         return basic_block;
       }
     }
-    throw string("could not find label ") + to_string(label_num);
+    assert(false);
   };
 
   for (auto iter = basic_block_vector_.begin(); iter != basic_block_vector_.end(); ++iter) {
     auto basic_block = *iter;
     auto last_ir = basic_block->ir_list_.back();
-    try {
-      if (last_ir->op_ == IR::JMP) {  // 无条件跳转
+    if (last_ir->op_ == IR::JMP) {  // 无条件跳转
+      auto target_block = find_label(last_ir->a0->val);
+      basic_block->successor_list_.push_back(target_block);
+      target_block->predecessor_list_.push_back(basic_block);
+    } else if (last_ir->op_ == IR::RET) { // 无条件跳转
+      if (next(iter) != basic_block_vector_.end()) {
+        auto next_block = *next(iter);
+        basic_block->successor_list_.push_back(next_block);
+        next_block->predecessor_list_.push_back(basic_block);
+      }
+    } else if (last_ir->op_ >= IR::JLE && last_ir->op_ <= IR::JNE) {  // 条件跳转
+      if (next(iter) != basic_block_vector_.end()) {
+        auto next_block = *next(iter);
+        auto target_block = find_label(last_ir->a0->val);
+        if (next_block->block_num_ != target_block->block_num_) {
+          basic_block->successor_list_.push_back(next_block);
+          next_block->predecessor_list_.push_back(basic_block);
+        } // 两个目标相同则只建立前驱-后继关系一次，不确保该情况会出现
+        basic_block->successor_list_.push_back(target_block);
+        target_block->predecessor_list_.push_back(basic_block);
+      } else {
         auto target_block = find_label(last_ir->a0->val);
         basic_block->successor_list_.push_back(target_block);
         target_block->predecessor_list_.push_back(basic_block);
-      } else if (last_ir->op_ == IR::RET) { // 无条件跳转
-        if (next(iter) != basic_block_vector_.end()) {
-          auto next_block = *next(iter);
-          basic_block->successor_list_.push_back(next_block);
-          next_block->predecessor_list_.push_back(basic_block);
-        }
-      } else if (last_ir->op_ >= IR::JLE && last_ir->op_ <= IR::JNE) {  // 条件跳转
-        if (next(iter) != basic_block_vector_.end()) {
-          auto next_block = *next(iter);
-          auto target_block = find_label(last_ir->a0->val);
-          if (next_block->block_num_ != target_block->block_num_) {
-            basic_block->successor_list_.push_back(next_block);
-            next_block->predecessor_list_.push_back(basic_block);
-          } // 两个目标相同则只建立前驱-后继关系一次，不确保该情况会出现
-          basic_block->successor_list_.push_back(target_block);
-          target_block->predecessor_list_.push_back(basic_block);
-        } else {
-          auto target_block = find_label(last_ir->a0->val);
-          basic_block->successor_list_.push_back(target_block);
-          target_block->predecessor_list_.push_back(basic_block);
-        }
-      } else {
-        if (next(iter) != basic_block_vector_.end()) {
-          auto next_block = *next(iter);
-          basic_block->successor_list_.push_back(next_block);
-          next_block->predecessor_list_.push_back(basic_block);
-        }
       }
-    } catch (const string &e) {
-      cout << e << endl;
-      exit(EXIT_FAILURE);
+    } else {
+      if (next(iter) != basic_block_vector_.end()) {
+        auto next_block = *next(iter);
+        basic_block->successor_list_.push_back(next_block);
+        next_block->predecessor_list_.push_back(basic_block);
+      }
     }
   }
 }
@@ -252,6 +247,7 @@ void Function::_build_gen_kill_map() {
 }
 void Function::_add_to_gen_kill_help_map(const IR::Ptr &ir, int lineno) {
   if (is_algo_op(ir->op_) || is_mov_op(ir->op_) || (ir->op_ == IR::LOAD)) {
+    if (ir->a0->kind == IR::Addr::Kind::NAMED_LABEL) return;  // ignore global
     if (ir->a0->kind == IR_Addr::PARAM) {  // 函数参数
       gen_kill_help_map_.insert(decltype(gen_kill_help_map_)::value_type(ir->a0->val, lineno));
     } else {  // 普通变量
@@ -261,11 +257,13 @@ void Function::_add_to_gen_kill_help_map(const IR::Ptr &ir, int lineno) {
 }
 void Function::_add_to_gen_map(const IR::Ptr &ir, int lineno) {
   if (is_algo_op(ir->op_) || is_mov_op(ir->op_) || (ir->op_ == IR::LOAD)) {
+    if (ir->a0->kind == IR::Addr::Kind::NAMED_LABEL) return;  // ignore global
     gen_map_[lineno].push_back(lineno);
   } // ignore else
 }
 void Function::_add_to_kill_map(const IR::Ptr &ir, int lineno) {
   if (is_algo_op(ir->op_) || is_mov_op(ir->op_) || (ir->op_ == IR::LOAD)) {
+    if (ir->a0->kind == IR::Addr::Kind::NAMED_LABEL) return;  // ignore global
     int val = ir->a0->val;
     decltype(gen_kill_help_map_)::iterator val_beg, val_end;
     if (ir->a0->kind == IR_Addr::PARAM) {  // 函数参数
@@ -432,18 +430,6 @@ void Function::_fill_all_exp_list() {
 }
 void Function::live_variable_analysis() {
   _calc_use_def();
-//  for (const auto &basic_block: basic_block_list_) {
-//    std::cout << red << "block " << basic_block->block_num_ << ":" << normal << std::endl;
-//    basic_block->debug();
-//    std::cout << blue << "predecessor: " << normal;
-//    PRINT_PRED_SUCC_BLOCKS(basic_block->predecessor_list_);
-//    std::cout << blue << "successor: " << normal;
-//    PRINT_PRED_SUCC_BLOCKS(basic_block->successor_list_);
-//    std::cout << blue << "use: " << normal << std::endl;
-//    PRINT_ELEMENTS(basic_block->use_);
-//    std::cout << blue << "def: " << normal << std::endl;
-//    PRINT_ELEMENTS(basic_block->def_);
-//  }
   _calc_live_variable_IN_OUT();
 }
 void Function::_calc_use_def() {
@@ -584,6 +570,7 @@ void Function::remove_dead_code() {
   for (auto &basic_block : basic_block_vector_) {
     basic_block->remove_dead_code();
   }
+  _rebuild_basic_block();
 }
 void Function::_calc_dominate_IN_OUT() {
   list<int> all_block_list;
@@ -665,7 +652,7 @@ void Function::loop_invariant_code_motion() {
       } else if (ir->op_ == IR::PARAM) {
         return *(ir->a1) == *var;
       } else if (ir->op_ == IR::RET) {
-        return *(ir->a0) == *var;
+        return *(ir->a1) == *var;
       } else if (ir->op_ == IR::LOAD) {
         return *(ir->a1) == *var || *(ir->a2) == *var;
       } else if (ir->op_ == IR::STORE) {
@@ -723,7 +710,8 @@ void Function::loop_invariant_code_motion() {
     auto all_exit = get_all_exit(l);
     for (auto[cur_block, cur_ir_iter] : mark_set) {
       auto cur_ir = *cur_ir_iter;
-      if ((dom_all_exit(cur_block, all_exit) || dead_on_all_exit(cur_ir->a0, all_exit))&& dom_all_use(cur_block, l, cur_ir->a0)) {  // 符合移动条件
+      if ((dom_all_exit(cur_block, all_exit) || dead_on_all_exit(cur_ir->a0, all_exit))
+          && dom_all_use(cur_block, l, cur_ir->a0)) {  // 符合移动条件
         preheader->ir_list_.push_back(cur_ir);
         cur_block->ir_list_.erase(cur_ir_iter); // 移除当前指令
       }
@@ -746,9 +734,10 @@ void Function::_find_back_edges() {
   _calc_dominate_IN_OUT();
   for (const auto &basic_block : basic_block_vector_) {
     for (int dominate_block_num : basic_block->dominate_OUT_) {
-      for (const auto &succ_block : basic_block->successor_list_) {
-        if (succ_block.lock()->block_num_ == dominate_block_num) {
-          back_edges_.insert(make_pair(basic_block, basic_block_vector_[dominate_block_num]));
+      for (const auto &succ_block_weak : basic_block->successor_list_) {
+        auto succ_block = succ_block_weak.lock();
+        if (succ_block->block_num_ == dominate_block_num) {
+          back_edges_.insert(make_pair(basic_block, succ_block));
           break;
         }
       }
@@ -972,6 +961,8 @@ void Function::staighten() {
         if (len_of_list(succ_block->predecessor_list_) == 1) {
           auto succ_pred_block = succ_block->predecessor_list_.front().lock();
           assert(succ_pred_block->block_num_ == basic_block->block_num_); // DELETE: 理论上必然成立
+          basic_block->ir_list_.pop_back();  // pop jmp op (JMP-JNE)
+          succ_block->ir_list_.pop_front(); // pop label
           _merge_block(basic_block, succ_block);
           change = true;
           break;  // 修改了容器，如果再循环可能会出问题
@@ -981,16 +972,24 @@ void Function::staighten() {
   }
 }
 
-void Function::_merge_block(const BasicBlock::Ptr &block1, const BasicBlock::Ptr &block2) {
-  block1->ir_list_.pop_back();  // pop jmp op (JMP-JNE)
-  block2->ir_list_.pop_front(); // pop label
+void Function::_merge_block(BasicBlock::Ptr &block1, const BasicBlock::Ptr &block2) {
   block1->ir_list_.splice(block1->ir_list_.end(),
                           block2->ir_list_,
                           block2->ir_list_.begin(), block2->ir_list_.end());
   block1->successor_list_ = block2->successor_list_;
+  for (auto &succ_block_weak : block2->successor_list_) {
+    auto succ_block = succ_block_weak.lock();
+    assert(succ_block != nullptr);
+    auto result = std::find_if(succ_block->predecessor_list_.begin(), succ_block->successor_list_.end(),
+                               [&block2](const BasicBlock::Ptr_weak &pred_succ_block) {
+                                 return pred_succ_block.lock()->block_num_ == block2->block_num_;
+                               });
+    assert(result != succ_block->predecessor_list_.end());
+    *result = block1;
+  }
   auto block2_iter = basic_block_vector_.begin() + block2->block_num_;
   basic_block_vector_.erase(block2_iter);
-  _build_lineno_ir_map();
+  _build_lineno_ir_map(); // update block num
 }
 
 void Function::if_simplify() {
@@ -1034,7 +1033,12 @@ void Function::tail_merging() {
       std::vector<BasicBlock::iterator> ir_iter_end_vec;
       std::vector<BasicBlock::Ptr> pred_block_vec;
       for (const auto &pred_block_weak : cur_block->predecessor_list_) {
+        assert(!pred_block_weak.expired());
         auto pred_block = pred_block_weak.lock();
+//        if (pred_block->ir_list_.empty()) {
+//          continue_flag = true;
+//          break;
+//        }
         auto rbeg = pred_block->ir_list_.rbegin();
         auto last_ir = *rbeg;
         if (is_jmp_op(last_ir->op_) && last_ir->op_ != IR::Op::JMP) { // 不是无条件跳转
@@ -1100,6 +1104,11 @@ void Function::label_simplify() {
   remove_useless_label(ir_list);
   remove_unnecessary_jmp(ir_list);
   remove_unnecessary_cmp(ir_list);
+//  std::cout << "----------------------------------------" << std::endl;
+//  for (const auto &ir : ir_list) {
+//    ir->internal_print();
+//  }
+//  std::cout << "----------------------------------------" << std::endl;
   _divide_basic_block(ir_list);
   _build_lineno_ir_map();
   _link_basic_block();
@@ -1115,20 +1124,20 @@ void Function::induction_variable_elimination() {
 
 void Function::optimize(int optimize_level) {
   if (optimize_level == 0) return;
-  for (int i = 0; i < 2; ++i) {
+  for (int i = 0; i < 3; ++i) {
     ir_specify_optimization();
     tail_merging();
     label_simplify();
     constant_folding();
     algebraic_simplification();
-    delete_local_common_expression();
-    delete_global_common_expression();
-    local_copy_propagation();
-    global_copy_propagation();
-    if_simplify();
-    loop_invariant_code_motion();
-    staighten();
-    delete_unreachable_code();
-    remove_dead_code();
+//    delete_local_common_expression();
+//    delete_global_common_expression();
+//    local_copy_propagation();
+//    global_copy_propagation();
+//    if_simplify();
+//    loop_invariant_code_motion();
+//    staighten();
+//    delete_unreachable_code();
+//    remove_dead_code();
   }
 }
