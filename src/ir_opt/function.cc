@@ -147,24 +147,24 @@ void Function::debug() {
     label_simplify();
     constant_folding();
     algebraic_simplification();
-    if (i == 1) {
-      cout << "------------------------------------" << endl;
-      for (const auto &basic_block : basic_block_vector_) {
-        basic_block->debug();
-      }
-      cout << "------------------------------------" << endl;
-    }
+//    if (i == 1) {
+//      cout << "------------------------------------" << endl;
+//      for (const auto &basic_block : basic_block_vector_) {
+//        basic_block->debug();
+//      }
+//      cout << "------------------------------------" << endl;
+//    }
     delete_local_common_expression();
-    if (i == 1) {
-      cout << "------------------------------------" << endl;
-      for (const auto &basic_block : basic_block_vector_) {
-        basic_block->debug();
-      }
-      cout << "------------------------------------" << endl;
-    }
+//    if (i == 1) {
+//      cout << "------------------------------------" << endl;
+//      for (const auto &basic_block : basic_block_vector_) {
+//        basic_block->debug();
+//      }
+//      cout << "------------------------------------" << endl;
+//    }
     delete_global_common_expression();
     local_copy_propagation();
-//    global_copy_propagation();
+    global_copy_propagation();
     if_simplify();
 //    loop_invariant_code_motion();
     staighten();
@@ -1181,7 +1181,7 @@ void Function::optimize(int optimize_level) {
     delete_local_common_expression();
     delete_global_common_expression();
     local_copy_propagation();
-//    global_copy_propagation();
+    global_copy_propagation();
     if_simplify();
 //    loop_invariant_code_motion();
     staighten();

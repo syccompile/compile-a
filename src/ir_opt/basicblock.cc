@@ -97,7 +97,7 @@ bool Exp::operator<(const Exp &exp) const {
 //      else return (*a1_ < *exp.a0_) || (*a0_ < *exp.a1_);
 //    }
 //  } else {
-    return (*a0_ < *exp.a0_) || (*a1_ < *exp.a1_);
+  return (*a0_ < *exp.a0_) || (*a1_ < *exp.a1_);
 //  }
 }
 bool Exp::be_used_by(const IR::Ptr &ir) const {
@@ -106,7 +106,7 @@ bool Exp::be_used_by(const IR::Ptr &ir) const {
 //      return op_ == ir->op_ &&
 //          ((*a0_ == *ir->a1 && *a1_ == *ir->a2) || (*a0_ == *ir->a2 && *a1_ == *ir->a1));
 //    } else {
-      return ir->op_ == op_ && *ir->a1 == *a0_ && *ir->a2 == *a1_;
+    return ir->op_ == op_ && *ir->a1 == *a0_ && *ir->a2 == *a1_;
 //    }
   }
   return false;
@@ -124,7 +124,7 @@ bool Exp::operator==(const Exp &rhs) const {
 //    return op_ == rhs.op_ &&
 //        ((*a0_ == *rhs.a0_ && *a1_ == *rhs.a1_) || (*a0_ == *rhs.a1_ && *a1_ == *rhs.a0_));
 //  } else {
-    return op_ == rhs.op_ && *a0_ == *rhs.a0_ && *a1_ == *rhs.a1_;
+  return op_ == rhs.op_ && *a0_ == *rhs.a0_ && *a1_ == *rhs.a1_;
 //  }
 }
 bool Exp::copy_be_used_by(const IR_Addr::Ptr &a) const {
@@ -205,6 +205,12 @@ void BasicBlock::calc_egen_ekill(const std::list<Exp> &all_exp_list) {
     } else if (ir->op_ == IR::Op::LOAD) { // TODO: 完善LOAD的情形
       delete_egen_exp(ir->a0);
       add_ekill_exp(ir->a0);
+    } else if (ir->op_ == IR::Op::PARAM) {
+      delete_egen_exp(ir->a0);
+      add_ekill_exp(ir->a0);
+    } else if (ir->op_ == IR::Op::CALL) {
+      delete_egen_exp(IR::Addr::make_ret());
+      add_ekill_exp(IR::Addr::make_ret());
     }
   }
   egen_.sort();   // 后续的集合运算要求有序
