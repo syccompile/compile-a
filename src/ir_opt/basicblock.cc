@@ -482,7 +482,7 @@ void BasicBlock::remove_dead_code() {
     } else if (cur_ir->op_ == IR::Op::PARAM) {
       add_live(cur_ir->a1);
     } else if (cur_ir->op_ == IR::Op::RET) {
-      add_live(cur_ir->a0);
+      add_live(cur_ir->a1);
     }
     if (iter == ir_list_.begin()) break;
   }
@@ -550,7 +550,7 @@ void BasicBlock::ir_specify_optimization() {
     } else if (cur_ir->op_ == IR::Op::PARAM) {
       add_live(cur_ir->a1);
     } else if (cur_ir->op_ == IR::Op::RET) {
-      add_live(cur_ir->a0);
+      add_live(cur_ir->a1);
     }
   }
 }

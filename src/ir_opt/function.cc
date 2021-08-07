@@ -91,11 +91,11 @@ void Function::_link_basic_block() {
       basic_block->successor_list_.push_back(target_block);
       target_block->predecessor_list_.push_back(basic_block);
     } else if (last_ir->op_ == IR::RET) { // 无条件跳转
-      if (next(iter) != basic_block_vector_.end()) {
-        auto next_block = *next(iter);
-        basic_block->successor_list_.push_back(next_block);
-        next_block->predecessor_list_.push_back(basic_block);
-      }
+//      if (next(iter) != basic_block_vector_.end()) {
+//        auto next_block = *next(iter);
+//        basic_block->successor_list_.push_back(next_block);
+//        next_block->predecessor_list_.push_back(basic_block);
+//      }
     } else if (last_ir->op_ >= IR::JLE && last_ir->op_ <= IR::JNE) {  // 条件跳转
       if (next(iter) != basic_block_vector_.end()) {
         auto next_block = *next(iter);
@@ -149,13 +149,13 @@ void Function::debug() {
     algebraic_simplification();
     delete_local_common_expression();
     delete_global_common_expression();
-    local_copy_propagation();
-    global_copy_propagation();
-//    if_simplify();
+//    local_copy_propagation();
+//    global_copy_propagation();
+    if_simplify();
 //    loop_invariant_code_motion();
-//    staighten();
-//    delete_unreachable_code();
-//    remove_dead_code();
+    staighten();
+    delete_unreachable_code();
+    remove_dead_code();
   }
   reach_define_analysis();
   available_expression_analysis();
@@ -345,7 +345,7 @@ void Function::reach_define_analysis() {
   _calc_reach_define_IN_OUT();
 }
 void Function::_build_lineno_ir_map() {
-  lineno_ir_map_.clear();
+//  lineno_ir_map_.clear();
   int block_num = -1;
   int lineno = -1;
   for (const auto &basic_block : basic_block_vector_) {
@@ -354,7 +354,7 @@ void Function::_build_lineno_ir_map() {
     basic_block->first_lineno_ = lineno + 1;
     for (const auto &ir : *basic_block) {
       ++lineno;
-      lineno_ir_map_[lineno] = ir; // 保存每一行对应的ir，加速后续的搜索
+//      lineno_ir_map_[lineno] = ir; // 保存每一行对应的ir，加速后续的搜索
     }
     basic_block->last_lineno_ = lineno;
   }
@@ -957,7 +957,8 @@ void Function::staighten() {
   while (change) {
     change = false;
     for (auto &basic_block : basic_block_vector_) {
-      assert(!basic_block->ir_list_.empty()); // DELETE: need to avoid
+      if (!basic_block->ir_list_.empty()) continue;
+//      assert(!basic_block->ir_list_.empty()); // DELETE: need to avoid
       auto last_ir = basic_block->ir_list_.back();
       if (!is_jmp_op(last_ir->op_)) continue;
       if (len_of_list(basic_block->successor_list_) == 1) {
@@ -1001,7 +1002,7 @@ void Function::if_simplify() {
   for (auto &basic_block : basic_block_vector_) {
     basic_block->if_simplify();
   }
-  _rebuild_basic_block();
+//  _rebuild_basic_block();
 }
 
 void Function::_rebuild_basic_block() {
@@ -1141,12 +1142,12 @@ void Function::optimize(int optimize_level) {
     algebraic_simplification();
     delete_local_common_expression();
     delete_global_common_expression();
-    local_copy_propagation();
-    global_copy_propagation();
-//    if_simplify();
+//    local_copy_propagation();
+//    global_copy_propagation();
+    if_simplify();
 //    loop_invariant_code_motion();
-//    staighten();
-//    delete_unreachable_code();
-//    remove_dead_code();
+    staighten();
+    delete_unreachable_code();
+    remove_dead_code();
   }
 }

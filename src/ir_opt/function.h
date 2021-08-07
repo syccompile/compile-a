@@ -7,7 +7,7 @@ class Function {
  private:
   map<int, int> symbol_table_;
   multimap<int, int> gen_kill_help_map_;
-  map<int, IR::Ptr> lineno_ir_map_; // 从lineno到IR指令的映射
+//  map<int, IR::Ptr> lineno_ir_map_; // 从lineno到IR指令的映射
   map<int, list<int>> gen_map_; // 从lineno到gen的映射
   map<int, list<int>> kill_map_;  // 从lineno到kill的映射
   list<Exp> all_exp_list_;
