@@ -84,7 +84,7 @@ class Function {
   void staighten();
   void if_simplify();
   void tail_merging();
-  void label_simplify();
+  void ir_code_simplify();
   void strength_reduction();
   void induction_variable_elimination();
   void optimize(int optimize_level);
@@ -171,6 +171,17 @@ inline void remove_unnecessary_cmp(std::list<IR::Ptr> &ir_list) {
         continue;
       }
       iter = ir_list.erase(iter);
+    }
+  }
+}
+
+inline void remove_useless_mov(std::list<IR::Ptr> &ir_list) {
+  for (auto iter = ir_list.begin(); iter != ir_list.end();) {
+    auto cur_ir = *iter;
+    if (cur_ir->op_ == IR::Op::MOV && ((*cur_ir->a0) == (*cur_ir->a1))) {
+      iter = ir_list.erase(iter);
+    } else {
+      ++iter;
     }
   }
 }

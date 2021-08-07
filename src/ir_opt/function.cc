@@ -144,7 +144,7 @@ void Function::debug() {
   for (int i = 0; i < 2; ++i) {
     ir_specify_optimization();
     tail_merging();
-    label_simplify();
+    ir_code_simplify();
     constant_folding();
     algebraic_simplification();
 //    if (i == 1) {
@@ -166,7 +166,7 @@ void Function::debug() {
     local_copy_propagation();
     global_copy_propagation();
     if_simplify();
-//    loop_invariant_code_motion();
+    loop_invariant_code_motion();
     staighten();
     delete_unreachable_code();
     remove_dead_code();
@@ -690,8 +690,6 @@ void Function::loop_invariant_code_motion() {
         return *(ir->a1) == *var || *(ir->a2) == *var;
       } else if (ir->op_ == IR::STORE) {
         return *(ir->a0) == *var || *(ir->a1) == *var || *(ir->a2) == *var;
-      } else if (ir->op_ == IR::CALL) {
-
       }
       return false;
     });
@@ -1143,11 +1141,12 @@ void Function::tail_merging() {
   }
 }
 
-void Function::label_simplify() {
+void Function::ir_code_simplify() {
   auto ir_list = merge();
   remove_useless_label(ir_list);
   remove_unnecessary_jmp(ir_list);
   remove_unnecessary_cmp(ir_list);
+  remove_useless_mov(ir_list);
 //  std::cout << "----------------------------------------" << std::endl;
 //  for (const auto &ir : ir_list) {
 //    ir->internal_print();
@@ -1175,7 +1174,7 @@ void Function::optimize(int optimize_level) {
   for (int i = 0; i < 2; ++i) {
     ir_specify_optimization();
     tail_merging();
-    label_simplify();
+    ir_code_simplify();
     constant_folding();
     algebraic_simplification();
     delete_local_common_expression();
