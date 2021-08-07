@@ -147,9 +147,23 @@ void Function::debug() {
     label_simplify();
     constant_folding();
     algebraic_simplification();
+    if (i == 1) {
+      cout << "------------------------------------" << endl;
+      for (const auto &basic_block : basic_block_vector_) {
+        basic_block->debug();
+      }
+      cout << "------------------------------------" << endl;
+    }
     delete_local_common_expression();
+    if (i == 1) {
+      cout << "------------------------------------" << endl;
+      for (const auto &basic_block : basic_block_vector_) {
+        basic_block->debug();
+      }
+      cout << "------------------------------------" << endl;
+    }
     delete_global_common_expression();
-//    local_copy_propagation();
+    local_copy_propagation();
 //    global_copy_propagation();
     if_simplify();
 //    loop_invariant_code_motion();
@@ -197,23 +211,23 @@ void Function::debug() {
     PRINT_ELEMENTS(basic_block->dominate_OUT_);
     cout << endl;
   }
-  cout << blue << "loops: " << normal << '\n';
-  vector<loop> loops;
-  _find_back_edges();
-  for (const auto &e : back_edges_) {
-    loops.push_back(_get_loop(e));
-  }
-  for (auto &l : loops) {
-    auto loop_invariant_set = _mark_loop_invariant(l);
-    cout << "( ";
-    PRINT_LOOP(l);
-    cout << "): ";
-    for (auto[block, iter]: loop_invariant_set) {
-      cout << "(" << block->block_num_ << ", " << distance(block->begin(), iter) << ")" << " ";
-    }
-    cout << '\n';
-  }
-  cout << '\n';
+//  cout << blue << "loops: " << normal << '\n';
+//  vector<loop> loops;
+//  _find_back_edges();
+//  for (const auto &e : back_edges_) {
+//    loops.push_back(_get_loop(e));
+//  }
+//  for (auto &l : loops) {
+//    auto loop_invariant_set = _mark_loop_invariant(l);
+//    cout << "( ";
+//    PRINT_LOOP(l);
+//    cout << "): ";
+//    for (auto[block, iter]: loop_invariant_set) {
+//      cout << "(" << block->block_num_ << ", " << distance(block->begin(), iter) << ")" << " ";
+//    }
+//    cout << '\n';
+//  }
+//  cout << '\n';
 //  std::cout << blue << "back_edges_: " << normal << std::endl;
 //  for (const auto &[first, second] : back_edges_) {
 //    std::cout << "(" << first << "->" << second << ") ";
@@ -253,11 +267,15 @@ void Function::_add_to_gen_kill_help_map(const IR::Ptr &ir, int lineno) {
     } else {  // 普通变量
       gen_kill_help_map_.insert(decltype(gen_kill_help_map_)::value_type(ir->a0->val + arg_num_, lineno));
     }
+  } else if (ir->op_ == IR::CALL) { // gen ret0
+    gen_kill_help_map_.emplace(-1, lineno); // -1 for ret0
   } // ignore else
 }
 void Function::_add_to_gen_map(const IR::Ptr &ir, int lineno) {
   if (is_algo_op(ir->op_) || is_mov_op(ir->op_) || (ir->op_ == IR::LOAD)) {
     if (ir->a0->kind == IR::Addr::Kind::NAMED_LABEL) return;  // ignore global
+    gen_map_[lineno].push_back(lineno);
+  } else if (ir->op_ == IR::CALL) {
     gen_map_[lineno].push_back(lineno);
   } // ignore else
 }
@@ -273,6 +291,16 @@ void Function::_add_to_kill_map(const IR::Ptr &ir, int lineno) {
       val_beg = gen_kill_help_map_.lower_bound(val + arg_num_);
       val_end = gen_kill_help_map_.upper_bound(val + arg_num_);
     }
+    while (val_beg != val_end) {
+      if (val_beg->second != lineno) {
+        kill_map_[lineno].push_back(val_beg->second);
+      }
+      val_beg++;
+    }
+  } else if (ir->op_ == IR::Op::CALL) {
+    decltype(gen_kill_help_map_)::iterator val_beg, val_end;
+    val_beg = gen_kill_help_map_.lower_bound(-1);
+    val_end = gen_kill_help_map_.upper_bound(-1);
     while (val_beg != val_end) {
       if (val_beg->second != lineno) {
         kill_map_[lineno].push_back(val_beg->second);
@@ -662,6 +690,8 @@ void Function::loop_invariant_code_motion() {
         return *(ir->a1) == *var || *(ir->a2) == *var;
       } else if (ir->op_ == IR::STORE) {
         return *(ir->a0) == *var || *(ir->a1) == *var || *(ir->a2) == *var;
+      } else if (ir->op_ == IR::CALL) {
+
       }
       return false;
     });
@@ -840,6 +870,9 @@ Function::_mark_loop_invariant(Function::loop &l) {
         auto ir = *cur_iter;
         if (is_algo_op(ir->op_)) {  // 两个源操作数的算术指令
           if (!inst_invariant_vec_[cur_lineno]) { // 当前指令不是循环不变计算
+            if (ir->a1->kind == IR_Addr::NAMED_LABEL || ir->a2->kind == IR::Addr::Kind::NAMED_LABEL) {
+              continue;
+            }
             bool a1_const = false, a2_const = false;
             if (is_loop_constant(ir->a1) || reach_define_out(cur_block, ir->a1)
                 || reach_define_in(cur_block, ir->a1, cur_lineno)) {
@@ -856,6 +889,9 @@ Function::_mark_loop_invariant(Function::loop &l) {
             }
           }
         } else if (is_mov_op(ir->op_)) {
+          if (ir->a1->kind == IR_Addr::NAMED_LABEL) {
+            continue;
+          }
           if (!inst_invariant_vec_[cur_lineno]) { // 当前指令不是循环不变计算
             bool a1_const = false;
             if (is_loop_constant(ir->a1) || reach_define_out(cur_block, ir->a1)
@@ -882,6 +918,8 @@ void Function::_build_lineno_rd_vec() {
     for (const auto &ir : basic_block->ir_list_) {
       if (is_algo_op(ir->op_) || is_mov_op(ir->op_)) {
         lineno_rd_vec_[cur_lineno] = ir->a0;
+      } else if (ir->op_ == IR::Op::CALL) {
+        lineno_rd_vec_[cur_lineno] =IR::Addr::make_ret();
       }
       ++cur_lineno;
     }
@@ -1002,7 +1040,7 @@ void Function::if_simplify() {
   for (auto &basic_block : basic_block_vector_) {
     basic_block->if_simplify();
   }
-//  _rebuild_basic_block();
+  _rebuild_basic_block();
 }
 
 void Function::_rebuild_basic_block() {
@@ -1134,7 +1172,7 @@ void Function::optimize(int optimize_level) {
     debug();
     return;
   }
-  for (int i = 0; i < 3; ++i) {
+  for (int i = 0; i < 2; ++i) {
     ir_specify_optimization();
     tail_merging();
     label_simplify();
@@ -1142,7 +1180,7 @@ void Function::optimize(int optimize_level) {
     algebraic_simplification();
     delete_local_common_expression();
     delete_global_common_expression();
-//    local_copy_propagation();
+    local_copy_propagation();
 //    global_copy_propagation();
     if_simplify();
 //    loop_invariant_code_motion();

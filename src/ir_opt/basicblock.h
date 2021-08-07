@@ -33,7 +33,11 @@ class Exp {
   IR::Op op_;
   IR::Addr::Ptr a0_;
   IR::Addr::Ptr a1_;
-  Exp(IR::Op op, IR::Addr::Ptr a0, IR::Addr::Ptr a1) : op_(op), a0_(std::move(a0)), a1_(std::move(a1)) {}
+  Exp(IR::Op op, IR::Addr::Ptr a0, IR::Addr::Ptr a1) : op_(op), a0_(std::move(a0)), a1_(std::move(a1)) {
+    if (is_swappable_op(op) && (a1_ < a0_)) {
+      std::swap(a0_, a1_);
+    }
+  }
   bool operator==(const Exp &rhs) const;
   bool related_to(const IR::Addr::Ptr &a) const;  // 当前表达式用到了a
   bool be_used_by(const IR::Ptr &ir) const; // ir中用到了当前表达式

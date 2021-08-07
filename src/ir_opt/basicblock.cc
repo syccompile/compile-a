@@ -1,11 +1,14 @@
 #include "basicblock.h"
 
 bool operator==(const IR::Addr &lhs, const IR::Addr &rhs) { // 不适用于比较name字段
-  return lhs.kind == rhs.kind && lhs.val == rhs.val;
+  if (lhs.kind != rhs.kind) return false;
+  if (lhs.kind == IR::Addr::NAMED_LABEL) return lhs.name == rhs.name;
+  return lhs.val == rhs.val;
 }
 
 bool operator<(const IR::Addr &lhs, const IR::Addr &rhs) {
   if (lhs.kind != rhs.kind) return lhs.kind < rhs.kind;
+  if (lhs.kind == IR::Addr::NAMED_LABEL) return lhs.name < rhs.name;
   return lhs.val < rhs.val;
 }
 
@@ -41,11 +44,12 @@ inline bool is_imm(const IR::Addr::Ptr &a) {
 }
 
 void testExp() {
-  auto exp1 = Exp(IR::Op::SUB, make_var(1), make_imm(9));
-  auto exp2 = Exp(IR::Op::SUB, make_var(1), make_imm(9));
-  assert(exp1 == exp2);
-  assert(!(exp1 < exp2));
-  assert(!(exp2 < exp1));
+  auto exp1 = Exp(IR::Op::ADD, make_var(1), make_imm(1));
+  auto exp2 = Exp(IR::Op::ADD, make_imm(100), make_var(1));
+  assert(!(exp1 == exp2));
+  assert(exp1 < exp2 || exp2 < exp1);
+//  assert(!(exp1 < exp2));
+//  assert(!(exp2 < exp1));
 }
 
 void testIRADDR() {
@@ -83,26 +87,27 @@ std::ostream &operator<<(std::ostream &os, const Exp &exp) {
 }
 bool Exp::operator<(const Exp &exp) const {
   if (op_ != exp.op_) return op_ < exp.op_;
-  if (is_swappable_op(op_)) { // 可交换
-    if (*a0_ < *a1_) {
-      if (*exp.a0_ < *exp.a1_) return *a0_ < *exp.a0_ || *a1_ < *exp.a1_;
-      else return *a0_ < *exp.a1_ || *a1_ < *exp.a1_;
-    } else {
-      if (*exp.a0_ < *exp.a1_) return *a1_ < *exp.a0_ || *a0_ < *exp.a1_;
-      else return *a1_ < *exp.a1_ || *a0_ < *exp.a1_;
-    }
-  } else {
-    return *a0_ < *exp.a0_ || *a1_ < *exp.a1_;
-  }
+//  if (is_swappable_op(op_)) { // 可交换
+//    if (*a0_ < *a1_) {
+//      if (*exp.a0_ < *exp.a1_) return (*a0_ < *exp.a0_) || (*a1_ < *exp.a1_);
+//      else return *a0_ < *exp.a1_ || *a1_ < *exp.a1_;
+//    }
+//    else {
+//      if (*exp.a0_ < *exp.a1_) return (*a1_ < *exp.a0_) || (*a0_ < *exp.a1_);
+//      else return (*a1_ < *exp.a0_) || (*a0_ < *exp.a1_);
+//    }
+//  } else {
+    return (*a0_ < *exp.a0_) || (*a1_ < *exp.a1_);
+//  }
 }
 bool Exp::be_used_by(const IR::Ptr &ir) const {
   if (is_algo_op(ir->op_)) {  // 仅处理算术指令
-    if (is_swappable_op(op_)) { // 可交换
-      return op_ == ir->op_ &&
-          ((*a0_ == *ir->a1 && *a1_ == *ir->a2) || (*a0_ == *ir->a2 && *a1_ == *ir->a1));
-    } else {
+//    if (is_swappable_op(op_)) { // 可交换
+//      return op_ == ir->op_ &&
+//          ((*a0_ == *ir->a1 && *a1_ == *ir->a2) || (*a0_ == *ir->a2 && *a1_ == *ir->a1));
+//    } else {
       return ir->op_ == op_ && *ir->a1 == *a0_ && *ir->a2 == *a1_;
-    }
+//    }
   }
   return false;
 }
@@ -115,12 +120,12 @@ bool Exp::related_to(const IR_Addr::Ptr &a) const {
   }
 }
 bool Exp::operator==(const Exp &rhs) const {
-  if (is_swappable_op(op_)) { // 可交换
-    return op_ == rhs.op_ &&
-        ((*a0_ == *rhs.a0_ && *a1_ == *rhs.a1_) || (*a0_ == *rhs.a1_ && *a1_ == *rhs.a0_));
-  } else {
+//  if (is_swappable_op(op_)) { // 可交换
+//    return op_ == rhs.op_ &&
+//        ((*a0_ == *rhs.a0_ && *a1_ == *rhs.a1_) || (*a0_ == *rhs.a1_ && *a1_ == *rhs.a0_));
+//  } else {
     return op_ == rhs.op_ && *a0_ == *rhs.a0_ && *a1_ == *rhs.a1_;
-  }
+//  }
 }
 bool Exp::copy_be_used_by(const IR_Addr::Ptr &a) const {
   if (op_ == IR::Op::MOV) {
@@ -139,6 +144,7 @@ std::list<std::string> BasicBlock::translate_to_arm() {
   return std::list<std::string>();
 }
 void BasicBlock::debug() {
+//  testExp();
   for (const auto &ir : ir_list_) {
     ir->internal_print();
   }
@@ -209,7 +215,7 @@ void BasicBlock::calc_use_def() {
   use_.clear();
   def_.clear();
   auto add_to_def = [&](const IR::Addr::Ptr &a) {
-    if (is_var_or_param(a)) {
+    if (is_var_or_param(a) || a->kind == IR::Addr::Kind::RET) {
       auto result = std::find(def_.begin(), def_.end(), *a);
       if (result == def_.end()) {
         def_.push_back(*a);
@@ -218,7 +224,7 @@ void BasicBlock::calc_use_def() {
     }
   };
   auto add_to_use = [&](const IR::Addr::Ptr &a) {
-    if (is_var_or_param(a)) {
+    if (is_var_or_param(a) || a->kind == IR::Addr::Kind::RET) {
       auto result = std::find(use_.begin(), use_.end(), *a);
       if (result == use_.end()) {
         use_.push_back(*a);
@@ -251,6 +257,8 @@ void BasicBlock::calc_use_def() {
     } else if (cur_ir->op_ == IR::Op::PARAM) {
       add_to_def(cur_ir->a0);
       add_to_use(cur_ir->a1);
+    } else if (cur_ir->op_ == IR::Op::CALL) {
+      add_to_def(IR::Addr::make_ret());
     }
   }
   use_.sort();
@@ -423,7 +431,7 @@ void BasicBlock::local_copy_propagation(std::set<Exp> &available_copy_exps) {
       copy_value(ir->a2);
       remove_exp(ir->a0);
     } else if (ir->op_ == IR::Op::PARAM) {
-      copy_value(ir->a1);
+      // copy_value(ir->a1); TODO: temp ignore
     } else if (ir->op_ == IR::Op::RET) {
       copy_value(ir->a1);
     } else if (ir->op_ == IR::Op::CALL) {

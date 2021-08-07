@@ -33,6 +33,7 @@ void test(const fs::path &testFile, const fs::path &outputDir) {
   auto outputASMFile = outputDir / (testFile.stem().string() + ".s");
   auto outputResultFile = outputDir / (testFile.stem().string() + ".out");
   auto outputExeFile = outputDir / testFile.stem();
+  auto outputSourceFile = outputDir / testFile.stem().concat(".sy");
   auto testDir = testFile.parent_path();
   auto expectedResultFile = testDir / (testFile.stem().string() + ".out");
   auto inputFile = testDir / (testFile.stem().string() + ".in");
@@ -47,6 +48,10 @@ void test(const fs::path &testFile, const fs::path &outputDir) {
   const std::string &testFilename = testFile.filename().string();
   std::cout << blue << "testing " << testFilename << ": " << normal << std::endl;
   int exit_code;
+
+  /* copy */
+  const auto copy_option = fs::copy_options::overwrite_existing;
+  fs::copy(testFile, outputSourceFile, copy_option);
 
   /* compile */
   exit_code = std::system(compile_command.c_str());
