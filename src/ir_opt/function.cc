@@ -147,26 +147,92 @@ void Function::debug() {
     ir_code_simplify();
     constant_folding();
     algebraic_simplification();
-//    if (i == 1) {
-//      cout << "------------------------------------" << endl;
-//      for (const auto &basic_block : basic_block_vector_) {
-//        basic_block->debug();
-//      }
-//      cout << "------------------------------------" << endl;
-//    }
     delete_local_common_expression();
-//    if (i == 1) {
-//      cout << "------------------------------------" << endl;
-//      for (const auto &basic_block : basic_block_vector_) {
-//        basic_block->debug();
-//      }
-//      cout << "------------------------------------" << endl;
-//    }
     delete_global_common_expression();
     local_copy_propagation();
     global_copy_propagation();
     if_simplify();
+//    if (i == 1) {
+//      cout << "------------------------------------" << endl;
+//      for (const auto &basic_block : basic_block_vector_) {
+//        basic_block->debug();
+//      }
+//      cout << "------------------------------------" << endl;
+//    }
+    reach_define_analysis();
+    available_expression_analysis();
+    live_variable_analysis();
+    for (const auto &basic_block : basic_block_vector_) {
+      cout << red << "block " << basic_block->block_num_ << ":" << normal << endl;
+      basic_block->debug();
+      cout << blue << "predecessor: " << normal;
+      PRINT_PRED_SUCC_BLOCKS(basic_block->predecessor_list_);
+      cout << blue << "successor: " << normal;
+      PRINT_PRED_SUCC_BLOCKS(basic_block->successor_list_);
+      cout << blue << "first_lineno: " << normal;
+      cout << basic_block->first_lineno_ << ", ";
+      cout << blue << "last_lineno: " << normal;
+      cout << basic_block->last_lineno_ << '\n';
+      cout << blue << "gen: " << normal;
+      PRINT_ELEMENTS(basic_block->gen_);
+      cout << blue << "kill: " << normal;
+      PRINT_ELEMENTS(basic_block->kill_);
+      cout << blue << "reach_define_IN: " << normal;
+      PRINT_ELEMENTS(basic_block->reach_define_IN_);
+      cout << blue << "reach_define_OUT: " << normal;
+      PRINT_ELEMENTS(basic_block->reach_define_OUT_);
+      cout << blue << "egen: " << normal;
+      PRINT_ELEMENTS(basic_block->egen_);
+      cout << blue << "ekill: " << normal;
+      PRINT_ELEMENTS(basic_block->ekill_);
+      cout << blue << "available_expression_IN_: " << normal;
+      PRINT_ELEMENTS(basic_block->available_expression_IN_);
+      cout << blue << "available_expression_OUT_: " << normal;
+      PRINT_ELEMENTS(basic_block->available_expression_OUT_);
+      cout << blue << "use: " << normal;
+      PRINT_ELEMENTS(basic_block->use_);
+      cout << blue << "def: " << normal;
+      PRINT_ELEMENTS(basic_block->def_);
+      cout << blue << "live_variable_IN_: " << normal;
+      PRINT_ELEMENTS(basic_block->live_variable_IN_);
+      cout << blue << "live_variable_OUT_: " << normal;
+      PRINT_ELEMENTS(basic_block->live_variable_OUT_);
+      cout << blue << "dominate_IN_: " << normal;
+      PRINT_ELEMENTS(basic_block->dominate_IN_);
+      cout << blue << "dominate_OUT_: " << normal;
+      PRINT_ELEMENTS(basic_block->dominate_OUT_);
+      cout << endl;
+    }
+    cout << blue << "loops: " << normal << '\n';
+    vector<loop> loops;
+    _find_back_edges();
+    for (const auto &e : back_edges_) {
+      loops.push_back(_get_loop(e));
+    }
+    for (auto &l : loops) {
+      auto loop_invariant_set = _mark_loop_invariant(l);
+      cout << "( ";
+      PRINT_LOOP(l);
+      cout << "): ";
+      for (auto[block, iter]: loop_invariant_set) {
+        cout << "(" << block->block_num_ << ", " << distance(block->begin(), iter) << ")" << " ";
+      }
+      cout << '\n';
+    }
+    cout << '\n';
+    std::cout << blue << "back_edges_: " << normal << std::endl;
+    for (const auto &[first, second] : back_edges_) {
+      std::cout << "(" << first->block_num_ << "->" << second->block_num_ << ") ";
+    }
+    std::cout << '\n';
     loop_invariant_code_motion();
+//    if (i == 1) {
+//      cout << "------------------------------------" << endl;
+//      for (const auto &basic_block : basic_block_vector_) {
+//        basic_block->debug();
+//      }
+//      cout << "------------------------------------" << endl;
+//    }
     staighten();
     delete_unreachable_code();
     remove_dead_code();
@@ -181,6 +247,10 @@ void Function::debug() {
     PRINT_PRED_SUCC_BLOCKS(basic_block->predecessor_list_);
     cout << blue << "successor: " << normal;
     PRINT_PRED_SUCC_BLOCKS(basic_block->successor_list_);
+    cout << blue << "first_lineno: " << normal;
+    cout << basic_block->first_lineno_ << ", ";
+    cout << blue << "last_lineno: " << normal;
+    cout << basic_block->last_lineno_ << '\n';
     cout << blue << "gen: " << normal;
     PRINT_ELEMENTS(basic_block->gen_);
     cout << blue << "kill: " << normal;
@@ -211,28 +281,28 @@ void Function::debug() {
     PRINT_ELEMENTS(basic_block->dominate_OUT_);
     cout << endl;
   }
-//  cout << blue << "loops: " << normal << '\n';
-//  vector<loop> loops;
-//  _find_back_edges();
-//  for (const auto &e : back_edges_) {
-//    loops.push_back(_get_loop(e));
-//  }
-//  for (auto &l : loops) {
-//    auto loop_invariant_set = _mark_loop_invariant(l);
-//    cout << "( ";
-//    PRINT_LOOP(l);
-//    cout << "): ";
-//    for (auto[block, iter]: loop_invariant_set) {
-//      cout << "(" << block->block_num_ << ", " << distance(block->begin(), iter) << ")" << " ";
-//    }
-//    cout << '\n';
-//  }
-//  cout << '\n';
-//  std::cout << blue << "back_edges_: " << normal << std::endl;
-//  for (const auto &[first, second] : back_edges_) {
-//    std::cout << "(" << first << "->" << second << ") ";
-//  }
-//  std::cout << '\n';
+  cout << blue << "loops: " << normal << '\n';
+  vector<loop> loops;
+  _find_back_edges();
+  for (const auto &e : back_edges_) {
+    loops.push_back(_get_loop(e));
+  }
+  for (auto &l : loops) {
+    auto loop_invariant_set = _mark_loop_invariant(l);
+    cout << "( ";
+    PRINT_LOOP(l);
+    cout << "): ";
+    for (auto[block, iter]: loop_invariant_set) {
+      cout << "(" << block->block_num_ << ", " << distance(block->begin(), iter) << ")" << " ";
+    }
+    cout << '\n';
+  }
+  cout << '\n';
+  std::cout << blue << "back_edges_: " << normal << std::endl;
+  for (const auto &[first, second] : back_edges_) {
+    std::cout << "(" << first->block_num_ << "->" << second->block_num_ << ") ";
+  }
+  std::cout << '\n';
 //  std::cout << "gen_map: " << std::endl;
 //  PRINT_MAP(gen_map_);
 //  std::cout << "kill_map: " << std::endl;
@@ -863,15 +933,20 @@ Function::_mark_loop_invariant(Function::loop &l) {
   while (change) {
     change = false;
     for (const auto &cur_block : l) {
-      auto cur_lineno = cur_block->first_lineno_;
+      auto cur_lineno = cur_block->first_lineno_ - 1;
       for (auto cur_iter = cur_block->begin(); cur_iter != cur_block->end(); ++cur_iter) {
+        ++cur_lineno;
         auto ir = *cur_iter;
         if (is_algo_op(ir->op_)) {  // 两个源操作数的算术指令
           if (!inst_invariant_vec_[cur_lineno]) { // 当前指令不是循环不变计算
-            if (ir->a1->kind == IR_Addr::NAMED_LABEL || ir->a2->kind == IR::Addr::Kind::NAMED_LABEL) {
-              continue;
+            if (ir->a0->kind == IR::Addr::NAMED_LABEL || ir->a1->kind == IR_Addr::NAMED_LABEL ||
+                ir->a2->kind == IR::Addr::Kind::NAMED_LABEL) {
+              continue; // 忽略全局变量
             }
-            bool a1_const = false, a2_const = false;
+            bool a0_const = false, a1_const = false, a2_const = false;
+            if (reach_define_out(cur_block, ir->a0)) {
+              a0_const = true;
+            }
             if (is_loop_constant(ir->a1) || reach_define_out(cur_block, ir->a1)
                 || reach_define_in(cur_block, ir->a1, cur_lineno)) {
               a1_const = true;
@@ -880,30 +955,32 @@ Function::_mark_loop_invariant(Function::loop &l) {
                 || reach_define_in(cur_block, ir->a2, cur_lineno)) {
               a2_const = true;
             }
-            if (a1_const && a2_const) {  // 新增了循环不变计算
+            if (a0_const && a1_const && a2_const) {  // 新增了循环不变计算
               inst_invariant_vec_[cur_lineno] = true;
               ret.emplace_back(cur_block, cur_iter);
               change = true;
             }
           }
         } else if (is_mov_op(ir->op_)) {
-          if (ir->a1->kind == IR_Addr::NAMED_LABEL) {
+          if (ir->a0->kind == IR::Addr::NAMED_LABEL || ir->a1->kind == IR_Addr::NAMED_LABEL) {
             continue;
           }
           if (!inst_invariant_vec_[cur_lineno]) { // 当前指令不是循环不变计算
-            bool a1_const = false;
+            bool a0_const = false, a1_const = false;
+            if (reach_define_out(cur_block, ir->a0)) {
+              a0_const = true;
+            }
             if (is_loop_constant(ir->a1) || reach_define_out(cur_block, ir->a1)
                 || reach_define_in(cur_block, ir->a1, cur_lineno)) {
               a1_const = true;
             }
-            if (a1_const) {  // 新增了循环不变计算
+            if (a0_const && a1_const) {  // 新增了循环不变计算
               inst_invariant_vec_[cur_lineno] = true;
               ret.emplace_back(cur_block, cur_iter);
               change = true;
             }
           }
         }
-        ++cur_lineno;
       }
     }
   }
@@ -914,10 +991,11 @@ void Function::_build_lineno_rd_vec() {
   for (const auto &basic_block : basic_block_vector_) {
     auto cur_lineno = basic_block->first_lineno_;
     for (const auto &ir : basic_block->ir_list_) {
-      if (is_algo_op(ir->op_) || is_mov_op(ir->op_)) {
+      if (is_algo_op(ir->op_) || is_mov_op(ir->op_) ||
+          ir->op_ == IR::Op::LOAD || ir->op_ == IR::Op::PARAM) {
         lineno_rd_vec_[cur_lineno] = ir->a0;
       } else if (ir->op_ == IR::Op::CALL) {
-        lineno_rd_vec_[cur_lineno] =IR::Addr::make_ret();
+        lineno_rd_vec_[cur_lineno] = IR::Addr::make_ret();
       }
       ++cur_lineno;
     }
@@ -1182,7 +1260,7 @@ void Function::optimize(int optimize_level) {
     local_copy_propagation();
     global_copy_propagation();
     if_simplify();
-//    loop_invariant_code_motion();
+    loop_invariant_code_motion();
     staighten();
     delete_unreachable_code();
     remove_dead_code();
